@@ -1,0 +1,29 @@
+- text: >
+    (1) an [RNA] containing cytidine + H2O = an [RNA]-3'-cytidine-3'-phosphate + a 5'-hydroxy-ribonucleotide-3'-[RNA] (overall reaction),
+    (1a) an [RNA] containing cytidine = an [RNA]-3'-cytidine-2',3'-cyclophosphate + a 5'-hydroxy-ribonucleotide-3'-[RNA],
+    (1b) an [RNA]-3'-cytidine-2',3'-cyclophosphate + H2O = an [RNA]-3'-cytidine-3'-phosphate,
+    (2) an [RNA] containing uridine + H2O = an [RNA]-3'-uridine-3'-phosphate + a 5'-hydroxy-ribonucleotide-3'-[RNA],
+    (2a) an [RNA] containing uridine = an [RNA]-3'-uridine-2',3'-cyclophosphate + a 5'-hydroxy-ribonucleotide-3'-[RNA],
+    (2b) an [RNA]-3'-uridine-2',3'-cyclophosphate + H2O = an [RNA]-3'-uridine-3'-phosphate
+  entities:
+    COFACTOR:
+      - "H2O"
+    RNA_COMPONENT:
+      - "[RNA]"
+      - "[RNA]-3'-cytidine-3'-phosphate"
+      - "[RNA]-3'-cytidine-2',3'-cyclophosphate"
+      - "[RNA]-3'-uridine-3'-phosphate"
+      - "[RNA]-3'-uridine-2',3'-cyclophosphate"
+      - "5'-hydroxy-ribonucleotide-3'-[RNA]"
+- text: >
+    (1) ADP + D-glucose = AMP + D-glucose 6-phosphate [RN:R05804],
+    (2) ADP + D-glucosamine = AMP + D-glucosamine 6-phosphate [RN:R12594]
+  entities:
+    SUGAR:
+      - D-glucose
+      - D-glucose 6-phosphate
+      - D-glucosamine
+      - D-glucosamine 6-phosphate
+    COFACTOR:
+      - ADP
+      - AMP
