@@ -1,0 +1,11 @@
+
+.DS_Store
+**/.snakemake
+*.pkl
+*.csv
+**/.ipynb_checkpoints
+*.tsv
+*.txt
+enzyme.dat
+*.gz
+*.xml
