@@ -280,12 +280,11 @@ def canon_smiles(x):
 from rdkit.Chem import PandasTools
 
 # Function to calculate descriptors
-def calculate_descriptors(mol):
-    return mol_descriptor_calculator.CalcDescriptors(mol)
+def calculate_descriptors(id, mol):
+    return (id,) + mol_descriptor_calculator.CalcDescriptors(mol)
 
 parser = argparse.ArgumentParser(description='Process EC information.')
 parser.add_argument('--ec_dat', type=str, help='Path to enzyme.dat file from EXPASY')
-parser.add_argument('--ec_class', type=str, help='URL to enzclass.txt file')
 parser.add_argument('--pubchem', type=str, help='Path to pubchem_substance_id_mapping file')
 parser.add_argument('--chebi', type=str, help='Path to chebi_kegg_file')
 parser.add_argument('--reaction_enzyme', type=str, help='')
@@ -448,11 +447,13 @@ except:
     kegg_enzyme_df_rhea["canonical_smiles"] = kegg_enzyme_df_rhea["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
 
     # Calculate descriptors for each molecule in the 'ROMol' column
-    rhea_mol_descriptors = kegg_enzyme_df_rhea['ROMol'].apply(calculate_descriptors)
-    rhea_mol_descriptors_df = pd.DataFrame(list(rhea_mol_descriptors), columns=descriptors)
+    #rhea_mol_descriptors = kegg_enzyme_df_rhea['ROMol'].apply(calculate_descriptors)
+    #rhea_mol_descriptors_df = pd.DataFrame(list(rhea_mol_descriptors), columns=descriptors)
 
     # Merge the descriptors DataFrame with the 'test' DataFrame
-    kegg_enzyme_df_rhea = pd.concat([kegg_enzyme_df_rhea, rhea_mol_descriptors_df], axis=1)
+    #kegg_enzyme_df_rhea = pd.concat([kegg_enzyme_df_rhea, rhea_mol_descriptors_df], axis=1)
+    kegg_enzyme_df_rhea["ligand_db"] = "RHEA"
+    kegg_enzyme_df_rhea = kegg_enzyme_df_rhea.loc[kegg_enzyme_df_rhea.ROMol.isna() == False].reset_index(drop = True)
     kegg_enzyme_df_rhea.to_pickle("kegg_enzyme_df_rhea.pkl")
 
 ### ChEBI KEGG Mapping
@@ -474,11 +475,12 @@ except:
     kegg_reaction_enzyme_df_exploded_chebi["canonical_smiles"] = kegg_reaction_enzyme_df_exploded_chebi["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
 
     # Calculate descriptors for each molecule in the 'ROMol' column
-    chebi_mol_descriptors = kegg_reaction_enzyme_df_exploded_chebi['ROMol'].apply(calculate_descriptors)
-    chebi_mol_descriptors_df = pd.DataFrame(list(chebi_mol_descriptors), columns=descriptors)
+    #chebi_mol_descriptors = kegg_reaction_enzyme_df_exploded_chebi['ROMol'].apply(calculate_descriptors)
+    #chebi_mol_descriptors_df = pd.DataFrame(list(chebi_mol_descriptors), columns=descriptors)
     # Merge the descriptors DataFrame with the 'test' DataFrame
-    kegg_reaction_enzyme_df_exploded_chebi = pd.concat([kegg_reaction_enzyme_df_exploded_chebi, chebi_mol_descriptors_df], axis=1)
-
+    #kegg_reaction_enzyme_df_exploded_chebi = pd.concat([kegg_reaction_enzyme_df_exploded_chebi, chebi_mol_descriptors_df], axis=1)
+    kegg_reaction_enzyme_df_exploded_chebi["ligand_db"] = "ChEBI"
+    kegg_reaction_enzyme_df_exploded_chebi = kegg_reaction_enzyme_df_exploded_chebi.loc[kegg_reaction_enzyme_df_exploded_chebi.ROMol.isna() == False].reset_index(drop = True)
     kegg_reaction_enzyme_df_exploded_chebi.to_pickle("kegg_reaction_enzyme_df_exploded_chebi.pkl")
     
 
@@ -519,12 +521,14 @@ except:
     PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_pubchem, smilesCol='canonical_smiles')
 
     # Calculate descriptors for each molecule in the 'ROMol' column
-    pubchem_mol_descriptors = kegg_reaction_enzyme_df_exploded_pubchem['ROMol'].apply(calculate_descriptors)
-    pubchem_mol_descriptors_df = pd.DataFrame(list(pubchem_mol_descriptors), columns=descriptors)
+    #pubchem_mol_descriptors = kegg_reaction_enzyme_df_exploded_pubchem['ROMol'].apply(calculate_descriptors)
+    #pubchem_mol_descriptors_df = pd.DataFrame(list(pubchem_mol_descriptors), columns=descriptors)
 
     # Merge the descriptors DataFrame with the 'test' DataFrame
-    kegg_reaction_enzyme_df_exploded_pubchem = pd.concat([kegg_reaction_enzyme_df_exploded_pubchem, pubchem_mol_descriptors_df], axis=1)
-    
+    #kegg_reaction_enzyme_df_exploded_pubchem = pd.concat([kegg_reaction_enzyme_df_exploded_pubchem, pubchem_mol_descriptors_df], axis=1)
+    kegg_reaction_enzyme_df_exploded_pubchem["ligand_db"] = "PubChem"
+    kegg_reaction_enzyme_df_exploded_pubchem.rename(columns = {"CanonicalSMILES" : "canonical_smiles"}, inplace = True)
+    kegg_reaction_enzyme_df_exploded_pubchem = kegg_reaction_enzyme_df_exploded_pubchem.loc[kegg_reaction_enzyme_df_exploded_pubchem.ROMol.isna() == False].reset_index(drop = True)
     kegg_reaction_enzyme_df_exploded_pubchem.to_pickle("kegg_reaction_enzyme_df_exploded_pubchem.pkl")
 
 try:
@@ -562,12 +566,14 @@ except:
     kegg_reaction_enzyme_df_exploded_gtc["canonical_smiles"] = kegg_reaction_enzyme_df_exploded_gtc["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
 
     # Calculate descriptors for each molecule in the 'ROMol' column
-    gtc_mol_descriptors = kegg_reaction_enzyme_df_exploded_gtc['ROMol'].apply(calculate_descriptors)
-    gtc_mol_descriptors_df = pd.DataFrame(list(gtc_mol_descriptors), columns=descriptors)
+    #gtc_mol_descriptors = kegg_reaction_enzyme_df_exploded_gtc['ROMol'].apply(calculate_descriptors)
+    #gtc_mol_descriptors_df = pd.DataFrame(list(gtc_mol_descriptors), columns=descriptors)
 
     # Merge the descriptors DataFrame with the 'test' DataFrame
-    kegg_reaction_enzyme_df_exploded_gtc = pd.concat([kegg_reaction_enzyme_df_exploded_gtc, gtc_mol_descriptors_df], axis=1)
+    #kegg_reaction_enzyme_df_exploded_gtc = pd.concat([kegg_reaction_enzyme_df_exploded_gtc, gtc_mol_descriptors_df], axis=1)
     kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded_gtc.drop_duplicates(subset = ["entry", "canonical_smiles"])
+    kegg_reaction_enzyme_df_exploded_gtc["ligand_db"] = "GlyTouCan"
+    kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded_gtc.loc[kegg_reaction_enzyme_df_exploded_gtc.ROMol.isna() == False].reset_index(drop = True)
     kegg_reaction_enzyme_df_exploded_gtc.to_pickle("kegg_reaction_enzyme_df_exploded_gtc.pkl")
 
 #append together the dataframes with various representations of biological ligands into a long form dataframe. Should have the EC number, EC name
@@ -578,26 +584,26 @@ except:
 
 #try to also get a name for the compounds.
 
-rhea_concat = kegg_enzyme_df_rhea
-rhea_concat["ligand_db"] = "RHEA"
-chebi_concat = kegg_reaction_enzyme_df_exploded_chebi
-chebi_concat["ligand_db"] = "ChEBI"
-pubchem_concat = kegg_reaction_enzyme_df_exploded_pubchem
-pubchem_concat["ligand_db"] = "PubChem"
-pubchem_concat.rename(columns = {"CanonicalSMILES" : "canonical_smiles"}, inplace = True)
-glycoct_concat = kegg_reaction_enzyme_df_exploded_gtc
-glycoct_concat["ligand_db"] = "GlyTouCan"
 
 
 #biological_ligand_df
-biological_ligands_df = pd.concat([chebi_concat[["entry", "canonical_smiles", "ROMol", "ligand_db"] + descriptors], pubchem_concat[["entry", "canonical_smiles", "ROMol", "ligand_db"] + descriptors], rhea_concat[["entry", "canonical_smiles", "ROMol", "ligand_db"] + descriptors], glycoct_concat[["entry", "canonical_smiles", "ROMol", "ligand_db"] + descriptors]])
-biological_ligands_df = biological_ligands_df.drop_duplicates(subset = ["entry", "canonical_smiles"])
+biological_ligands_df = pd.concat([kegg_reaction_enzyme_df_exploded_chebi[["entry", "canonical_smiles", "ROMol", "ligand_db"]], kegg_reaction_enzyme_df_exploded_pubchem[["entry", "canonical_smiles", "ROMol", "ligand_db"]], kegg_enzyme_df_rhea[["entry", "canonical_smiles", "ROMol", "ligand_db"]], kegg_reaction_enzyme_df_exploded_gtc[["entry", "canonical_smiles", "ROMol", "ligand_db"]]])
+biological_ligands_df = biological_ligands_df.reset_index()
 
 biological_ligands_df_databases = biological_ligands_df[["entry", "canonical_smiles", "ligand_db"]].groupby(["entry", "canonical_smiles"]).agg(list).reset_index()
+
 biological_ligands_df = biological_ligands_df.drop_duplicates(subset = ["entry", "canonical_smiles"]).drop(columns = "ligand_db")
 biological_ligands_df = biological_ligands_df.merge(biological_ligands_df_databases, on = ["entry", "canonical_smiles"], how = "left", indicator = True)
+print(biological_ligands_df.loc[biological_ligands_df._merge != "both"])
+assert(len(biological_ligands_df.loc[biological_ligands_df._merge != "both"]) == 0)
+biological_ligands_df["uniqueID"] = biological_ligands_df.groupby('canonical_smiles').ngroup()
+biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
+print(biological_ligands_df)
 
+biological_ligands_descriptors = biological_ligands_df.apply(lambda x: calculate_descriptors(x["uniqueID"], x["ROMol"]), axis = 1)
+print(biological_ligands_descriptors)
+biological_ligands_descriptors_df = pd.DataFrame(list(biological_ligands_descriptors), columns=["uniqueID"] + descriptors)
+biological_ligands_df = pd.concat([biological_ligands_df, biological_ligands_descriptors_df], axis=1)
 
 biological_ligands_df.to_pickle("biological_ligands_df.pkl")
-print(biological_ligands_df)
 #should be 70297
