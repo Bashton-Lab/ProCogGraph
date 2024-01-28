@@ -1,6 +1,10 @@
+make_index: |
+  CREATE INDEX FOR (i:Interpro) ON (i.ENTRY_TYPE);
+  CREATE INDEX FOR (p:Entity) ON (p.TYPE);
+
 cath_bl_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[cd:IS_IN_CATH_DOMAIN]->(c:CATH),
+    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
     e.EC IS NOT NULL AND
@@ -41,7 +45,7 @@ cath_bl_query: |
 
 cath_sugar_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[cd:IS_IN_CATH_DOMAIN]->(c:CATH),
+    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
     e.EC IS NOT NULL AND
@@ -82,8 +86,8 @@ cath_sugar_query: |
 
 scop_bl_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[sd:IS_IN_SCOP_DOMAIN]->(s:SCOP),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry) 
     WHERE
     e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
@@ -96,7 +100,7 @@ scop_bl_query: |
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
     bl.UNIQID as bound_ligand_entity_id,
-    p.UNIQID as ligand_entity_id,
+    p.UNIQID as ligand_entity_id, 
     p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
     p.TYPE as ligand_entity_type,
@@ -125,7 +129,7 @@ scop_bl_query: |
 
 scop_sugar_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[sd:IS_IN_SCOP_DOMAIN]->(s:SCOP),
+    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry) 
     WHERE
     e.EC IS NOT NULL AND
@@ -168,10 +172,10 @@ scop_sugar_query: |
 
 interpro_d_bl_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "D" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
@@ -206,10 +210,10 @@ interpro_d_bl_query: |
 
 interpro_d_sugar_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "D" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
@@ -244,10 +248,10 @@ interpro_d_sugar_query: |
 
 interpro_f_bl_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "F" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
@@ -282,10 +286,10 @@ interpro_f_bl_query: |
 
 interpro_f_sugar_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "F" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
@@ -320,10 +324,10 @@ interpro_f_sugar_query: |
 
 interpro_h_bl_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "H" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
@@ -358,13 +362,13 @@ interpro_h_bl_query: |
 
 interpro_h_sugar_query: |
     MATCH
-    (bl:BoundLigand)<-[x:IS_AN_INSTANCE_OF]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})<-[k:HAS_ENTITY]-(bm:BoundMolecule)<-[part:IS_PART_OF]-(bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)-[ip:IS_IN_INTERPRO]->(i:Interpro),
+    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
     (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
     WHERE
-    e.EC IS NOT NULL AND i.ENTRY_TYPE = "H" AND
+    e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR 
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
     a.ID as pdb_id, 
