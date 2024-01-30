@@ -68,14 +68,15 @@ def get_parity_score(mol1, mol2, print_structures = False, ringmatches = False,r
 import io
 from contextlib import redirect_stderr
 
-def parity_score_inchi(pdb_ligand_id, inchi, ec, compound_df, timeout = 300):
+def parity_score_inchi(pdb_ligand_id, inchi, ec, bl_name, compound_df, timeout = 300):
     f = io.StringIO()
     scores = []
     
-    compound_list = compound_df.loc[(compound_df.pdb_entry == ec) & (compound_df.unique_id.isna() == False), "unique_id"].values.tolist()
-    
-    if len(compound_list) == 0:
-        score_dict = {"pdb_ligand" : pdb_ligand_id, "compound": None, "score" : 0, "error" : f"No KEGG Compounds found for EC", "cancelled" : None}
+    compound_df_subset = compound_df.loc[(compound_df.entry.isin(ec)), ["entry", "canonical_smiles", "ROMol"]]
+    compound_df_subset = compound_df_subset.groupby("canonical_smiles").agg({"entry" : list, "ROMol" : "first"}).reset_index()
+    ec = ",".join(ec)
+    if len(compound_df_subset) == 0:
+        score_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "compound": None, "score" : 0, "error" : f"No biological compounds found for ligand", "cancelled" : None}
         scores.append(score_dict)
     else:
         with redirect_stderr(f):
@@ -83,22 +84,24 @@ def parity_score_inchi(pdb_ligand_id, inchi, ec, compound_df, timeout = 300):
                 ligand_rdkit = Chem.inchi.MolFromInchi(inchi)
             except Exception as e:
                 for compound in compound_list:
-                    score_dict = {"pdb_ligand" : pdb_ligand_id, "compound": compound, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "cancelled" : None}
+                    score_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "compound": compound, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "cancelled" : None}
                     scores.append(score_dict)
                 return scores
 
         out = f.getvalue()
-        for compound in compound_list:
+        for idx, row in compound_df_subset.iterrows():
+            compound = row["canonical_smiles"]
+            ec = ",".join(row["entry"])
             try:
-                rdkit_compound = compound_df.loc[compound_df["unique_id"] == compound, "mol"].values[0]
+                rdkit_compound = row["ROMol"]
                 if rdkit_compound in [None, np.nan]:
-                    scores_dict = {"pdb_ligand" : pdb_ligand_id, "compound": compound, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None}
+                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "compound": compound, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None}
                 else:
                     score, cancelled = get_parity_score(ligand_rdkit, rdkit_compound, returnmcs=False, timeout = timeout)
-                    scores_dict = {"pdb_ligand" : pdb_ligand_id, "compound": compound, "score" : score, "error" : None, "cancelled" : cancelled}
+                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "compound": compound, "score" : score, "error" : None, "cancelled" : cancelled}
                 scores.append(scores_dict)
             except Exception as e:
-                scores_dict = {"pdb_ligand" : pdb_ligand_id, "compound": compound, "score" : 0, "error" : f"Parity error: {str(e)}", "cancelled" : None}
+                scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "compound": compound, "score" : 0, "error" : f"Parity error: {str(e)}", "cancelled" : None}
                 scores.append(scores_dict)
     
     return scores
@@ -123,7 +126,6 @@ args = parser.parse_args()
 all_chem_descriptors_ligands_unique_pairs = pd.read_pickle(f"{args.processed_ligands_file}")
 
 cognate_ligands_df = pd.read_pickle(f"{args.cognate_ligands_file}")
-cognate_ligands_df = cognate_ligands_df.loc[cognate_ligands_df.search_type != "NER"]
 chunk_index = args.chunk
 chunk_size = args.chunk_size
 
@@ -136,9 +138,14 @@ pickle_filename = f"{args.outdir}/parity_calcs_chunk_{chunk_index}.pkl"
 
 if not os.path.exists(pickle_filename):
     chunk_results = []
-    for x, y, z in zip(chunk_df["ligand_entity_id"], chunk_df['descriptor'], chunk_df['protein_polymer_EC']):
-        scores_list = parity_score_inchi(x, y, z, cognate_ligands_df, timeout = 30)
+    for index, row in chunk_df.iterrows():
+        bl_name = row['bl_name']
+        x = row['ligand_entity_id']
+        y = row['descriptor']
+        z = row['ec_list']
+        scores_list = parity_score_inchi(x, y, z, bl_name, cognate_ligands_df, timeout = 30)
         chunk_results.extend(scores_list)
+        print(f"Chunk {args.chunk}, row {index}")
     # Save the inchi_ec_pairs for the chunk as a pickle file
     with open(pickle_filename, "wb") as file:
         pickle.dump(chunk_results, file)
