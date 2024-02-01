@@ -1,5 +1,6 @@
 import argparse
 import pandas as pd
+import pickle 
 
 parser = argparse.ArgumentParser(description = 'TO DO')
 parser.add_argument('--chunk_list', metavar = '', nargs='+', 

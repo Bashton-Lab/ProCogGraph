@@ -27,7 +27,7 @@ parser.add_argument('--pdb_ligands_file', default = 'cath_scop_ligands_to_score.
     help = "")
 parser.add_argument('--cognate_ligands_file', default = 'final_kegg_compound_reaction_enzyme_df.pkl', type = str, 
     help = "")
-parser.add_argument('--outdir', type = str, default = "parity_calcs",
+parser.add_argument('--outdir', type = str, default = "parity_calcs", 
     help = ""),
 parser.add_argument('--chunk_size', type = int, default= 1000, 
     help = "")
