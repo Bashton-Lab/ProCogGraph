@@ -67,8 +67,8 @@ def main():
 
     biological_ligands_nodes = biological_ligands[[col for col in biological_ligands.columns if col not in ["entry", "_merge"]]].copy()
     biological_ligands_nodes.drop_duplicates(subset = ["canonical_smiles", "uniqueID"], inplace = True)
-    biological_ligands_nodes = biological_ligands_nodes[["canonical_smiles", "uniqueID", "ligand_db"]]
-    biological_ligands_nodes.rename(columns = {"uniqueID": "uniqueID:ID(bio-id)", "canonical_smiles": "canonicalSMILES", "ligand_db" : "ligandDB:string[]"}, inplace = True)
+    biological_ligands_nodes = biological_ligands_nodes[["canonical_smiles", "uniqueID", "ligand_db", "compound_name"]]
+    biological_ligands_nodes.rename(columns = {"uniqueID": "uniqueID:ID(bio-id)", "compound_name": "name", "canonical_smiles": "canonicalSMILES", "ligand_db" : "ligandDB:string[]"}, inplace = True)
 
     biological_ligands_nodes.to_csv(f"{args.outdir}/biological_ligand_nodes.csv.gz", compression = "gzip",sep = "\t", index = False)
 
