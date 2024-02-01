@@ -304,9 +304,9 @@ def main():
         assert(len(interpro_pdb_residue_interactions_distinct_sugar_ec.loc[interpro_pdb_residue_interactions_distinct_sugar_ec.bound_ligand_id.isin(bound_molecules_ligands.bound_ligand_id.unique())]) == 0)
 
         bound_molecules_sugars = pd.concat([
-            cath_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(), 
-            scop_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(),
-            interpro_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates()
+            cath_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(), 
+            scop_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(),
+            interpro_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates()
             ])
         bound_molecules_sugars.to_csv(f"{args.outdir}/bound_molecules_sugars.csv.gz", index = False, compression = "gzip")
     else:
@@ -396,13 +396,14 @@ def main():
         bound_molecules_sugars_ec["ligand_index"].fillna(bound_molecules_sugars_ec["missing_ligand_index"], inplace=True)
         bound_molecules_sugars_ec.drop(columns = "missing_ligand_index", inplace = True)
         bound_molecules_sugars_ec["descriptor"].fillna("SMILES unavailable", inplace = True)
-
+        bound_molecules_sugars_ec[""]
         bound_molecules_sugars_ec.to_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
     else:
         print("Loading bound_molecules_sugars_smiles")
         bound_molecules_sugars_ec = pd.read_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
+        bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
 
-    if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
+    if not os.path.exists(f"{args.outdir}/bound_entities_to_score.pkl"):
         print("retrieving ligand smiles")
         #should potentially move this part of the script to the yaml fiel that others come from.
         if not os.path.exists(f"{args.outdir}/all_chem_descriptors_bm_ec.csv.gz"):
@@ -427,6 +428,7 @@ def main():
         all_chem_descriptors_smiles = all_chem_descriptors_ec.loc[all_chem_descriptors_ec.descriptor_type == "SMILES_CANONICAL"]
         all_chem_descriptors_smiles_unique_pairs = all_chem_descriptors_smiles.drop_duplicates(["bl_id","ec_list"], keep='first') #get the unique pairs of inchi descriptors and EC numbers
 
+        
         bound_ligand_descriptors = all_chem_descriptors_smiles_unique_pairs.loc[
             (all_chem_descriptors_smiles_unique_pairs.bl_id.isin(bound_molecules_ligands.bound_ligand_id.unique()))]
 
@@ -435,9 +437,18 @@ def main():
         bound_ligands_to_score = bound_ligands_to_score.reset_index().rename(columns = {"index" : "ligand_entity_id"})
         bound_ligands_to_score["ligand_entity_id"] = bound_ligands_to_score["ligand_entity_id"] + bound_molecules_sugars_ec.ligand_index.max() + 1 #plus one because of 0 index to avoid overlaps
         bound_ligands_to_score.to_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
+
+        bound_ligand_descriptors =  bound_ligand_descriptors.merge(bound_ligands_to_score[["bl_name", "descriptor", "ligand_entity_id"]].rename(columns = {"ligand_entity_id":"ligand_index"}), on = ["bl_name", "descriptor"], how = "left", indicator = True)
+        assert(len(bound_ligand_descriptors.loc[bound_ligand_descriptors._merge != "both"]) == 0)
+        bound_ligand_descriptors.drop(columns = "_merge", inplace = True)
+        bound_ligand_descriptors.to_pickle(f"{args.outdir}/bound_ligand_descriptors.pkl")
+
+        bound_entities_to_score = pd.concat([bound_sugars_to_score[["ligand_entity_id", "bl_name", "ligand_entity_description", "descriptor", "ec_list"]], bound_ligands_to_score])
+        bound_entities_to_score.to_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
+
     else:
-        print("Loading bound_ligands_to_score")
-        bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
+        print("Loading bound_entities_to_score")
+        bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
 
     #consider dropping the retrieval of ligand_entity_id from graph. We remove it in the domain_ownership script anyway.
     #also consider using a different name to ligand_entity_id for the index in scoring - can even do ligand index , just need to update the scoring script for this change.
