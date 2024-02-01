@@ -567,11 +567,14 @@ def main():
         # create molecular descriptor calculator
         mol_descriptor_calculator = MolecularDescriptorCalculator(descriptors)
         biological_ligands_df = pd.concat([kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
-                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
+                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "name", "compound_id","ROMol", "ligand_db"]].rename(columns = {"name": "compound_name"})])
         biological_ligands_df = biological_ligands_df.reset_index()
         
+
+        biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
+        biological_ligands_df.drop(columns = ["ChEBI_NAME"], inplace = True)
         biological_ligands_df = biological_ligands_df.groupby(["entry", "compound_id"], dropna = False).agg({"ROMol": "first", "compound_name" : "first", "ligand_db": set}).reset_index()
         biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
