@@ -1,15 +1,19 @@
 # ProCogGraph
 Graph based ligand-domain interaction database for exploring and mining domain-cognate ligand interactions. Powered by PDBe-graph and Neo4j.
 
+### why represent each bound molecule and its constituent entities?
+
+110l_bm1 shows how the consitituent entities of a bound molecule can have different contact counts to the same domain. 
+
 ## To Do
 
 | Task | Status | Priority |
 | ---- | ------ | -------- |
-| Obtain biological ligand names from database source | not started | 2 |
-| Find new way to combine duplicate biological ligands from different databases | not started | 3 |
+| Write pipline to annotated CDS from metagenomic libraries with cognate ligand binding profiles | in progress | 1 |
+| Obtain biological ligand names from database source | complete (kegg name for all compound IDs, glycans take the GlyTouCan ID for now) | 2 |
+| Find new way to combine duplicate biological ligands from different databases | complete (removed RHEA which is predominantly redundant in the biological ligands file, and use kegg compoun ids to agg) | 3 |
 | Add new biological ligands to database | not started | 5 |
 | Write script to process PDB files into database | not started | 4 |
-| Write pipline to annotated CDS from metagenomic libraries with cognate ligand binding profiles | not started | 1 |
 
 ## PDBe Graph Data
 
@@ -30,7 +34,7 @@ In ProCogGraph, we collect biological ligands from a variety of database sources
 * [PubChem](https://pubchem.ncbi.nlm.nih.gov/)
 * [KEGG](https://www.genome.jp/kegg/)
 * [ChEBI](https://www.ebi.ac.uk/chebi/)
-* [Rhea](https://www.rhea-db.org/)
+* [Rhea](https://www.rhea-db.org/) *removed in current version*
 * [GlyTouCan](https://glytoucan.org/)
 
 Potential databases which will be included in future versions include:
@@ -60,6 +64,10 @@ The biological ligands are obtained from the databases listed above using the fo
 8. Search for glycan IDs in GlyTouCan and obtain SMILES string where possible.
 9. Search for EC records in Rhea and obtain reaction SMILES string where possible. Split into component SMILES strings.
 10. Combine into a single biological ligands dataframe.
+
+### Naming Biological Ligands in the ProCogGraph Database
+
+Each biological ligand is assigned a unique identifier in the ProCogGraph database. This identifier is a combination of the database source and the database identifier. For example, the biological ligand with the PubChem CID 2244 is assigned the identifier `PubChem:2244`. Every database contains its own naming scheme for biological ligands and these are retained in the ProCogGraph database. For example, the biological ligand with the KEGG ID C00022 is assigned the identifier `KEGG:C00022`. The biological ligand with the ChEBI ID 15377 is assigned the identifier `ChEBI:15377`. The biological ligand with the Rhea ID 15377 is assigned the identifier `Rhea:15377`. The biological ligand with the GlyTouCan ID G00026MO is assigned the identifier `GlyTouCan:G00026MO`.
 
 ## Defining Biological Ligand Similarity
 
@@ -130,3 +138,15 @@ This creates the database.
 ## Database Schema
 
 ## Citations
+
+``` python
+python3 extract_pdbe_info.py --neo4j_user neo4j --neo4j_password 'yTJutYQ$$d%!9h' --outdir test_script_out --enzyme_dat_file ../biological_ligands/enzyme.dat --pdbe_graph_yaml pdbe_graph_queries.yaml
+
+python3 get_ec_information.py --ec_dat enzyme.dat --pubchem pubchem_substance_id_mapping.txt --chebi ChEBI_Results.tsv --rhea_mapping rhea-directions.tsv --rhea_reactions rhea-reaction-smiles.tsv --rhea2ec rhea2ec.tsv --outdir biological_ligands
+
+python3 snakemake_ligands_df.py --pdb_ligands_file /raid/MattC/repos/CognateLigandProject/pdbe_graph_files/bound_entities_to_score.pkl --cognate_ligands /raid/MattC/repos/CognateLigandProject/biological_ligands/outdir2/biological_ligands_df.pkl --outdir bound_entities_parity --chunk_size 10 --threads 70 --snakefile parity.smk
+
+python3 assign_domain_ownership.py --cath_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz --cath_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz  --scop_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz --scop_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz --interpro_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz --interpro_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz --outdir test_script_new3 --scop_domains_info_file dir.cla.scop.1_75.txt --scop_descriptions_file dir.des.scop.1_75.txt
+
+python3 produce_neo4j_files.py --enzyme_dat_file ../biological_ligands/enzyme.dat --enzyme_class_file ../biological_ligands/enzclass.txt --outdir neo4j_files_out_test2 --biological_ligands ../biological_ligands/outdir2/biological_ligands_df.pkl --cath_domain_ownership ../domain_ownership/test_script_new3/cath_combined_domain_ownership.csv --scop_domain_ownership ../domain_ownership/test_script_new3/scop_combined_domain_ownership.csv --interpro_domain_ownership ../domain_ownership/test_script_new3/interpro_combined_domain_ownership.csv --bound_ligand_descriptors ../pdbe_graph_files/test_script_out/bound_ligand_descriptors.pkl --bound_molecules_sugars_smiles ../pdbe_graph_files/test_script_out/bound_molecules_sugars_smiles.pkl --parity_calcs ../parity_calcs/bound_entities_parity_3/all_parity_calcs.pkl
+```
