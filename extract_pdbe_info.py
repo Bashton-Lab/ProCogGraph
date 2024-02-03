@@ -357,6 +357,7 @@ def main():
         bound_molecules_sugars.drop(columns = ["_merge"], inplace = True)
 
         bound_molecules_sugars_ec = get_updated_enzyme_records(bound_molecules_sugars, ec_records_df, ec_col = "protein_entity_ec")
+        
         bound_molecules_sugars_ec["ec_list"] = bound_molecules_sugars_ec.ec_list.str.split(",")
         bound_molecules_sugars_ec = bound_molecules_sugars_ec.explode("ec_list")
         bound_molecules_sugars_ec.drop(columns = "protein_entity_ec", inplace = True)
@@ -367,27 +368,30 @@ def main():
 
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_smiles.pkl"):
         print("retrieving sugar smiles")
+        if not os.path.exists(f"{args.outdir}/bound_sugars_to_score.pkl"):
+            bound_sugars_to_score = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.WURCS != "WURCS not available", ["ligand_entity_description","WURCS", "ec_list"]].drop_duplicates()
+            bound_sugars_to_score = bound_sugars_to_score.groupby(["ligand_entity_description","WURCS"]).agg({"ec_list": set}).reset_index()
 
-        bound_sugars_to_score = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.WURCS != "WURCS not available", ["ligand_entity_description","WURCS", "ec_list"]].drop_duplicates()
-        bound_sugars_to_score = bound_sugars_to_score.groupby(["ligand_entity_description","WURCS"]).agg({"ec_list": set}).reset_index()
+            bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x))
+            bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isna() == False]
 
-        bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x))
-        bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isna() == False]
+            bound_sugars_to_score["csdb"] = bound_sugars_to_score["glycoct"].apply(lambda x: get_csdb_from_glycoct(x))
+            bound_sugars_to_score["descriptor"] = bound_sugars_to_score["csdb"].apply(lambda x: get_smiles_from_csdb(x))
 
-        bound_sugars_to_score["csdb"] = bound_sugars_to_score["glycoct"].apply(lambda x: get_csdb_from_glycoct(x))
-        bound_sugars_to_score["descriptor"] = bound_sugars_to_score["csdb"].apply(lambda x: get_smiles_from_csdb(x))
+            bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.descriptor.isna() == False]
 
-        bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.descriptor.isna() == False]
+            bound_sugars_to_score = bound_sugars_to_score.reset_index()
+            bound_sugars_to_score.drop(columns = ["index"], inplace = True)
+            bound_sugars_to_score = bound_sugars_to_score.reset_index().rename(columns = {"index": "ligand_index"})
 
-        bound_sugars_to_score = bound_sugars_to_score.reset_index()
-        bound_sugars_to_score.drop(columns = ["index"], inplace = True)
-        bound_sugars_to_score = bound_sugars_to_score.reset_index().rename(columns = {"index": "ligand_index"})
+            bound_molecules_sugars_ec = bound_molecules_sugars_ec.merge(bound_sugars_to_score[["ligand_entity_description", "ligand_index", "WURCS", "descriptor"]], on = ["ligand_entity_description","WURCS"], how = "left")
 
-        bound_molecules_sugars_ec = bound_molecules_sugars_ec.merge(bound_sugars_to_score[["ligand_entity_description", "ligand_index", "WURCS", "descriptor"]], on = ["ligand_entity_description","WURCS"], how = "left")
-
-        bound_sugars_to_score["bl_name"] = bound_sugars_to_score["ligand_entity_description"]
-        bound_sugars_to_score.rename(columns = {"ligand_index": "ligand_entity_id"}, inplace = True) #do this to run sugars in parity calcs
-        bound_sugars_to_score.to_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
+            bound_sugars_to_score["bl_name"] = bound_sugars_to_score["ligand_entity_description"]
+            bound_sugars_to_score.rename(columns = {"ligand_index": "ligand_entity_id"}, inplace = True) #do this to run sugars in parity calcs
+            bound_sugars_to_score.to_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
+        else:
+            print("Loading bound_sugars_to_score")
+            bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
 
         missing_ligand_index = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.descriptor.isna(), ["pdb_id", "entity_id"]].drop_duplicates()
         missing_ligand_index["missing_ligand_index"] = missing_ligand_index.reset_index(drop=True).reset_index().index + bound_molecules_sugars_ec.ligand_index.max() + 1
@@ -396,7 +400,7 @@ def main():
         bound_molecules_sugars_ec["ligand_index"].fillna(bound_molecules_sugars_ec["missing_ligand_index"], inplace=True)
         bound_molecules_sugars_ec.drop(columns = "missing_ligand_index", inplace = True)
         bound_molecules_sugars_ec["descriptor"].fillna("SMILES unavailable", inplace = True)
-        bound_molecules_sugars_ec[""]
+
         bound_molecules_sugars_ec.to_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
     else:
         print("Loading bound_molecules_sugars_smiles")
