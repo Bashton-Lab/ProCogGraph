@@ -72,7 +72,7 @@ def get_parity_score(mol1, mol2, print_structures = False, ringmatches = False,r
     else:
         return score, mol1_sub_match, mol2_sub_match, cancelled
 
-from p
+from pdbeccdutils.computations.parity_method import compare_molecules
     
 import io
 from contextlib import redirect_stderr
@@ -105,7 +105,15 @@ def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, 
                 if rdkit_compound in [None, np.nan]:
                     scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": compound, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0}
                 else:
-                    score, pdbl_subparity, bl_subparity, cancelled = get_parity_score(ligand_rdkit, rdkit_compound, returnmcs=False, timeout = timeout)
+                    parity = compare_molecules(ligand_rdkit, rdkit_compound)
+                    score = parity.similarity_score
+                    mol1_atom_count = ligand_rdkit.GetNumAtoms()
+                    mol2_atom_count = rdkit_compound.GetNumAtoms()
+                    matching_atoms = len(parity.mapping)
+                    pdbl_subparity = matching_atoms/mol1_atom_count
+                    bl_subparity = matching_atoms/mol2_atom_count
+                    cancelled = None
+                    #score, pdbl_subparity, bl_subparity, cancelled = get_parity_score(ligand_rdkit, rdkit_compound, returnmcs=False, timeout = timeout)
                     scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": compound, "score" : score, "error" : None, "cancelled" : cancelled, "pdbl_subparity": pdbl_subparity, "bl_subparity": bl_subparity}
                 scores.append(scores_dict)
             except Exception as e:
