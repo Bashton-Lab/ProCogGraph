@@ -107,8 +107,22 @@ def main():
     protein_ec_rels.to_csv(f"{args.outdir}/protein_ec_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_domains_nodes = scop_domains[["scop_id", "dm_description"]].drop_duplicates()
-    scop_domains_nodes.rename(columns = {"scop_id": "scopDomain:ID(scop-domain-id)", "dm_description": "domainDescription"}, inplace = True)
-    scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+    scop_domains_nodes["type"] = "SCOP"
+    scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(domain-id)", "dm_description": "name"}, inplace = True)
+    #scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    cath_domains_nodes = cath_domains[["cath_domain", "cath_name"]].drop_duplicates()
+    cath_domains_nodes["type"] = "CATH"
+    cath_domains_nodes.rename(columns = {"cath_domain": "domain:ID(domain-ID)", "cath_name": "name"}, inplace = True)
+    #cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type"]].drop_duplicates()
+    interpro_domain_nodes["type"] = "InterPro"
+    interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(domain-ID)", "interpro_name": "name", "interpro_type": "interproType"}, inplace = True)
+    #interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
+    domain_nodes.to_csv(f"{args.outdir}/domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_family_nodes = scop_domains[["scop_sunid", "sf_description"]].drop_duplicates()
     scop_family_nodes.rename(columns = {"scop_sunid": "scopFamily:ID(scop-family-id)", "sf_description": "familyDescription"}, inplace = True)
@@ -127,7 +141,7 @@ def main():
     scop_fold_nodes.to_csv(f"{args.outdir}/scop_fold_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_domain_family_rels = scop_domains[["scop_id", "scop_sunid"]].drop_duplicates()
-    scop_domain_family_rels.rename(columns = {"scop_id": ":START_ID(scop-domain-id)", "scop_sunid": ":END_ID(scop-family-id)"}, inplace = True)
+    scop_domain_family_rels.rename(columns = {"scop_id": ":START_ID(domain-id)", "scop_sunid": ":END_ID(scop-family-id)"}, inplace = True)
     scop_domain_family_rels.to_csv(f"{args.outdir}/scop_domain_family_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_family_superfamily_rels = scop_domains[["scop_sunid", "sf_id"]].drop_duplicates()
@@ -142,10 +156,6 @@ def main():
     scop_fold_class_rels.rename(columns = {"cf_id": ":START_ID(scop-fold-id)", "cl_id": ":END_ID(scop-class-id)"}, inplace = True)
     scop_fold_class_rels.to_csv(f"{args.outdir}/scop_fold_class_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["cath_domain", "cath_name"]].drop_duplicates()
-    cath_domains_nodes.rename(columns = {"cath_domain": "cathDomain:ID(cath-domain-ID)", "cath_name": "cathName"}, inplace = True)
-    cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
-
     cath_class_nodes = cath_domains.cath_class.unique()
     cath_architecture_nodes = cath_domains.cath_architecture.unique()
     cath_topology_nodes = cath_domains.cath_topology.unique()
@@ -159,16 +169,12 @@ def main():
     cath_class_architecture_rels = cath_domains[["cath_class", "cath_architecture"]].rename(columns = {"cath_class": ":END_ID(cath-class-ID)", "cath_architecture" : ":START_ID(cath-architecture-ID)"}).drop_duplicates()
     cath_architecture_topology_rels = cath_domains[["cath_architecture", "cath_topology"]].rename(columns = {"cath_architecture": ":END_ID(cath-architecture-ID)", "cath_topology" : ":START_ID(cath-topology-ID)"}).drop_duplicates()
     cath_topology_homology_rels = cath_domains[["cath_topology", "cath_homology"]].rename(columns = {"cath_topology": ":END_ID(cath-topology-ID)", "cath_homology" : ":START_ID(cath-homology-ID)"}).drop_duplicates()
-    cath_homology_domain_rels = cath_domains[["cath_homology", "cath_domain"]].rename(columns = {"cath_domain": ":START_ID(cath-domain-ID)", "cath_homology" : ":END_ID(cath-homology-ID)"}).drop_duplicates()
+    cath_homology_domain_rels = cath_domains[["cath_homology", "cath_domain"]].rename(columns = {"cath_domain": ":START_ID(domain-ID)", "cath_homology" : ":END_ID(cath-homology-ID)"}).drop_duplicates()
 
     cath_class_architecture_rels.to_csv(f"{args.outdir}/cath_class_architecture_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_architecture_topology_rels.to_csv(f"{args.outdir}/cath_architecture_topology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_topology_homology_rels.to_csv(f"{args.outdir}/cath_topology_homology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_homology_domain_rels.to_csv(f"{args.outdir}/cath_homology_domain_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-
-    interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type"]].drop_duplicates()
-    interpro_domain_nodes.rename(columns = {"interpro_accession": "interpro_domain:ID(ipr-domain-ID)", "interpro_name": "interproName", "interpro_type": "interproType"}, inplace = True)
-    interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     bound_molecules = pd.concat([cath_domains.bound_molecule_id, scop_domains.bound_molecule_id, interpro_domains.bound_molecule_id]).drop_duplicates()
     bound_molecules.rename("boundMolecule:ID(bm-id)", inplace = True)
@@ -239,15 +245,15 @@ def main():
     parity_rels.to_csv(f"{args.outdir}/bound_entity_parity_score_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     cath_domain_ligand_interactions = cath_domains[["cath_domain", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-ID)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc" , "domain_ownership" : "interactionMode"}, inplace = True)
+    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(domain-ID)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc" , "domain_ownership" : "interactionMode"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_domain_ligand_interactions = scop_domains[["scop_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
+    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     interpro_domain_ligand_interactions = interpro_domains[["interpro_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(ipr-domain-ID)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
+    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(domain-ID)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
     interpro_domain_ligand_interactions.to_csv(f"{args.outdir}/interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_pdb_protein_rels = scop_domains[["pdb_id", "protein_entity_id"]].drop_duplicates()
@@ -258,13 +264,27 @@ def main():
     pdb_protein_rels.rename(columns = {"protein_entity_id": ":START_ID(pdbp-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
     pdb_protein_rels.to_csv(f"{args.outdir}/pdb_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_protein_rels = cath_domains[["cath_domain", "protein_entity_id"]].drop_duplicates().rename(columns = {"cath_domain": ":START_ID(cath-domain-ID)", "protein_entity_id":":END_ID(pdbp-id)"})
-    scop_protein_rels = scop_domains[["scop_id", "protein_entity_id"]].drop_duplicates().rename(columns = {"scop_id": ":START_ID(scop-domain-id)", "protein_entity_id":":END_ID(pdbp-id)"})
-    interpro_protein_rels = interpro_domains[["interpro_accession", "protein_entity_id"]].drop_duplicates().rename(columns = {"interpro_accession": ":START_ID(ipr-domain-ID)", "protein_entity_id":":END_ID(pdbp-id)"})
+    cath_protein_rels = cath_domains[["cath_domain", "protein_entity_id"]].drop_duplicates().rename(columns = {"cath_domain": ":START_ID(domain-ID)", "protein_entity_id":":END_ID(pdbp-id)"})
+    scop_protein_rels = scop_domains[["scop_id", "protein_entity_id"]].drop_duplicates().rename(columns = {"scop_id": ":START_ID(domain-id)", "protein_entity_id":":END_ID(pdbp-id)"})
+    interpro_protein_rels = interpro_domains[["interpro_accession", "protein_entity_id"]].drop_duplicates().rename(columns = {"interpro_accession": ":START_ID(domain-ID)", "protein_entity_id":":END_ID(pdbp-id)"})
     
     cath_protein_rels.to_csv(f"{args.outdir}/cath_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     scop_protein_rels.to_csv(f"{args.outdir}/scop_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     interpro_protein_rels.to_csv(f"{args.outdir}/interpro_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    procoggraph_node = pd.DataFrame({"procoggraph:ID(procoggraph-id)": ["procoggraph"],
+                                     "name": ["ProCogGraph"],
+                                     "description": ["procoggraph"],
+                                     "date_created": ["2023"],
+                                     "date_updated": ["2023"],
+                                     "database_version": ["0.1"],
+                                     "biological_ligands_version": ["0.1"],
+                                     "pdbe_graph_version": ["0.1"],
+                                     "pdbe_graph_scripts_version": ["0.1"],
+                                     "pdbe_graph_data_version": ["0.1"],
+                                     "input_params": ["-"],})
+    
+    procoggraph_node.to_csv(f"{args.outdir}/procoggraph_node.csv.gz", compression = "gzip", sep = "\t", index = False)
 
 if __name__ == "__main__":
     main()
