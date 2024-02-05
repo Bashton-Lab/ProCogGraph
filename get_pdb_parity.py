@@ -88,7 +88,8 @@ def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, 
     else:
         with redirect_stderr(f):
             try:
-                ligand_rdkit = Chem.MolFromSmiles(smiles)
+                #repeat canonicalisation to ensure best possible parity score
+                ligand_rdkit = Chem.MolFromSmiles(Chem.CanonSmiles(smiles))
             except Exception as e:
                 for idx, row in compound_df_subset.iterrows():
                     compound = row["canonical_smiles"]
@@ -105,6 +106,8 @@ def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, 
                 if rdkit_compound in [None, np.nan]:
                     scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": compound, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0}
                 else:
+                    #repeat canonicalisation to ensure best possible parity score
+                    rdkit_compound = Chem.MolFromSmiles(Chem.CanonSmiles(row["canonical_smiles"]))
                     parity = compare_molecules(ligand_rdkit, rdkit_compound)
                     score = parity.similarity_score
                     mol1_atom_count = ligand_rdkit.GetNumAtoms()
