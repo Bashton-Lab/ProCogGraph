@@ -79,7 +79,7 @@ def get_terminal_record(entry, row, df):
     return row.ID
 
 def get_csdb_from_glycoct(glycoct):
-    if glycoct is np.nan:
+    if glycoct is np.nan or glycoct is None:
         return np.nan
     else:
         url = "http://csdb.glycoscience.ru/database/core/convert_api.php"
