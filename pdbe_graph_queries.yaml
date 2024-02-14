@@ -2,21 +2,46 @@ make_index: |
   CREATE INDEX FOR (i:Interpro) ON (i.ENTRY_TYPE);
   CREATE INDEX FOR (p:Entity) ON (p.TYPE);
 
+bound_ligand_query: |
+    MATCH
+    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})<-[c:HAS_ENTITY]-(a:Entry)-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})
+    WHERE
+    e.EC IS NOT NULL AND
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
+    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
+    ORDER BY bm_uniqid, bl_uniqid
+    RETURN pdb_id, protein_entity_id, ligand_entity_id, bl_uniqid, COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
+
+bound_sugar_query: |
+    MATCH
+    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "s", POLYMER_TYPE: "S"})<-[c:HAS_ENTITY]-(a:Entry)-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})
+    WHERE
+    e.EC IS NOT NULL AND
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
+    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
+    ORDER BY bm_uniqid, bl_uniqid
+    RETURN pdb_id, protein_entity_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
+
 cath_bl_query: |
     MATCH
-    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND cd.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
     p.ID as ligand_entity_id_numerical,
     p.DESCRIPTION as ligand_entity_description,
@@ -33,6 +58,7 @@ cath_bl_query: |
     c.HOMOL as cath_homology,
     c.NAME as cath_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
@@ -45,19 +71,24 @@ cath_bl_query: |
 
 cath_sugar_query: |
     MATCH
-    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (c:CATH)<-[cd:IS_IN_CATH_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND cd.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
     p.ID as ligand_entity_id_numerical,
     p.DESCRIPTION as ligand_entity_description,
@@ -74,6 +105,7 @@ cath_sugar_query: |
     c.HOMOL as cath_homology,
     c.NAME as cath_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
@@ -86,23 +118,27 @@ cath_sugar_query: |
 
 scop_bl_query: |
     MATCH
-    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry) 
+    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND sd.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -117,8 +153,9 @@ scop_bl_query: |
     sd.SCOP_ID as scop_id,
     sd.AUTH_ASYM_ID as scop_chain_id,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -129,23 +166,27 @@ scop_bl_query: |
 
 scop_sugar_query: |
     MATCH
-    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry) 
+    (s:SCOP)<-[sd:IS_IN_SCOP_DOMAIN]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
     Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND sd.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -160,8 +201,9 @@ scop_sugar_query: |
     sd.SCOP_ID as scop_id,
     sd.AUTH_ASYM_ID as scop_chain_id,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -172,23 +214,27 @@ scop_sugar_query: |
 
 interpro_d_bl_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -198,8 +244,9 @@ interpro_d_bl_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -210,23 +257,27 @@ interpro_d_bl_query: |
 
 interpro_d_sugar_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "D"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -236,8 +287,9 @@ interpro_d_sugar_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -248,23 +300,27 @@ interpro_d_sugar_query: |
 
 interpro_f_bl_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -274,8 +330,9 @@ interpro_f_bl_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -286,23 +343,27 @@ interpro_f_bl_query: |
 
 interpro_f_sugar_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "F"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -312,8 +373,9 @@ interpro_f_sugar_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -324,23 +386,27 @@ interpro_f_sugar_query: |
 
 interpro_h_bl_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 'b', POLYMER_TYPE : 'B'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 'b', POLYMER_TYPE : 'B', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -350,8 +416,9 @@ interpro_h_bl_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
@@ -362,23 +429,27 @@ interpro_h_bl_query: |
 
 interpro_h_sugar_query: |
     MATCH
-    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]->(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE : 's', POLYMER_TYPE : 'S'})-[x:IS_AN_INSTANCE_OF]->(bl),
-    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity {TYPE : 'p', POLYMER_TYPE : 'P'})<-[z:HAS_ENTITY]-(a:Entry)
+    (i:Interpro {ENTRY_TYPE: "H"})<-[ip:IS_IN_INTERPRO]-(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand {UNIQID: $bl_uniqid})-[part:IS_PART_OF]->(bm:BoundMolecule {UNIQID: $bm_uniqid})-[k:HAS_ENTITY]->(p:Entity  {TYPE : 's', POLYMER_TYPE : 'S', UNIQID: $ligand_entity_uniqid})-[x:IS_AN_INSTANCE_OF]->(bl),
+    (pr)<-[y:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P', UNIQID: $protein_entity_uniqid})<-[z:HAS_ENTITY]-(a:Entry {ID: $pdb_id})
     WHERE
+    (part.SYM_OPERATOR = $sym_op OR part.SYM_OPERATOR IS NULL) AND 
     e.EC IS NOT NULL AND
-    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']"
+    Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" 
     AND ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND Arp.SYM_OP_1 = part.SYM_OPERATOR
+    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR)
     AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     RETURN DISTINCT
-    a.ID as pdb_id, 
+    a.ID as pdb_id,
+    a.TITLE as pdb_title,
+    a.DESCRIPTOR as pdb_descriptor,
+    a.KEYWORDS as pdb_keywords,
     e.UNIQID as protein_entity_id,
     e.BEST_CHAIN_ID as pdb_best_chain_id,
     e.EC as protein_entity_ec,
-    bl.UNIQID as bound_ligand_entity_id,
+    e.DESCRIPTION as protein_entity_description,
     p.UNIQID as ligand_entity_id, 
-    p.DESCRIPTION as ligand_entity_description,
     p.ID as ligand_entity_id_numerical,
+    p.DESCRIPTION as ligand_entity_description,
     p.TYPE as ligand_entity_type,
     p.BEST_CHAIN_ID as bound_ligand_best_chain_id, 
     p.POLYMER_TYPE as ligand_entity_polymer_type, 
@@ -388,8 +459,9 @@ interpro_h_sugar_query: |
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
     bm.UNIQID as bound_molecule_id,
+    bm.ID as bound_molecule_display_id,
     bl.UNIQID as bound_ligand_id, 
-    bl.AUTH_COMP_ID as bound_ligand_name,
+    bl.CHEM_COMP_ID as bound_ligand_name,
     Arp.AUTH_SEQ_ID_2 as pdb_residue_auth_id,
     Arp.AUTH_SEQ_ID_1 as bound_ligand_auth_id,
     Arp.CONTACT_TYPE as contact_type, 
