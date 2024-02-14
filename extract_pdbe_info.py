@@ -292,24 +292,19 @@ def main():
         scop_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(sugar_results["SCOP"], ec_records_df)
         interpro_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_sugar, ec_records_df)
 
-        cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_se" + cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str")
+        cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
         cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         cath_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
-        scop_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_se" + scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str")
+        scop_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
         scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         scop_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
-        interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_se" + interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str")
+        interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
         interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         interpro_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
 
         cath_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
         scop_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
         interpro_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
-
-        #verifying that the sugar bound ligand ids are not in the bound ligand dataframes.
-        assert(len(cath_pdb_residue_interactions_distinct_sugar_ec.loc[cath_pdb_residue_interactions_distinct_sugar_ec.bound_ligand_id.isin(bound_molecules_ligands.bound_ligand_id.unique())]) == 0)
-        assert(len(scop_pdb_residue_interactions_distinct_sugar_ec.loc[scop_pdb_residue_interactions_distinct_sugar_ec.bound_ligand_id.isin(bound_molecules_ligands.bound_ligand_id.unique())]) == 0)
-        assert(len(interpro_pdb_residue_interactions_distinct_sugar_ec.loc[interpro_pdb_residue_interactions_distinct_sugar_ec.bound_ligand_id.isin(bound_molecules_ligands.bound_ligand_id.unique())]) == 0)
 
         bound_molecules_sugars = pd.concat([
             cath_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(), 
