@@ -316,12 +316,23 @@ def main():
         print("Getting KEGG Enzyme records")
         n=10 #chunk size
         enzyme_records = {}
-        for i in range(0, len(ec_list), n):
-            print(f"Processing chunk {i} of {len(ec_list)}")
-            chunk = ec_list[i:i + n]
-            enzyme_dict = get_kegg_enzymes(chunk)
+        enzyme_string_list = []
+        if args.kegg_enzyme_string is not None:
+            print("Loading enzyme records from text file.")
+            enzyme_dict, enzyme_string = get_kegg_enzymes(ec_list, enzyme_string_file = args.kegg_enzyme_string)
             enzyme_records.update(enzyme_dict)
-            time.sleep(1)
+        else:
+            print("Fetching enzyme records from KEGG API")
+            for i in range(0, len(ec_list), n):
+                print(f"Processing chunk {i} of {len(ec_list)}")
+                chunk = ec_list[i:i + n]
+                enzyme_dict, enzyme_string = get_kegg_enzymes(chunk)
+                enzyme_records.update(enzyme_dict)
+                enzyme_string_list.append(enzyme_string)
+                time.sleep(1)
+            enzyme_string_list_joined = "\n".join(enzyme_string_list)
+            with open(f"{args.outdir}/kegg_enzyme_strings.txt", "w") as file:
+                file.write(enzyme_string_list_joined)
 
         kegg_enzyme_df = pd.DataFrame(enzyme_records).T
         kegg_enzyme_df = kegg_enzyme_df.explode("EC_reactions")
@@ -332,16 +343,26 @@ def main():
         kegg_enzyme_df = pd.read_pickle(f"{args.outdir}/kegg_enzyme_df.pkl")
         print("KEGG Enzyme records loaded from file")
     reactions = kegg_enzyme_df.EC_reactions.dropna().unique()
-
+    #we should first of all compile all of the function outputs into a single text file.
     if not os.path.exists(f"{args.outdir}/kegg_reaction_df.pkl"):
         print("Getting KEGG Reaction records")
         kegg_reaction_dictionary = {}
-        n=10 #chunk size
-        for i in range(0, len(reactions), n):
-            chunk = reactions[i:i + n]
-            reaction_dictionary = get_kegg_reactions(chunk)
-            kegg_reaction_dictionary.update(reaction_dictionary)
-            time.sleep(1)
+        kegg_reaction_strings = []
+        if args.kegg_reaction_string is not None:
+            print("Loading reaction records from text file.")
+            kegg_reaction_dictionary, kegg_reaction_string = get_kegg_reactions(reactions, reactions_string_file = args.kegg_reaction_string)
+        else:
+            print("Fetching reaction records from KEGG API")
+            n=10 #chunk size
+            for i in range(0, len(reactions), n):
+                chunk = reactions[i:i + n]
+                reaction_dictionary, reaction_string = get_kegg_reactions(chunk)
+                kegg_reaction_dictionary.update(reaction_dictionary)
+                kegg_reaction_strings.append(reaction_string)
+                time.sleep(1)
+            kegg_reaction_strings_joined = "\n".join(kegg_reaction_strings)
+            with open(f"{args.outdir}/kegg_reaction_strings.txt", "w") as file:
+                file.write(kegg_reaction_strings_joined)
 
         kegg_reaction_df = pd.DataFrame(kegg_reaction_dictionary).T
         assert(len(kegg_reaction_df.loc[kegg_reaction_df.reaction_definition.str.len() > 1]) == 0) #what is this assertion for? 
