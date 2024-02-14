@@ -286,11 +286,11 @@ def main():
     parser.add_argument('--ec_dat', type=str, help='Path to enzyme.dat file from EXPASY')
     parser.add_argument('--pubchem', type=str, help='Path to pubchem_substance_id_mapping file')
     parser.add_argument('--chebi', type=str, help='Path to chebi_kegg_file')
-    parser.add_argument('--rhea_mapping', type=str, help='Path to rhea-directions.tsv file')
-    parser.add_argument('--rhea_reactions', type=str, help='Path to rhea-reaction-smiles.tsv file')
-    parser.add_argument('--rhea2ec', type=str, help='Path to rhea2ec.tsv file')
+    parser.add_argument('--rhea_reactions', type=str, help='Path to preprocessed rhea-reaction dataframe')
     parser.add_argument('--outdir', type=str, help='Path to output directory')
-
+    parser.add_argument('--kegg_enzyme_string', type=str, default = None, help='Path to kegg_enzyme_strings.txt file, cached from previous run')
+    parser.add_argument('--kegg_reaction_string', type=str, default = None, help='Path to kegg_reaction_strings.txt file, cached from previous run')
+    
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
