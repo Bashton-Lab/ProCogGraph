@@ -103,39 +103,48 @@ def extract_secondary_id(identifier, database_list, current_db = ""):
     
     return database, identifier
 
-def get_kegg_reactions(chunk):
+def get_kegg_reactions(chunk, reactions_string_file = None):
     kegg_reaction_dictionary = {}
-    response = requests.get(f'https://rest.kegg.jp/get/{ "+".join(chunk)}')
-    if response.status_code == 200:
-        responses_string = response.text
-        responses_string = responses_string.split("///")
-        for item in responses_string:
-            record = item.split("\n")
-            for line in record:
-                if line.startswith('ENTRY'):
-                    entry = line.split()[1]
-                elif line.startswith('DEFINITION'):
-                    definition = line.split(maxsplit = 1)[1:]
-                elif line.startswith('EQUATION'):
-                    equation = line.split(maxsplit = 1)[1:][0]
-
-            substrates, products = equation.split(' <=> ')
-            substrate_codes = re.findall(r'\b[C|G]\d+\b', substrates)
-            product_codes = re.findall(r'\b[C|G]\d+\b', products)
-            kegg_reaction_dictionary[entry] = {"reaction_id": entry, 
-                                               "reaction_definition" : definition, 
-                                               "reaction_equation": equation, 
-                                               "reaction_substrates": substrates, 
-                                               "reaction_products" : products, 
-                                               "reaction_substrate_codes" : substrate_codes, 
-                                               "reaction_product_codes" : product_codes}
+    if not reactions_string_file:
+        response = requests.get(f'https://rest.kegg.jp/get/{ "+".join(chunk)}')
+        if response.status_code == 200:
+            responses_string = response.text
+        else:
             for reaction in chunk:
-                if reaction not in kegg_reaction_dictionary.keys():
-                    kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
+                kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
+            responses_string = ""
+            return kegg_reaction_dictionary, responses_string
     else:
+        with open(reactions_string_file, "r") as file:
+            responses_string = file.read()
+        
+    responses_string_split = responses_string.split("///")
+    for item in responses_string_split:
+        record = item.split("\n")
+        for line in record:
+            if line.startswith('ENTRY'):
+                entry = line.split()[1]
+            elif line.startswith('DEFINITION'):
+                definition = line.split(maxsplit = 1)[1:]
+            elif line.startswith('EQUATION'):
+                equation = line.split(maxsplit = 1)[1:][0]
+            elif line.startswith('ENZYME'):
+                enzyme = line.split(maxsplit = 1)[1:]
+        substrates, products = equation.split(' <=> ')
+        substrate_codes = re.findall(r'\b[C|G]\d+\b', substrates)
+        product_codes = re.findall(r'\b[C|G]\d+\b', products)
+        kegg_reaction_dictionary[entry] = {"reaction_id": entry, 
+                                            "reaction_definition" : definition, 
+                                            "reaction_equation": equation, 
+                                            "reaction_substrates": substrates, 
+                                            "reaction_products" : products, 
+                                            "reaction_substrate_codes" : substrate_codes, 
+                                            "reaction_product_codes" : product_codes}
         for reaction in chunk:
-            kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
-    return kegg_reaction_dictionary
+            if reaction not in kegg_reaction_dictionary.keys():
+                kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
+    
+    return kegg_reaction_dictionary, responses_string
 
 
 #pubchem listkeys may speed this up? https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest-tutorial#section=Dealing-with-Lists-of-Identifiers
