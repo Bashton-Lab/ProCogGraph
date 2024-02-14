@@ -89,6 +89,17 @@ class Neo4jConnection:
                 session.close()
         return response
 
+
+import concurrent.futures
+from rich.progress import Progress
+
+def process_row(conn, progress, task, row, query):
+    if len(row.bm_bl_sym_ops) == 0:
+        row.bm_bl_sym_ops = [""]
+    result = conn.query(query, db='neo4j', pdb_id=row.pdb_id, protein_entity_uniqid=row.protein_entity_id, ligand_entity_uniqid=row.ligand_entity_id, bl_uniqid=row.bl_uniqid, bm_uniqid=row.bm_uniqids[0], sym_op = row.bm_bl_sym_ops[0])
+    progress.update(task, advance=1)
+    return result
+
 def parse_table_data(elem):
     data = {}
     for row in elem.findall('row'):
@@ -144,75 +155,76 @@ def main():
         except yaml.YAMLError as exc:
             print(exc)
 
-    cath_pdb_residue_interactions_query_distinct_bl = pdbe_graph_queries["cath_bl_query"]
-    cath_pdb_residue_interactions_query_distinct_sugar = pdbe_graph_queries["cath_sugar_query"]
-    scop_pdb_residue_interactions_query_distinct_bl = pdbe_graph_queries["scop_bl_query"]
-    scop_pdb_residue_interactions_query_distinct_sugar = pdbe_graph_queries["scop_sugar_query"]
-    interpro_pdb_residue_interactions_query_distinct_bl_d = pdbe_graph_queries["interpro_d_bl_query"] 
-    interpro_pdb_residue_interactions_query_distinct_sugar_d = pdbe_graph_queries["interpro_d_sugar_query"]
-    interpro_pdb_residue_interactions_query_distinct_bl_f = pdbe_graph_queries["interpro_f_bl_query"]
-    interpro_pdb_residue_interactions_query_distinct_sugar_f = pdbe_graph_queries["interpro_f_sugar_query"]
-    interpro_pdb_residue_interactions_query_distinct_bl_h = pdbe_graph_queries["interpro_h_bl_query"]
-    interpro_pdb_residue_interactions_query_distinct_sugar_h = pdbe_graph_queries["interpro_h_sugar_query"]
+    bl_queries = {
+        "CATH" : pdbe_graph_queries["cath_bl_query"],
+        "SCOP" : pdbe_graph_queries["scop_bl_query"],
+        "InterProDomain" : pdbe_graph_queries["interpro_d_bl_query"],
+        "InterProFamily" : pdbe_graph_queries["interpro_f_bl_query"],
+        "InterProHomologousSuperfamily" : pdbe_graph_queries["interpro_h_bl_query"]}
+    
+    sugar_queries = {
+        "CATH" : pdbe_graph_queries["cath_sugar_query"],
+        "SCOP" : pdbe_graph_queries["scop_sugar_query"],
+        "InterProDomain" : pdbe_graph_queries["interpro_d_sugar_query"],
+        "InterProFamily" : pdbe_graph_queries["interpro_f_sugar_query"],
+        "InterProHomologousSuperfamily" : pdbe_graph_queries["interpro_h_sugar_query"]}
 
     Path(f"{args.outdir}").mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(f"{args.outdir}/bound_molecules_ligands.csv.gz"):
-        if not os.path.exists(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl.csv.gz"):
-            print("Retrieving cath_pdb_residue_interactions_distinct_bl")
-            cath_pdb_residue_interactions_distinct_bl = pd.DataFrame([dict(_) for _ in conn.query(cath_pdb_residue_interactions_query_distinct_bl, db='neo4j')])
-            cath_pdb_residue_interactions_distinct_bl.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip")
+        if not os.path.exists(f"{args.outdir}/bound_ligand_entities_search.csv.gz"):
+            print("Retrieving bound_ligand_entities_search")
+            bound_ligand_entities_search = pd.DataFrame([dict(_) for _ in conn.query(pdbe_graph_queries["bound_ligand_query"], db='neo4j')])
+            bound_ligand_entities_search["bm_uniqids"] = bound_ligand_entities_search["bm_uniqids"].str.join(",")
+            bound_ligand_entities_search["bm_bl_sym_ops"] = bound_ligand_entities_search["bm_bl_sym_ops"].str.join(",")
+            bound_ligand_entities_search.to_csv(f"{args.outdir}/bound_ligand_entities_search.csv.gz", compression = "gzip")
         else:
-            print("Loading cath_pdb_residue_interactions_distinct_bl")
-            cath_pdb_residue_interactions_distinct_bl = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+            print("Loading bound_entities_search")
+            bound_ligand_entities_search = pd.read_csv(f"{args.outdir}/bound_ligand_entities_search.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        bound_ligand_entities_search["bm_uniqids"] = bound_ligand_entities_search["bm_uniqids"].str.split(",")
+        bound_ligand_entities_search["bm_bl_sym_ops"] = bound_ligand_entities_search["bm_bl_sym_ops"].str.split(",")
+        bl_results = {}
+        with Progress() as progress:
+            total_rows = len(bound_ligand_entities_search)
+            for db, query in bl_queries.items():
+                task = progress.add_task(f"[cyan]Processing {db} bound ligands...", total=total_rows)
+                if not os.path.exists(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz"):
+                    print(f"Retrieving {db}_pdb_residue_interactions_distinct_bl")
+                    results = []
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_entities_search.iterrows()]
+                        for future in concurrent.futures.as_completed(futures):
+                            results.extend(future.result())
 
-        if not os.path.exists(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl.csv.gz"):
-            print("Retrieving scop_pdb_residue_interactions_distinct_bl")
-            scop_pdb_residue_interactions_distinct_bl = pd.DataFrame([dict(_) for _ in conn.query(scop_pdb_residue_interactions_query_distinct_bl, db='neo4j')])
-            scop_pdb_residue_interactions_distinct_bl.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip")
-        else:
-            print("Loading scop_pdb_residue_interactions_distinct_bl")
-            scop_pdb_residue_interactions_distinct_bl = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-        
-        if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl.csv.gz"):
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_d.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_bl_d")
-                interpro_pdb_residue_interactions_distinct_bl_d = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_bl_d, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_bl_d.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_d.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_bl_d")
-                interpro_pdb_residue_interactions_distinct_bl_d = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_d.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-            
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_f.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_bl_f")
-                interpro_pdb_residue_interactions_distinct_bl_f = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_bl_f, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_bl_f.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_f.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_bl_f")
-                interpro_pdb_residue_interactions_distinct_bl_f = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_f.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+                    # Convert results to DataFrame
+                    result_df = pd.DataFrame([dict(_) for _ in results])
+                    result_df = result_df.merge(bound_ligand_entities_search[["bl_uniqid", "bm_uniqids", "bm_bl_sym_ops"]], left_on = "bound_ligand_id", right_on = "bl_uniqid", how = "left", indicator = True)
+                    assert(len(result_df.loc[result_df["_merge"] != "both"]) == 0)
+                    result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
+                    result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
+                    result_df.drop(columns = ["_merge", "bl_uniqid", "bound_molecule_id"], inplace = True)
+                    result_df.to_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip")
+                    bl_results[db] = result_df
+                    del(results)
+                else:
+                    result_df = pd.read_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+                    bl_results[db] = result_df
+                    progress.update(task, advance=total_rows)
 
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_h.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_bl_h")
-                interpro_pdb_residue_interactions_distinct_bl_h = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_bl_h, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_bl_h.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_h.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_bl_h")
-                interpro_pdb_residue_interactions_distinct_bl_h = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_h.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-            interpro_pdb_residue_interactions_distinct_bl = pd.concat([interpro_pdb_residue_interactions_distinct_bl_d,
-                                                                    interpro_pdb_residue_interactions_distinct_bl_f,
-                                                                    interpro_pdb_residue_interactions_distinct_bl_h])
-            interpro_pdb_residue_interactions_distinct_bl.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip")
+            print("Concatenating interpro bound ligand interactions")
+            interpro_pdb_residue_interactions_bl = pd.concat([bl_results["InterProDomain"], bl_results["InterProFamily"], bl_results["InterProHomologousSuperfamily"]])                                                                    
+            interpro_pdb_residue_interactions_bl.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bl.csv.gz", compression = "gzip")
 
         print("Updating ligand EC records")
-        cath_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(cath_pdb_residue_interactions_distinct_bl, ec_records_df)
-        scop_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(scop_pdb_residue_interactions_distinct_bl, ec_records_df)
-        interpro_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_distinct_bl, ec_records_df)
+        cath_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(bl_results["CATH"], ec_records_df)
+        scop_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(bl_results["SCOP"], ec_records_df)
+        interpro_pdb_residue_interactions_distinct_bl_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_bl, ec_records_df)
 
-        cath_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_bl_ec["bound_molecule_id"] + "_" + cath_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
+        cath_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
         cath_pdb_residue_interactions_distinct_bl_ec["type"] = "ligand"
-        scop_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_bl_ec["bound_molecule_id"] + "_" + scop_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
+        scop_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
         scop_pdb_residue_interactions_distinct_bl_ec["type"] = "ligand"
-        interpro_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_bl_ec["bound_molecule_id"] + "_" + interpro_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
+        interpro_pdb_residue_interactions_distinct_bl_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_bl_ec["bound_ligand_id"].astype("str")
         interpro_pdb_residue_interactions_distinct_bl_ec["type"] = "ligand"
 
         cath_pdb_residue_interactions_distinct_bl_ec.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz", index = False, compression = "gzip")
@@ -229,60 +241,56 @@ def main():
         bound_molecules_ligands = pd.read_csv(f"{args.outdir}/bound_molecules_ligands.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars.csv.gz"):
-    
-        if not os.path.exists(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar.csv.gz"):
-            print("Retrieving cath_pdb_residue_interactions_distinct_sugar")
-            cath_pdb_residue_interactions_distinct_sugar = pd.DataFrame([dict(_) for _ in conn.query(cath_pdb_residue_interactions_query_distinct_sugar, db='neo4j')])
-            cath_pdb_residue_interactions_distinct_sugar.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip")
+        if not os.path.exists(f"{args.outdir}/bound_sugars_entities_search.csv.gz"):
+            print("Retrieving bound_sugars_entities_search")
+            bound_sugars_entities_search = pd.DataFrame([dict(_) for _ in conn.query(pdbe_graph_queries["bound_sugar_query"], db='neo4j')])
+            bound_sugars_entities_search["bm_uniqids"] = bound_sugars_entities_search["bm_uniqids"].str.join(",")
+            bound_sugars_entities_search["bm_bl_sym_ops"] = bound_sugars_entities_search["bm_bl_sym_ops"].str.join(",")
+            bound_sugars_entities_search.to_csv(f"{args.outdir}/bound_sugars_entities_search.csv.gz", compression = "gzip")
         else:
-            print("Loading cath_pdb_residue_interactions_distinct_sugar")
-            cath_pdb_residue_interactions_distinct_sugar = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
-        if not os.path.exists(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar.csv.gz"):
-            print("Retrieving scop_pdb_residue_interactions_distinct_sugar")
-            scop_pdb_residue_interactions_distinct_sugar = pd.DataFrame([dict(_) for _ in conn.query(scop_pdb_residue_interactions_query_distinct_sugar, db='neo4j')])
-            scop_pdb_residue_interactions_distinct_sugar.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip")
-        else:
-            print("Loading scop_pdb_residue_interactions_distinct_sugar")
-            scop_pdb_residue_interactions_distinct_sugar = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
-        if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar.csv.gz"):
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_d.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_sugar_d")
-                interpro_pdb_residue_interactions_distinct_sugar_d = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_sugar_d, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_sugar_d.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_d.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_sugar_d")
-                interpro_pdb_residue_interactions_distinct_sugar_d = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_d.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_f.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_sugar_f")
-                interpro_pdb_residue_interactions_distinct_sugar_f = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_sugar_f, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_sugar_f.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_f.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_sugar_f")
-                interpro_pdb_residue_interactions_distinct_sugar_f = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_f.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-            
-            if not os.path.exists(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_h.csv.gz"):
-                print("Retrieving interpro_pdb_residue_interactions_distinct_sugar_h")
-                interpro_pdb_residue_interactions_distinct_sugar_h = pd.DataFrame([dict(_) for _ in conn.query(interpro_pdb_residue_interactions_query_distinct_sugar_h, db='neo4j')])
-                interpro_pdb_residue_interactions_distinct_sugar_h.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_h.csv.gz", compression = "gzip")
-            else:
-                print("Loading interpro_pdb_residue_interactions_distinct_sugar_h")
-                interpro_pdb_residue_interactions_distinct_sugar_h = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_h.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+            print("Loading bound_sugars_entities_search")
+            bound_sugars_entities_search = pd.read_csv(f"{args.outdir}/bound_sugars_entities_search.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         
-            interpro_pdb_residue_interactions_distinct_sugar = pd.concat([interpro_pdb_residue_interactions_distinct_sugar_d,
-                                                                    interpro_pdb_residue_interactions_distinct_sugar_f,
-                                                                    interpro_pdb_residue_interactions_distinct_sugar_h])
-            interpro_pdb_residue_interactions_distinct_sugar.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip")
-        else:
-            print("Loading interpro_pdb_residue_interactions_distinct_sugar")
-            interpro_pdb_residue_interactions_distinct_sugar = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        bound_sugars_entities_search["bm_uniqids"] = bound_sugars_entities_search["bm_uniqids"].str.split(",")
+        bound_sugars_entities_search["bm_bl_sym_ops"] = bound_sugars_entities_search["bm_bl_sym_ops"].str.split(",")
+
+        sugar_results = {}
+        with Progress() as progress:
+            total_rows = len(bound_sugars_entities_search)
+            for db, query in sugar_queries.items():
+                task = progress.add_task(f"[cyan]Processing {db} bound sugars...", total=total_rows)
+                if not os.path.exists(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_sugar.csv.gz"):
+                    print(f"Retrieving {db}_pdb_residue_interactions_distinct_sugar")
+                    results = []
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugars_entities_search.iterrows()]
+                        for future in concurrent.futures.as_completed(futures):
+                            results.extend(future.result())
+
+                    # Convert results to DataFrame
+                    result_df = pd.DataFrame([dict(_) for _ in results])
+                    result_df = result_df.merge(bound_sugars_entities_search[["bl_uniqid", "bm_uniqids", "bm_bl_sym_ops"]], left_on = "bound_ligand_id", right_on = "bl_uniqid", how = "left", indicator = True)
+                    assert(len(result_df.loc[result_df["_merge"] != "both"]) == 0)
+                    result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
+                    result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
+                    result_df.drop(columns = "_merge", inplace = True)
+                    result_df.to_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip")
+                    sugar_results[db] = result_df
+                    del(results)
+                else:
+                    result_df = pd.read_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_sugar.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+                    sugar_results[db] = result_df
+                    progress.update(task, advance=total_rows)
+
+            print("Concatenating bound_molecules_sugars")
+            interpro_pdb_residue_interactions_sugar = pd.concat([sugar_results["InterProDomain"], sugar_results["InterProFamily"], sugar_results["InterProHomologousSuperfamily"]])                                                                    
+            interpro_pdb_residue_interactions_sugar.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_sugar.csv.gz", compression = "gzip")
+
 
         print("Updating sugar EC records")
-        cath_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(cath_pdb_residue_interactions_distinct_sugar, ec_records_df)
-        scop_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(scop_pdb_residue_interactions_distinct_sugar, ec_records_df)
-        interpro_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_distinct_sugar, ec_records_df)
+        cath_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(sugar_results["CATH"], ec_records_df)
+        scop_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(sugar_results["SCOP"], ec_records_df)
+        interpro_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_sugar, ec_records_df)
 
         cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_se" + cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str")
         cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
