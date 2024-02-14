@@ -26,12 +26,15 @@ from utils import get_terminal_record, get_csdb_from_glycoct
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
-def get_kegg_enzymes(ec_list):
+def get_kegg_enzymes(ec_list, enzyme_string_file = None):
     def extract_reaction(enzyme_record):
         reaction_list = enzyme_record.reaction
         rn_numbers = []
         for reaction_str in reaction_list:
-            rn_numbers.extend(re.findall(r'\[RN:(R\d+)\]', reaction_str))
+                reaction_ids = re.findall(r'\[RN:(.*)\]', reaction_str)
+                for reaction in reaction_ids:
+                    reactions = set(reaction.split())
+                    rn_numbers.extend(reactions)
         if len(rn_numbers) > 0:
             return rn_numbers
         else:
@@ -44,30 +47,36 @@ def get_kegg_enzymes(ec_list):
             return matches
         else:
             return np.nan    
-    
-    response = requests.get(f'https://rest.kegg.jp/get/{"+".join(ec_list)}')
-    enzyme_dict = {}
-    if response.status_code == 200:
-        enzyme_list = list(Enzyme.parse(io.StringIO(response.text)))
-        enzyme_dict = {item.entry : {"entry": item.entry, 
-                                     "error" : np.nan, 
-                                     "matched_name" : item.name[0], 
-                                     "reaction_text" : item.reaction, 
-                                     "EC_substrate_codes" : extract_compound_codes(','.join(item.substrate)) if isinstance(item.substrate, list) else [],
-                                     "EC_product_codes" : extract_compound_codes(','.join(item.product)) if isinstance(item.product, list) else [],
-                                     "EC_dbxrefs": item.dblinks, 
-                                     "EC_reactions" : extract_reaction(item)} for item in enzyme_list}
-                    
-        if set(enzyme_dict.keys()) != set(ec_list):
-            missing_ecs = list(set(ec_list) - set(enzyme_dict.keys()))
-            for missing_ec in missing_ecs:
-                enzyme_dict[missing_ec] = {"entry" : missing_ec, "error" : "KEGG API did not return result"}
-            
+    if not enzyme_string_file:
+        response = requests.get(f'https://rest.kegg.jp/get/{"+".join(ec_list)}')
+        if response.status_code == 200:
+            response_string = response.text
+        else:
+            response_string = ""
+            for ec in ec_list:
+                enzyme_dict[ec] = {"entry" : ec, "error" : f"KEGG API returned status code {response.status_code}"}
+            return enzyme_dict, response_string
     else:
-        for ec in ec_list:
-            enzyme_dict[ec] = {"entry" : ec, "error" : f"KEGG API returned status code {response.status_code}"}
+        with open(enzyme_string_file, "r") as file:
+            response_string = file.read()
+    enzyme_dict = {}
     
-    return enzyme_dict
+    enzyme_list = list(Enzyme.parse(io.StringIO(response_string)))
+    enzyme_dict = {item.entry : {"entry": item.entry, 
+                                    "error" : np.nan, 
+                                    "matched_name" : item.name[0], 
+                                    "reaction_text" : item.reaction, 
+                                    "EC_substrate_codes" : extract_compound_codes(','.join(item.substrate)) if isinstance(item.substrate, list) else [],
+                                    "EC_product_codes" : extract_compound_codes(','.join(item.product)) if isinstance(item.product, list) else [],
+                                    "EC_dbxrefs": item.dblinks, 
+                                    "EC_reactions" : extract_reaction(item)} for item in enzyme_list}
+                
+    if set(enzyme_dict.keys()) != set(ec_list):
+        missing_ecs = list(set(ec_list) - set(enzyme_dict.keys()))
+        for missing_ec in missing_ecs:
+            enzyme_dict[missing_ec] = {"entry" : missing_ec, "error" : "KEGG API did not return result"}
+    
+    return enzyme_dict, response_string
 
 def extract_secondary_id(identifier, database_list, current_db = ""):
     #takes the identifier, and the database list
