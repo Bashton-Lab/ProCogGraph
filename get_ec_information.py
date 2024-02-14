@@ -444,32 +444,10 @@ def main():
 
 
     #the rhea reactions can have identical molecules on left and right hand side, so should drop duplicates for final df.
-    if not os.path.exists(f"{args.outdir}/kegg_enzyme_df_rhea.pkl"):
-        print("Getting RHEA records")
-        rhea_mapping = pd.read_csv(f"{args.rhea_mapping}", sep = "\t")
-        rhea_reactions = pd.read_csv(f"{args.rhea_reactions}", sep = "\t", header = None, names = ["REACTION_ID", "REACTION"])
-        rhea2ec = pd.read_csv(f"{args.rhea2ec}", sep = "\t")
-
-        rhea_mapping_merged = rhea_mapping.merge(rhea2ec, left_on = "RHEA_ID_MASTER", right_on = "MASTER_ID", how = "right")
-
-        #we use the left-to-right mapping of the reaction for identifying smiles strings for the compounds
-        rhea_mapping_merged_reactions = rhea_mapping_merged.merge(rhea_reactions, left_on = "RHEA_ID_LR", right_on = "REACTION_ID", how = "left")
-        rhea_mapping_merged_reactions = rhea_mapping_merged_reactions.loc[rhea_mapping_merged_reactions.REACTION.isna() == False].copy()
-        kegg_enzyme_df_rhea = kegg_enzyme_df.merge(rhea_mapping_merged_reactions, left_on = "entry", right_on = "ID", how = "inner")
-        
-        kegg_enzyme_df_rhea = kegg_enzyme_df_rhea.loc[kegg_enzyme_df_rhea.REACTION.isna() == False].copy()
-        kegg_enzyme_df_rhea["REACTANT"] = kegg_enzyme_df_rhea["REACTION"].str.split(r">>|\.")
-        kegg_enzyme_df_rhea = kegg_enzyme_df_rhea.explode("REACTANT")
-        kegg_enzyme_df_rhea = kegg_enzyme_df_rhea.drop_duplicates(subset = ["entry", "REACTANT"])
-        kegg_enzyme_df_rhea.reset_index(drop = True, inplace = True)
-        PandasTools.AddMoleculeColumnToFrame(kegg_enzyme_df_rhea, smilesCol='REACTANT')
-
-        kegg_enzyme_df_rhea = kegg_enzyme_df_rhea.loc[kegg_enzyme_df_rhea.ROMol.isna() == False].reset_index(drop = True)
-        kegg_enzyme_df_rhea["ligand_db"] = "RHEA:" + kegg_enzyme_df_rhea["RHEA_ID"].astype("str")
-        kegg_enzyme_df_rhea.to_pickle(f"{args.outdir}/kegg_enzyme_df_rhea.pkl")
-        print("RHEA records saved")
+    if not args.rhea_reactions:
+        raise ValueError("RHEA reactions file not provided")
     else:
-        kegg_enzyme_df_rhea = pd.read_pickle(f"{args.outdir}/kegg_enzyme_df_rhea.pkl")
+        rhea_reactions = pd.read_pickle(args.rhea_reactions)
         print("RHEA records loaded from file")
     ### ChEBI KEGG Mapping
     if not os.path.exists(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_chebi.pkl"):
@@ -602,13 +580,15 @@ def main():
                 'fr_methoxy', 'fr_morpholine', 'fr_nitrile', 'fr_nitro', 'fr_nitro_arom', 'fr_nitro_arom_nonortho', 'fr_nitroso', 'fr_oxazole', 'fr_oxime', 'fr_para_hydroxylation', 'fr_phenol', 
                 'fr_phenol_noOrthoHbond', 'fr_phos_acid', 'fr_phos_ester', 'fr_piperdine', 'fr_piperzine', 'fr_priamide', 'fr_prisulfonamd', 'fr_pyridine', 'fr_quatN', 'fr_sulfide', 'fr_sulfonamd', 
                 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'qed']
-        #kegg_enzyme_df_rhea[["entry", "ROMol", "ligand_db"]],  removign rhea from concat - if adding back 
+        #,  removign rhea from concat - if adding back 
         # create molecular descriptor calculator
         mol_descriptor_calculator = MolecularDescriptorCalculator(descriptors)
-        biological_ligands_df = pd.concat([kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
+        biological_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db"]],
+                                           kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "name", "compound_id","ROMol", "ligand_db"]].rename(columns = {"name": "compound_name"})])
+        
         biological_ligands_df = biological_ligands_df.reset_index()
         
 
