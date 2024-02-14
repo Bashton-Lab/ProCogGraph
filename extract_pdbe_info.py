@@ -57,7 +57,7 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
 
 from neo4j import __version__ as neo4j_version,  GraphDatabase
 print(f"Neo4j python package version: {neo4j_version}")
-#class is from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
+#class is adapted from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
 import pandas as pd
 class Neo4jConnection:
     
@@ -75,13 +75,13 @@ class Neo4jConnection:
         if self.__driver is not None:
             self.__driver.close()
         
-    def query(self, query, db=None):
+    def query(self, query, db=None, **kwargs):
         assert self.__driver is not None, "Driver not initialized!"
         session = None
         response = None
         try: 
             session = self.__driver.session(database=db) if db is not None else self.__driver.session() 
-            response = list(session.run(query))
+            response = list(session.run(query, **kwargs))
         except Exception as e:
             print("Query failed:", e)
         finally: 
