@@ -53,6 +53,7 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
     df_merged = df.merge(residue_ec_records_grouped, on = ec_col, how = "left", indicator = True)
     assert(len(df_merged.loc[df_merged["_merge"] != "both"]) == 0)
     df_merged.drop(columns = "_merge", inplace = True)
+    df_merged = df_merged.loc[df_merged.ec_list != ""] #remove any rows where the ec_list is empty - we cant process these anyway.
     return(df_merged)
 
 from neo4j import __version__ as neo4j_version,  GraphDatabase
@@ -250,8 +251,8 @@ def main():
         scop_pdb_residue_interactions_distinct_bl_ec.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz", index = False, compression = "gzip")
         interpro_pdb_residue_interactions_distinct_bl_ec.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz", index = False, compression = "gzip")
         
-        bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_distinct_bl_ec[["bound_molecule_id", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_distinct_bl_ec[["bound_molecule_id", "bound_ligand_id"]].drop_duplicates(),
-            interpro_pdb_residue_interactions_distinct_bl_ec[["bound_molecule_id", "bound_ligand_id"]].drop_duplicates()])
+        bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_distinct_bl_ec[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_distinct_bl_ec[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(),
+            interpro_pdb_residue_interactions_distinct_bl_ec[["bm_uniqids", "bound_ligand_id"]].drop_duplicates()])
         print("Saving bound_molecules_ligands")
         bound_molecules_ligands.to_csv(f"{args.outdir}/bound_molecules_ligands.csv.gz", index = False, compression = "gzip")
 
