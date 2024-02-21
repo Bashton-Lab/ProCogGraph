@@ -211,7 +211,7 @@ def main():
                 if not os.path.exists(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz"):
                     print(f"Retrieving {db}_pdb_residue_interactions_distinct_bl")
                     results = []
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
                         futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_entities_search.iterrows()]
                         for future in concurrent.futures.as_completed(futures):
                             results.extend(future.result())
@@ -259,7 +259,10 @@ def main():
     else:
         print("Loading bound_molecules_ligands")
         bound_molecules_ligands = pd.read_csv(f"{args.outdir}/bound_molecules_ligands.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-        
+        cath_pdb_residue_interactions_distinct_bl_ec = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        scop_pdb_residue_interactions_distinct_bl_ec = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        interpro_pdb_residue_interactions_distinct_bl_ec = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars.csv.gz"):
         if not os.path.exists(f"{args.outdir}/bound_sugars_entities_search.csv.gz"):
             print("Retrieving bound_sugars_entities_search")
@@ -282,7 +285,7 @@ def main():
                 if not os.path.exists(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_sugar.csv.gz"):
                     print(f"Retrieving {db}_pdb_residue_interactions_distinct_sugar")
                     results = []
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
                         futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugars_entities_search.iterrows()]
                         for future in concurrent.futures.as_completed(futures):
                             results.extend(future.result())
@@ -331,15 +334,18 @@ def main():
         interpro_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
 
         bound_molecules_sugars = pd.concat([
-            cath_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(), 
-            scop_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates(),
-            interpro_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bound_molecule_id", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates()
+            cath_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates() , 
+            scop_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates() ,
+            interpro_pdb_residue_interactions_distinct_sugar_ec[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec"]].drop_duplicates()
             ])
         bound_molecules_sugars.to_csv(f"{args.outdir}/bound_molecules_sugars.csv.gz", index = False, compression = "gzip")
     else:
         print("Loading bound_molecules_sugars")
         bound_molecules_sugars = pd.read_csv(f"{args.outdir}/bound_molecules_sugars.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-    
+        cath_pdb_residue_interactions_distinct_sugar_ec = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        scop_pdb_residue_interactions_distinct_sugar_ec = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        interpro_pdb_residue_interactions_distinct_sugar_ec = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_ec_exploded.csv.gz"):
         print("retrieving sugar CIF records")
 
@@ -357,7 +363,7 @@ def main():
         branched_entity_list = []
         reader = CifFileReader()
         for cif_id in cif_ids:
-            cif_path = f'sugar_cifs/{cif_id}_updated.cif'
+            cif_path = f'{args.outdir}/sugar_cifs/{cif_id}_updated.cif'
             cif_dict = reader.read(cif_path, output='cif_dictionary')
             cif_df = pd.DataFrame(cif_dict)
             if "_pdbx_entity_branch_descriptor" in cif_df.index:
@@ -391,8 +397,7 @@ def main():
         bound_molecules_sugars_ec.to_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded.csv.gz", compression = "gzip")
     else:
         print("Loading bound_molecules_sugars_ec_exploded")
-        bound_molecules_sugars_ec = pd.read_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
+        bound_molecules_sugars_ec = pd.read_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded.csv.gz", compression = "gzip")
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_smiles.pkl"):
         print("retrieving sugar smiles")
         if not os.path.exists(f"{args.outdir}/bound_sugars_to_score.pkl"):
@@ -434,39 +439,79 @@ def main():
             bound_molecules_sugars_ec = pd.read_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded_smiles.csv.gz", compression = "gzip")
             
 
-        missing_ligand_index = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.descriptor.isna(), ["pdb_id", "entity_id"]].drop_duplicates()
+        missing_ligand_index = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.descriptor.isna(), ["uniqueID"]].drop_duplicates()
         missing_ligand_index["missing_ligand_index"] = missing_ligand_index.reset_index(drop=True).reset_index().index + bound_molecules_sugars_ec.ligand_index.max() + 1
 
-        bound_molecules_sugars_ec = bound_molecules_sugars_ec.merge(missing_ligand_index, on = ["pdb_id", "entity_id"], how = "left")
+        bound_molecules_sugars_ec = bound_molecules_sugars_ec.merge(missing_ligand_index, on = ["uniqueID"], how = "left")
         bound_molecules_sugars_ec["ligand_index"].fillna(bound_molecules_sugars_ec["missing_ligand_index"], inplace=True)
         bound_molecules_sugars_ec.drop(columns = "missing_ligand_index", inplace = True)
         bound_molecules_sugars_ec["descriptor"].fillna("SMILES unavailable", inplace = True)
-
         bound_molecules_sugars_ec.to_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
+
+        cath_pre_shape = len(cath_pdb_residue_interactions_distinct_sugar_ec)
+        cath_pdb_residue_interactions_distinct_sugar_ec_id = cath_pdb_residue_interactions_distinct_sugar_ec.merge(bound_molecules_sugars_ec[["ligand_index", "uniqueID", "descriptor"]].drop_duplicates().rename(columns = {"ligand_index": "ligand_uniqueID"}), on = "uniqueID", how = "left", indicator = True, validate = "many_to_one")
+        assert(len(cath_pdb_residue_interactions_distinct_sugar_ec_id) == cath_pre_shape)
+        assert(len(cath_pdb_residue_interactions_distinct_sugar_ec_id.loc[cath_pdb_residue_interactions_distinct_sugar_ec_id._merge != "both"]) == 0)
+        cath_pdb_residue_interactions_distinct_sugar_ec_id.drop(columns = ["_merge"], inplace = True)
+        cath_pdb_residue_interactions_distinct_sugar_ec_id.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar_ec_id.csv.gz", index = False, compression = "gzip")
+
+        scop_pre_shape = len(scop_pdb_residue_interactions_distinct_sugar_ec)
+        scop_pdb_residue_interactions_distinct_sugar_ec_id = scop_pdb_residue_interactions_distinct_sugar_ec.merge(bound_molecules_sugars_ec[["ligand_index", "uniqueID", "descriptor"]].drop_duplicates().rename(columns = {"ligand_index": "ligand_uniqueID"}), on = "uniqueID", how = "left", indicator = True, validate = "many_to_one")
+        assert(len(scop_pdb_residue_interactions_distinct_sugar_ec_id) == scop_pre_shape)
+        assert(len(scop_pdb_residue_interactions_distinct_sugar_ec_id.loc[scop_pdb_residue_interactions_distinct_sugar_ec_id._merge != "both"]) == 0)
+        scop_pdb_residue_interactions_distinct_sugar_ec_id.drop(columns = ["_merge"], inplace = True)
+        scop_pdb_residue_interactions_distinct_sugar_ec_id.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar_ec_id.csv.gz", index = False, compression = "gzip")
+
+        interpro_pre_shape = len(interpro_pdb_residue_interactions_distinct_sugar_ec)
+        interpro_pdb_residue_interactions_distinct_sugar_ec_id = interpro_pdb_residue_interactions_distinct_sugar_ec.merge(bound_molecules_sugars_ec[["ligand_index", "uniqueID", "descriptor"]].drop_duplicates().rename(columns = {"ligand_index": "ligand_uniqueID"}), on = "uniqueID", how = "left", indicator = True, validate = "many_to_one")
+        assert(len(interpro_pdb_residue_interactions_distinct_sugar_ec_id) == interpro_pre_shape)
+        assert(len(interpro_pdb_residue_interactions_distinct_sugar_ec_id.loc[interpro_pdb_residue_interactions_distinct_sugar_ec_id._merge != "both"]) == 0)
+        interpro_pdb_residue_interactions_distinct_sugar_ec_id.drop(columns = ["_merge"], inplace = True)
+        interpro_pdb_residue_interactions_distinct_sugar_ec_id.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_sugar_ec_id.csv.gz", index = False, compression = "gzip")
+
     else:
         print("Loading bound_molecules_sugars_smiles")
         bound_molecules_sugars_ec = pd.read_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
         bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
         
+    if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
+        bound_ligands_to_score = pd.concat([cath_pdb_residue_interactions_distinct_bl_ec[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]],
+                                            scop_pdb_residue_interactions_distinct_bl_ec[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]],
+                                            interpro_pdb_residue_interactions_distinct_bl_ec[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]]]).drop_duplicates()
+                                   
+        bound_ligands_to_score = bound_ligands_to_score.groupby(["bound_ligand_name", "descriptor"]).agg({"ec_list": set, "ligand_entity_description": "first"}).reset_index()
+                                   
         bound_ligands_to_score = bound_ligands_to_score.reset_index().rename(columns = {"index" : "ligand_entity_id"})
         bound_ligands_to_score["ligand_entity_id"] = bound_ligands_to_score["ligand_entity_id"] + bound_molecules_sugars_ec.ligand_index.max() + 1 #plus one because of 0 index to avoid overlaps
+        
+        cath_pdb_residue_interactions_distinct_bl_ec_id = cath_pdb_residue_interactions_distinct_bl_ec.merge(bound_ligands_to_score[["bound_ligand_name", "ligand_entity_id"]].rename(columns = {"ligand_entity_id": "ligand_uniqueID"}), on = "bound_ligand_name", how = "left", indicator = True)
+        assert(len(cath_pdb_residue_interactions_distinct_bl_ec_id.loc[cath_pdb_residue_interactions_distinct_bl_ec_id._merge != "both"]) == 0)
+        cath_pdb_residue_interactions_distinct_bl_ec_id.drop(columns = "_merge", inplace = True)
+        cath_pdb_residue_interactions_distinct_bl_ec_id.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_bl_ec_id.csv.gz", index = False, compression = "gzip")
+
+        scop_pdb_residue_interactions_distinct_bl_ec_id = scop_pdb_residue_interactions_distinct_bl_ec.merge(bound_ligands_to_score[["bound_ligand_name", "ligand_entity_id"]].rename(columns = {"ligand_entity_id": "ligand_uniqueID"}), on = "bound_ligand_name", how = "left", indicator = True)
+        assert(len(scop_pdb_residue_interactions_distinct_bl_ec_id.loc[scop_pdb_residue_interactions_distinct_bl_ec_id._merge != "both"]) == 0)
+        scop_pdb_residue_interactions_distinct_bl_ec_id.drop(columns = "_merge", inplace = True)
+        scop_pdb_residue_interactions_distinct_bl_ec_id.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_bl_ec_id.csv.gz", index = False, compression = "gzip")
+
+        interpro_pdb_residue_interactions_distinct_bl_ec_id = interpro_pdb_residue_interactions_distinct_bl_ec.merge(bound_ligands_to_score[["bound_ligand_name", "ligand_entity_id"]].rename(columns = {"ligand_entity_id": "ligand_uniqueID"}), on = "bound_ligand_name", how = "left", indicator = True)
+        assert(len(interpro_pdb_residue_interactions_distinct_bl_ec_id.loc[interpro_pdb_residue_interactions_distinct_bl_ec_id._merge != "both"]) == 0)
+        interpro_pdb_residue_interactions_distinct_bl_ec_id.drop(columns = "_merge", inplace = True)
+        interpro_pdb_residue_interactions_distinct_bl_ec_id.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions_distinct_bl_ec_id.csv.gz", index = False, compression = "gzip")
+        
+        bound_ligands_to_score.rename(columns = {"bound_ligand_name": "bl_name"}, inplace = True)
         bound_ligands_to_score.to_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
+    else:
+        print("Loading bound_ligands_to_score")
+        bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
 
-        bound_ligand_descriptors =  bound_ligand_descriptors.merge(bound_ligands_to_score[["bl_name", "descriptor", "ligand_entity_id"]].rename(columns = {"ligand_entity_id":"ligand_index"}), on = ["bl_name", "descriptor"], how = "left", indicator = True)
-        assert(len(bound_ligand_descriptors.loc[bound_ligand_descriptors._merge != "both"]) == 0)
-        bound_ligand_descriptors.drop(columns = "_merge", inplace = True)
-        bound_ligand_descriptors.to_pickle(f"{args.outdir}/bound_ligand_descriptors.pkl")
-
+    if not os.path.exists(f"{args.outdir}/bound_entities_to_score.pkl"):
         bound_entities_to_score = pd.concat([bound_sugars_to_score[["ligand_entity_id", "bl_name", "ligand_entity_description", "descriptor", "ec_list"]], bound_ligands_to_score])
+        assert(bound_entities_to_score.ligand_entity_id.value_counts().max() == 1)
         bound_entities_to_score.to_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
-
     else:
         print("Loading bound_entities_to_score")
-        bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
-
-    #consider dropping the retrieval of ligand_entity_id from graph. We remove it in the domain_ownership script anyway.
-    #also consider using a different name to ligand_entity_id for the index in scoring - can even do ligand index , just need to update the scoring script for this change.
-    #now do a summary of all the data before exiting.
+        bound_entities_to_score = pd.read_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
 
 if __name__ == "__main__":
     main()
