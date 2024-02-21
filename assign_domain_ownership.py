@@ -38,16 +38,16 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     ligands_df["domain_hbond_perc"] = ligands_df.domain_hbond_counts / ligands_df.total_contact_counts
     ligands_df["domain_contact_perc"] = ligands_df.domain_contact_counts / ligands_df.total_contact_counts
     ligands_df["domain_ownership"] = np.where(
-        ligands_df["domain_covalent_counts"] > 0, "covalent_binding_domain",
+        ligands_df["domain_covalent_counts"] > 0, "covalent",
         np.where(
-            ligands_df["domain_contact_perc"] == 1, "uniquely_binding_domain",
+            ligands_df["domain_contact_perc"] == 1, "unique",
             np.where(
-                ligands_df["domain_contact_perc"] >= 0.7, "dominant_binding_domain",
+                ligands_df["domain_contact_perc"] >= 0.7, "dominant",
                 np.where(
                     (ligands_df["domain_contact_perc"] >= 0.3)
-                    & (ligands_df["domain_contact_perc"] < 0.7), "partner_binding_domain",
+                    & (ligands_df["domain_contact_perc"] < 0.7), "partner",
                     np.where(
-                        ligands_df["domain_contact_perc"] < 0.3, "minor_binding_domain", np.nan)
+                        ligands_df["domain_contact_perc"] < 0.3, "minor", np.nan)
                 )
             )
         )
@@ -82,7 +82,9 @@ def complete_unmatched_domains(df, class_codes, fold_codes, superfamily_codes):
     df.drop(columns = ["_merge", "sf_description_y", "sf_id_y"], inplace = True)
     return df
 
-#
+def sorted_set(x):
+    return sorted(set(x))
+
 def main():
     parser = argparse.ArgumentParser(description = 'TO DO')
     parser.add_argument('--cath_bl_residue_interactions_file', metavar = '', type = str,
@@ -111,18 +113,22 @@ def main():
     cath_bl_residue_df.rename(columns = {"bound_ligand_name": "name"}, inplace = True)
     cath_sugar_residue_df = pd.read_csv(f"{args.cath_sugar_residue_interactions_file}", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
     cath_sugar_residue_df.rename(columns = {"ligand_entity_description": "name"}, inplace = True)
-    #uniqueID assignment should be done in the script which generates the residue interaction files.
-    #should also add the ligand type here.
     
     cath_bl_residue_df["contact_type"] = cath_bl_residue_df["contact_type"].apply(literal_eval)
     cath_bl_residue_df_domains = assign_ownership_percentile_categories(cath_bl_residue_df.copy(), "uniqueID", "cath_domain")
-    cath_bl_domains = cath_bl_residue_df_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "cath_domain", "cath_class", "cath_architecture", "cath_topology","cath_homology", "cath_name", "bound_molecule_id", "bound_ligand_id", "name", "uniqueID", "type","total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
+    cath_cols = ["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_id", "protein_entity_ec", "ec_list", "cath_domain", "cath_class", "cath_architecture", "cath_topology","cath_homology", "cath_name", "cath_code", "bm_uniqids", "bound_molecule_display_id", "name", "uniqueID", "bound_ligand_id", "ligand_uniqueID", "type","total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "protein_chain_id", "bound_ligand_struct_asym_id"]
+    cath_bl_residue_df_domains["pdb_descriptor"] = cath_bl_residue_df_domains["pdb_descriptor"].fillna("")
+    cath_bl_domains = cath_bl_residue_df_domains.groupby(cath_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    cath_bl_domains["pdb_residue_auth_id"] = cath_bl_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    cath_bl_domains["bound_ligand_auth_id"] = cath_bl_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     cath_bl_domains.drop_duplicates(inplace = True)
     cath_bl_domains.to_csv(f"{args.outdir}/cath_bl_domain_ownership.csv", index = False)
 
     cath_sugar_residue_df["contact_type"] = cath_sugar_residue_df["contact_type"].apply(literal_eval)
     cath_sugar_residue_df_domains = assign_ownership_percentile_categories(cath_sugar_residue_df.copy(), "uniqueID", "cath_domain")
-    cath_sugar_domains = cath_sugar_residue_df_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "cath_domain", "cath_class", "cath_architecture", "cath_topology","cath_homology", "cath_name", "bound_molecule_id", "bound_ligand_id", "uniqueID", "name", "type", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
+    cath_sugar_domains = cath_sugar_residue_df_domains.groupby(cath_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    cath_sugar_domains["pdb_residue_auth_id"] = cath_sugar_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    cath_sugar_domains["bound_ligand_auth_id"] = cath_sugar_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     cath_sugar_domains.drop_duplicates(inplace = True)
     cath_sugar_domains.to_csv(f"{args.outdir}/cath_sugar_domain_ownership.csv", index = False)
 
@@ -151,7 +157,12 @@ def main():
     scop_bl_residue_df["contact_type"] = scop_bl_residue_df["contact_type"].apply(literal_eval)
     scop_bl_residue_df_domains = assign_ownership_percentile_categories(scop_bl_residue_df.copy(), "uniqueID", "scop_id")
 
-    scop_bl_domains = scop_bl_residue_df_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "scop_sunid","scop_description", "scop_sccs", "scop_class_id", "scop_fold_id", "scop_superfamily_id", "scop_id", "bound_molecule_id", "bound_ligand_id", "name", "uniqueID", "type", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
+    scop_cols = ["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_id", "protein_entity_ec", "ec_list", "scop_sunid","scop_description", "scop_sccs", "scop_class_id", "scop_fold_id", "scop_superfamily_id", "scop_id", "bm_uniqids", "bound_molecule_display_id", "name", "uniqueID", "bound_ligand_id", "ligand_uniqueID", "type","total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "protein_chain_id", "bound_ligand_struct_asym_id"]
+    scop_bl_residue_df_domains["pdb_descriptor"] = scop_bl_residue_df_domains["pdb_descriptor"].fillna("")
+
+    scop_bl_domains = scop_bl_residue_df_domains.groupby(scop_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    scop_bl_domains["pdb_residue_auth_id"] = scop_bl_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    scop_bl_domains["bound_ligand_auth_id"] = scop_bl_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     scop_bl_domains.drop_duplicates(inplace = True)
 
     scop_bl_domains = scop_bl_domains.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
@@ -169,8 +180,10 @@ def main():
     scop_sugar_residue_df.rename(columns = {"ligand_entity_description": "name"}, inplace = True)
     scop_sugar_residue_df["contact_type"] = scop_sugar_residue_df["contact_type"].apply(literal_eval)
     scop_sugar_residue_df_domains = assign_ownership_percentile_categories(scop_sugar_residue_df.copy(), "uniqueID", "scop_id")
-
-    scop_sugar_domains = scop_sugar_residue_df_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "scop_sunid","scop_description", "scop_sccs", "scop_class_id", "scop_fold_id", "scop_superfamily_id", "scop_id", "bound_molecule_id", "bound_ligand_id", "uniqueID", "type", "name", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
+    scop_sugar_residue_df_domains["pdb_descriptor"] = scop_sugar_residue_df_domains["pdb_descriptor"].fillna("")
+    scop_sugar_domains = scop_sugar_residue_df_domains.groupby(scop_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    scop_sugar_domains["pdb_residue_auth_id"] = scop_sugar_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    scop_sugar_domains["bound_ligand_auth_id"] = scop_sugar_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     scop_sugar_domains.drop_duplicates(inplace = True)
 
     scop_sugar_domains = scop_sugar_domains.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
@@ -200,8 +213,11 @@ def main():
 
     interpro_bl_domains = pd.concat([interpro_bl_residue_df_d_domains, interpro_bl_residue_df_f_domains, interpro_bl_residue_df_h_domains])
 
-    interpro_bl_domains = interpro_bl_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "interpro_accession", "interpro_name", "interpro_type", "bound_molecule_id", "bound_ligand_id", "name", "uniqueID", "type", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
-
+    interpro_cols = ["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_id", "protein_entity_ec", "ec_list", "interpro_accession", "interpro_name", "interpro_type", "bm_uniqids", "bound_molecule_display_id", "name", "uniqueID", "bound_ligand_id", "ligand_uniqueID", "type", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "protein_chain_id", "bound_ligand_struct_asym_id"]
+    interpro_bl_domains["pdb_descriptor"] = interpro_bl_domains["pdb_descriptor"].fillna("")
+    interpro_bl_domains = interpro_bl_domains.groupby(interpro_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    interpro_bl_domains["pdb_residue_auth_id"] = interpro_bl_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    interpro_bl_domains["bound_ligand_auth_id"] = interpro_bl_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     interpro_bl_domains.drop_duplicates(inplace = True)
     interpro_bl_domains.to_csv(f"{args.outdir}/interpro_bl_domain_ownership.csv", index = False)
 
@@ -219,7 +235,10 @@ def main():
     interpro_sugar_residue_df_h_domains = assign_ownership_percentile_categories(interpro_sugar_residue_df_h.copy(), "uniqueID", "interpro_accession")
 
     interpro_sugar_domains = pd.concat([interpro_sugar_residue_df_d_domains,interpro_sugar_residue_df_f_domains,interpro_sugar_residue_df_h_domains])
-    interpro_sugar_domains = interpro_sugar_domains[["pdb_id", "protein_entity_id", "protein_entity_ec", "ec_list", "interpro_accession", "interpro_name", "interpro_type", "bound_molecule_id", "bound_ligand_id", "uniqueID", "type", "name", "total_contact_counts", "domain_contact_counts", "domain_hbond_counts", "domain_contact_perc", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership"]].copy()
+    interpro_sugar_domains["pdb_descriptor"] = interpro_sugar_domains["pdb_descriptor"].fillna("")
+    interpro_sugar_domains = interpro_sugar_domains.groupby(interpro_cols, dropna = False).agg({"pdb_residue_auth_id": sorted_set, "bound_ligand_auth_id": sorted_set}).reset_index()
+    interpro_sugar_domains["pdb_residue_auth_id"] = interpro_sugar_domains["pdb_residue_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
+    interpro_sugar_domains["bound_ligand_auth_id"] = interpro_sugar_domains["bound_ligand_auth_id"].apply(lambda x: "|".join(str(res) for res in x))
     interpro_sugar_domains.drop_duplicates(inplace = True)
     interpro_sugar_domains.to_csv(f"{args.outdir}/interpro_sugar_domain_ownership.csv", index = False)
 
