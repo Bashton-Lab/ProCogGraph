@@ -124,8 +124,27 @@ def main():
         help = ""),
     parser.add_argument('--pdbe_graph_yaml', type = str, default = "pdbe_graph.yaml",
         help = "")
+    parser.add_argument('--glycoct_cache', type = str,
+        help = "glycoct cache file")
+    parser.add_argument('--smiles_cache', type = str,
+        help = "smiles cache file")
+    parser.add_argument('--csdb_linear_cache', type = str,
+        help = "csdb linear cache file")
     
     args = parser.parse_args()
+    if args.glycoct_cache:
+        glycoct_cache = pd.read_pickle(args.glycoct_cache)
+    else:
+        glycoct_cache = pd.DataFrame(columns = ["WURCS", "glycoct"])
+    if args.smiles_cache:
+        smiles_cache = pd.read_pickle(args.smiles_cache)
+    else:
+        smiles_cache = pd.DataFrame(columns = ["csdb", "descriptor"])
+    if args.csdb_linear_cache:
+        csdb_linear_cache = pd.read_pickle(args.csdb_linear_cache)
+    else:
+        csdb_linear_cache = pd.DataFrame(columns = ["glycoct", "csdb"])
+        
 
     print("Connecting to neo4j")
     conn = Neo4jConnection(uri=f"{args.neo4j_bolt_uri}", user=f"{args.neo4j_user}", pwd=f"{args.neo4j_password}")
@@ -375,12 +394,21 @@ def main():
             bound_sugars_to_score = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.WURCS != "WURCS not available", ["ligand_entity_description","WURCS", "ec_list"]].drop_duplicates()
             bound_sugars_to_score = bound_sugars_to_score.groupby(["ligand_entity_description","WURCS"]).agg({"ec_list": set}).reset_index()
 
-            bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x))
+            bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x, glycoct_cache))
+            new_glycoct_values = bound_sugars_to_score.loc[bound_sugars_to_score.WURCS.isin(glycoct_cache.WURCS.values) == False, ["glycoct","WURCS"]].drop_duplicates()
+            glycoct_cache = pd.concat([glycoct_cache, new_glycoct_values], ignore_index = True)
+            glycoct_cache.to_pickle(f"{args.outdir}/glycoct_cache.pkl")
             bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isna() == False]
 
-            bound_sugars_to_score["csdb"] = bound_sugars_to_score["glycoct"].apply(lambda x: get_csdb_from_glycoct(x))
-            bound_sugars_to_score["descriptor"] = bound_sugars_to_score["csdb"].apply(lambda x: get_smiles_from_csdb(x))
-
+            bound_sugars_to_score["csdb"] = bound_sugars_to_score["glycoct"].apply(lambda x: get_csdb_from_glycoct(x, csdb_linear_cache))
+            new_csdb_values = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isin(csdb_linear_cache.glycoct.values) == False, ["csdb","glycoct"]].drop_duplicates()
+            csdb_linear_cache = pd.concat([csdb_linear_cache, new_csdb_values], ignore_index = True)
+            csdb_linear_cache.to_pickle(f"{args.outdir}/csdb_linear_cache.pkl")
+            bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.csdb.isna() == False]
+            bound_sugars_to_score["descriptor"] = bound_sugars_to_score["csdb"].apply(lambda x: get_smiles_from_csdb(x, smiles_cache))
+            new_smiles_values = bound_sugars_to_score.loc[bound_sugars_to_score.csdb.isin(smiles_cache.csdb.values) == False, ["descriptor","csdb"]].drop_duplicates()
+            smiles_cache = pd.concat([smiles_cache, new_smiles_values], ignore_index = True)
+            smiles_cache.to_pickle(f"{args.outdir}/smiles_cache.pkl")
             bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.descriptor.isna() == False]
 
             bound_sugars_to_score = bound_sugars_to_score.reset_index()
@@ -388,13 +416,18 @@ def main():
             bound_sugars_to_score = bound_sugars_to_score.reset_index().rename(columns = {"index": "ligand_index"})
 
             bound_molecules_sugars_ec = bound_molecules_sugars_ec.merge(bound_sugars_to_score[["ligand_entity_description", "ligand_index", "WURCS", "descriptor"]], on = ["ligand_entity_description","WURCS"], how = "left")
-
+            
             bound_sugars_to_score["bl_name"] = bound_sugars_to_score["ligand_entity_description"]
+            
+            bound_molecules_sugars_ec.to_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded_smiles.csv.gz", compression = "gzip", index = False)
+            
             bound_sugars_to_score.rename(columns = {"ligand_index": "ligand_entity_id"}, inplace = True) #do this to run sugars in parity calcs
             bound_sugars_to_score.to_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
         else:
             print("Loading bound_sugars_to_score")
             bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
+            bound_molecules_sugars_ec = pd.read_csv(f"{args.outdir}/bound_molecules_sugars_ec_exploded_smiles.csv.gz", compression = "gzip")
+            
 
         missing_ligand_index = bound_molecules_sugars_ec.loc[bound_molecules_sugars_ec.descriptor.isna(), ["pdb_id", "entity_id"]].drop_duplicates()
         missing_ligand_index["missing_ligand_index"] = missing_ligand_index.reset_index(drop=True).reset_index().index + bound_molecules_sugars_ec.ligand_index.max() + 1

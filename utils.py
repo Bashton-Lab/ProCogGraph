@@ -78,9 +78,11 @@ def get_terminal_record(entry, row, df):
         row = df.loc[df.ID == transfers[0]].iloc[0]
     return row.ID
 
-def get_csdb_from_glycoct(glycoct):
-    if glycoct is np.nan or glycoct is None:
+def get_csdb_from_glycoct(glycoct, cache_df):
+    if glycoct is np.nan or glycoct == None:
         return np.nan
+    elif glycoct in cache_df.glycoct.values:
+        csdb_linear = cache_df.loc[cache_df.glycoct == glycoct, "csdb"].values[0]
     else:
         url = "http://csdb.glycoscience.ru/database/core/convert_api.php"
         data = {"glycoct":glycoct}
@@ -96,27 +98,37 @@ def get_csdb_from_glycoct(glycoct):
                     break
         else:
             csdb_linear = np.nan
-        return csdb_linear
-    
-def get_glycoct_from_wurcs(wurcs):
-    url = "https://api.glycosmos.org/glycanformatconverter/2.8.2/wurcs2glycoct"
-    data = {"input":wurcs}
-    headers = {'Content-Type': 'application/json'}
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    
-    if response.status_code == 200:
-        response_data = response.json()
-        if 'message' in response_data and response_data['message'] == 'Returned null.':
-            glycoct = np.nan
-        else:
-            glycoct = response_data['GlycoCT']
-    else:
-        glycoct = np.nan
-    return glycoct
 
-def get_smiles_from_csdb(csdb_linear):
-    if csdb_linear is np.nan:
+    return csdb_linear
+    
+def get_glycoct_from_wurcs(wurcs, cache_df):
+    if wurcs is np.nan or wurcs == None:
         return np.nan
+    elif wurcs in cache_df.WURCS.values:
+        glycoct = cache_df.loc[cache_df.WURCS == wurcs, "glycoct"].values[0]
+        return glycoct
+    else:
+        url = "https://api.glycosmos.org/glycanformatconverter/2.8.2/wurcs2glycoct"
+        data = {"input":wurcs}
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+
+        if response.status_code == 200:
+            response_data = response.json()
+            if 'message' in response_data and response_data['message'] == 'Returned null.':
+                glycoct = np.nan
+            else:
+                glycoct = response_data['GlycoCT']
+        else:
+            glycoct = np.nan
+        return glycoct
+
+def get_smiles_from_csdb(csdb_linear, cache_df):
+    if csdb_linear is np.nan or csdb_linear == None:
+        return np.nan
+    elif csdb_linear in cache_df.csdb.values:
+        smiles = cache_df.loc[cache_df.csdb == csdb_linear, "descriptor"].values[0]
+        return smiles
     else:
         response = requests.get(f"http://csdb.glycoscience.ru/database/core/convert_api.php?csdb={quote(csdb_linear)}&format=smiles")
         mol = np.nan
@@ -130,5 +142,5 @@ def get_smiles_from_csdb(csdb_linear):
                     smiles = a.contents[0].strip()
                     break
         else:
-            smiles = np.nan   
+            smiles = np.nan 
         return smiles
