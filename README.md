@@ -129,7 +129,52 @@ The ProCogGraph database is created using Neo4J. The database is created using t
 2. Copy the Neo4j files from the `neo4j` folder into the `import` folder in the Neo4J Database.
 3. Run the admin-import tool:
 ```
-bin/neo4j-admin database import full --array-delimiter="|" --skip-bad-relationships --delimiter="\t" --nodes=boundMolecule=import/bound_molecules.csv --nodes=boundEntity=import/bound_entities.csv --relationships=CONTAINS=import/bm_be_rels.csv --nodes=biologicalLigand=import/biological_ligand_nodes.csv --relationships=HAS_SIMILARITY=import/bound_entity_parity_score_rels.csv.gz --nodes=ecID=import/ec_id_nodes.csv --relationships=IS_IN_EC=import/biological_ligands_ec.csv --nodes=ecClass=import/ec_nodes_class.csv --relationships=IS_IN_CLASS=import/ec_class_subclass_rel.csv --nodes=ecSubClass=import/ec_nodes_subclass.csv --relationships=IS_IN_SUBCLASS=import/ec_subclass_subsubclass_rel.csv --nodes=ecSubSubClass=import/ec_nodes_subsubclass.csv --relationships=IS_IN_SUBSUBCLASS=import/ec_subsubclass_id_rel.csv --nodes=scopDomain=import/scop_domains_nodes.csv --relationships=IS_IN_SCOP_FAMILY=import/scop_domain_family_rels.csv --nodes=scopFamily=import/scop_family_nodes.csv --relationships=IS_IN_SCOP_SUPERFAMILY=import/scop_family_superfam_rels.csv --nodes=scopSuperfamily=import/scop_superfamily_nodes.csv --relationships=IS_IN_SCOP_FOLD=import/scop_superfam_fold_rels.csv --nodes=scopFold=import/scop_fold_nodes.csv --relationships=IS_IN_SCOP_CLASS=import/scop_fold_class_rels.csv --nodes=IS_IN_SCOP_CLASS=import/scop_class_nodes.csv --nodes=cathClass=import/cath_class_nodes.csv --relationships=IS_IN_CATH_CLASS=import/cath_class_architecture_rels.csv --nodes=cathArchitecture=import/cath_architecture_nodes.csv --relationships=IS_IN_CATH_ARCHITECTURE=import/cath_architecture_topology_rels.csv --nodes=cathTopology=import/cath_topology_nodes.csv --relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_homology_rels.csv --nodes=cathHomology=import/cath_homology_nodes.csv --relationships=IS_IN_CATH_HOMOLOGY=import/cath_homology_domain_rels.csv --nodes=cathDomain=import/cath_domains_nodes.csv --nodes=interproDomain=import/interpro_domain_nodes.csv --relationships=INTERACTS_WITH_LIGAND=import/scop_domain_ligand_interactions.csv --relationships=INTERACTS_WITH_LIGAND=import/cath_domain_ligand_interactions.csv --relationships=INTERACTS_WITH_LIGAND=import/interpro_domain_ligand_interactions.csv --nodes=proteinChain=import/pdb_protein_chain_nodes.csv --nodes=entry=import/pdb_entry_nodes.csv --relationships=IS_IN_PDB=import/bound_molecules_pdb_rels.csv --relationships=IS_IN_PDB=import/pdb_protein_rels.csv --relationships=IS_IN_PROTEIN_CHAIN=import/cath_protein_rels.csv --relationships=IS_IN_PROTEIN_CHAIN=import/scop_protein_rels.csv --relationships=IS_IN_PROTEIN_CHAIN=import/interpro_protein_rels.csv --relationships=IS_IN_EC=import/protein_ec_rels.csv --overwrite-destination neo4j
+bin/neo4j-admin database import full --array-delimiter="|" --skip-bad-relationships \
+--delimiter="\t" \
+--nodes=boundEntity=import/bound_entities.csv.gz \
+--nodes=boundDescriptor=import/bound_descriptors.csv.gz \
+--relationships=DESCRIBED_BY=import/be_bd_rels.csv.gz \
+--nodes=cognateLigand=import/cognate_ligand_nodes.csv.gz \
+--relationships=HAS_SIMILARITY=import/bound_entity_parity_score_rels.csv.gz \
+--nodes=ecID=import/ec_id_nodes.csv.gz \
+--relationships=IS_IN_EC=import/cognate_ligands_ec.csv.gz \
+--nodes=ecClass=import/ec_nodes_class.csv.gz \
+--relationships=IS_IN_CLASS=import/ec_class_subclass_rel.csv.gz \
+--nodes=ecSubClass=import/ec_nodes_subclass.csv.gz \
+--relationships=IS_IN_SUBCLASS=import/ec_subclass_subsubclass_rel.csv.gz \
+--nodes=ecSubSubClass=import/ec_nodes_subsubclass.csv.gz \
+--relationships=IS_IN_SUBSUBCLASS=import/ec_subsubclass_id_rel.csv.gz \
+--nodes=cathDomain=import/cath_domains_nodes.csv.gz \
+--nodes=scopDomain=import/scop_domains_nodes.csv.gz \
+--nodes=interproDomain=import/interpro_domain_nodes.csv.gz \
+--relationships=IS_IN_SCOP_FAMILY=import/scop_domain_family_rels.csv.gz \
+--nodes=scopFamily=import/scop_family_nodes.csv.gz \
+--relationships=IS_IN_SCOP_SUPERFAMILY=import/scop_family_superfam_rels.csv.gz \
+--nodes=scopSuperfamily=import/scop_superfamily_nodes.csv.gz \
+--relationships=IS_IN_SCOP_FOLD=import/scop_superfam_fold_rels.csv.gz \
+--nodes=scopFold=import/scop_fold_nodes.csv.gz \
+--relationships=IS_IN_SCOP_CLASS=import/scop_fold_class_rels.csv.gz \
+--nodes=IS_IN_SCOP_CLASS=import/scop_class_nodes.csv.gz \
+--nodes=cathClass=import/cath_class_nodes.csv.gz \
+--relationships=IS_IN_CATH_CLASS=import/cath_class_architecture_rels.csv.gz \
+--nodes=cathArchitecture=import/cath_architecture_nodes.csv.gz \
+--relationships=IS_IN_CATH_ARCHITECTURE=import/cath_architecture_topology_rels.csv.gz \
+--nodes=cathTopology=import/cath_topology_nodes.csv.gz \
+--relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_homology_rels.csv.gz \
+--nodes=cathHomology=import/cath_homology_nodes.csv.gz \
+--relationships=IS_IN_CATH_HOMOLOGY=import/cath_homology_domain_rels.csv.gz \
+--relationships=INTERACTS_WITH_LIGAND=import/scop_domain_ligand_interactions.csv.gz \
+--relationships=INTERACTS_WITH_LIGAND=import/cath_domain_ligand_interactions.csv.gz \
+--relationships=INTERACTS_WITH_LIGAND=import/interpro_domain_ligand_interactions.csv.gz \
+--nodes=proteinChain=import/pdb_protein_chain_nodes.csv.gz \
+--nodes=entry=import/pdb_entry_nodes.csv.gz \
+--relationships=IS_IN_PDB=import/be_pdb_rels.csv.gz \
+--relationships=IS_IN_PDB=import/pdb_protein_rels.csv.gz \
+--relationships=IS_IN_PROTEIN_CHAIN=import/cath_protein_rels.csv.gz \
+--relationships=IS_IN_PROTEIN_CHAIN=import/scop_protein_rels.csv.gz \
+--relationships=IS_IN_PROTEIN_CHAIN=import/interpro_protein_rels.csv.gz \
+--relationships=IS_IN_EC=import/protein_ec_rels.csv.gz \
+--overwrite-destination neo4j
 ```
 This creates the database.
 
@@ -140,13 +185,16 @@ This creates the database.
 ## Citations
 
 ``` python
-python3 extract_pdbe_info.py --neo4j_user neo4j --neo4j_password 'yTJutYQ$$d%!9h' --outdir test_script_out --enzyme_dat_file ../biological_ligands/enzyme.dat --pdbe_graph_yaml pdbe_graph_queries.yaml
+
+python3 preprocess_rhea.py --rhea_ec_mapping biological_ligands/data_files/rhea2ec.tsv --rhea_reaction_directions biological_ligands/data_files/rhea-directions.tsv --rd_dir rd/ --outdir . --chebi_names biological_ligands/data_files/chebi_names.tsv.gz
+
+python3 extract_pdbe_info.py --neo4j_user neo4j --neo4j_password 'yTJutYQ$$d%!9h' --outdir pdbe_graph_info2 --enzyme_dat_file ../biological_ligands/enzyme.dat --pdbe_graph_yaml pdbe_graph_queries.yaml --glycoct_cache pdbe_graph_info2/glycoct_cache.pkl --smiles_cache pdbe_graph_info2/smiles_cache.pkl --csdb_linear_cache pdbe_graph_info2/csdb_linear_cache.pkl
 
 python3 get_ec_information.py --ec_dat enzyme.dat --pubchem pubchem_substance_id_mapping.txt --chebi ChEBI_Results.tsv --rhea_mapping rhea-directions.tsv --rhea_reactions rhea-reaction-smiles.tsv --rhea2ec rhea2ec.tsv --outdir biological_ligands
 
-python3 snakemake_ligands_df.py --pdb_ligands_file /raid/MattC/repos/CognateLigandProject/pdbe_graph_files/bound_entities_to_score.pkl --cognate_ligands /raid/MattC/repos/CognateLigandProject/biological_ligands/outdir2/biological_ligands_df.pkl --outdir bound_entities_parity --chunk_size 10 --threads 70 --snakefile parity.smk
+python3 snakemake_ligands_df.py --pdb_ligands_file /raid/MattC/repos/CognateLigandProject/pdbe_graph_files/pdbe_graph_info2/bound_entities_to_score.pkl --cognate_ligands /raid/MattC/repos/CognateLigandProject/biological_ligands/outdir_update/biological_ligands_df.pkl --outdir bound_entities_parity_rhea2 --chunk_size 10 --threads 75 --snakefile parity.smk
 
-python3 assign_domain_ownership.py --cath_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz --cath_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz  --scop_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz --scop_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz --interpro_bl_residue_interactions_file ../pdbe_graph_files/test_script_out/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz --interpro_sugar_residue_interactions_file ../pdbe_graph_files/test_script_out/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz --outdir test_script_new3 --scop_domains_info_file dir.cla.scop.1_75.txt --scop_descriptions_file dir.des.scop.1_75.txt
+python3 assign_domain_ownership.py --cath_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz --cath_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz  --scop_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz --scop_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz --interpro_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz --interpro_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz --outdir domain_ownership100 --scop_domains_info_file dir.cla.scop.1_75.txt --scop_descriptions_file dir.des.scop.1_75.txt
 
-python3 produce_neo4j_files.py --enzyme_dat_file ../biological_ligands/enzyme.dat --enzyme_class_file ../biological_ligands/enzclass.txt --outdir neo4j_files_out_test2 --biological_ligands ../biological_ligands/outdir2/biological_ligands_df.pkl --cath_domain_ownership ../domain_ownership/test_script_new3/cath_combined_domain_ownership.csv --scop_domain_ownership ../domain_ownership/test_script_new3/scop_combined_domain_ownership.csv --interpro_domain_ownership ../domain_ownership/test_script_new3/interpro_combined_domain_ownership.csv --bound_ligand_descriptors ../pdbe_graph_files/test_script_out/bound_ligand_descriptors.pkl --bound_molecules_sugars_smiles ../pdbe_graph_files/test_script_out/bound_molecules_sugars_smiles.pkl --parity_calcs ../parity_calcs/bound_entities_parity_3/all_parity_calcs.pkl
+python3 produce_neo4j_files.py --enzyme_dat_file ../biological_ligands/enzyme.dat --enzyme_class_file ../biological_ligands/enzclass.txt --outdir neo4j_files_out --biological_ligands ../biological_ligands/outdir_update/biological_ligands_df.pkl --cath_domain_ownership ../domain_ownership/domain_ownership100/cath_combined_domain_ownership.csv --scop_domain_ownership ../domain_ownership/domain_ownership100/scop_combined_domain_ownership.csv --interpro_domain_ownership ../domain_ownership/domain_ownership100/interpro_combined_domain_ownership.csv --bound_ligand_descriptors ../pdbe_graph_files/pdbe_graph_info2/bound_ligands_to_score.pkl --bound_molecules_sugars_smiles ../pdbe_graph_files/pdbe_graph_info2/bound_molecules_sugars_smiles.pkl --parity_calcs ../parity_calcs/bound_entities_parity_rhea2/all_parity_calcs.pkl --interpro_xml ../interpro.xml.gz
 ```
