@@ -17,9 +17,9 @@ bound_ligand_sifts: |
     (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})<-[c:HAS_ENTITY]-(a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:CONTAINS_CHAIN]->(ch:Chain {AUTH_ASYM_ID : $chain})
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , ch.STRUCT_ASYM_ID as chain_id, p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
+    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , ch.STRUCT_ASYM_ID as chain_id, ch.AUTH_ASYM_ID as auth_chain_id, p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
     ORDER BY bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, chain_id, ligand_entity_id, bl_uniqid, COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
+    RETURN pdb_id, protein_entity_id, chain_id, auth_chain_id, ligand_entity_id, bl_uniqid, COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
 
 bound_sugar_query: |
     MATCH
@@ -36,9 +36,9 @@ bound_sugar_sifts: |
     (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "s", POLYMER_TYPE: "S"})<-[c:HAS_ENTITY]-(a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:CONTAINS_CHAIN]->(ch:Chain {AUTH_ASYM_ID : $chain})
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
+    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , ch.STRUCT_ASYM_ID as chain_id, ch.AUTH_ASYM_ID as auth_chain_id, p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
     ORDER BY bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, chain_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
+    RETURN pdb_id, protein_entity_id, chain_id, auth_chain_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
 
 cath_bl_query: |
     MATCH
