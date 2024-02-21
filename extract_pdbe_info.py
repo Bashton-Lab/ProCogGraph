@@ -447,38 +447,7 @@ def main():
         print("Loading bound_molecules_sugars_smiles")
         bound_molecules_sugars_ec = pd.read_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
         bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
-
-    if not os.path.exists(f"{args.outdir}/bound_entities_to_score.pkl"):
-        print("retrieving ligand smiles")
-        #should potentially move this part of the script to the yaml fiel that others come from.
-        if not os.path.exists(f"{args.outdir}/all_chem_descriptors_bm_ec.csv.gz"):
-            if not os.path.exists(f"{args.outdir}/all_chem_descriptors_bm.csv.gz"):
-                all_chem_descriptors_query_bm = pdbe_graph_queries["all_chem_descriptors_bm"]
-
-                all_chem_descriptors_bm = pd.DataFrame([dict(_) for _ in conn.query(all_chem_descriptors_query_bm, db='neo4j')])
-                all_chem_descriptors_bm.to_csv(f"{args.outdir}/all_chem_descriptors_bm.csv.gz", compression = "gzip")
-            else:
-                print("Loading all_chem_descriptors_bm")
-                all_chem_descriptors_bm = pd.read_csv(f"{args.outdir}/all_chem_descriptors_bm.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
-            all_chem_descriptors_ec = get_updated_enzyme_records(all_chem_descriptors_bm, ec_records_df, ec_col = "protein_polymer_EC")
-            all_chem_descriptors_ec["ec_list"] = all_chem_descriptors_ec.ec_list.str.split(",")
-            all_chem_descriptors_ec = all_chem_descriptors_ec.explode("ec_list")
-            all_chem_descriptors_ec.drop(columns = "protein_polymer_EC", inplace = True)
-            all_chem_descriptors_ec.to_csv(f"{args.outdir}/all_chem_descriptors_bm_ec.csv.gz", compression = "gzip")
-        else:
-            print("Loading all_chem_descriptors_bm_ec")
-            all_chem_descriptors_ec = pd.read_csv(f"{args.outdir}/all_chem_descriptors_bm_ec.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
-
-        all_chem_descriptors_smiles = all_chem_descriptors_ec.loc[all_chem_descriptors_ec.descriptor_type == "SMILES_CANONICAL"]
-        all_chem_descriptors_smiles_unique_pairs = all_chem_descriptors_smiles.drop_duplicates(["bl_id","ec_list"], keep='first') #get the unique pairs of inchi descriptors and EC numbers
-
         
-        bound_ligand_descriptors = all_chem_descriptors_smiles_unique_pairs.loc[
-            (all_chem_descriptors_smiles_unique_pairs.bl_id.isin(bound_molecules_ligands.bound_ligand_id.unique()))]
-
-        bound_ligands_to_score = bound_ligand_descriptors[["ligand_entity_description", "bl_name", "descriptor", "ec_list"]].drop_duplicates()
-        bound_ligands_to_score = bound_ligands_to_score.groupby(["bl_name", "descriptor"]).agg({"ec_list": set, "ligand_entity_description": "first"}).reset_index()
         bound_ligands_to_score = bound_ligands_to_score.reset_index().rename(columns = {"index" : "ligand_entity_id"})
         bound_ligands_to_score["ligand_entity_id"] = bound_ligands_to_score["ligand_entity_id"] + bound_molecules_sugars_ec.ligand_index.max() + 1 #plus one because of 0 index to avoid overlaps
         bound_ligands_to_score.to_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
