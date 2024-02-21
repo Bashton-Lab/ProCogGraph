@@ -312,15 +312,19 @@ def main():
         scop_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(sugar_results["SCOP"], ec_records_df)
         interpro_pdb_residue_interactions_distinct_sugar_ec = get_updated_enzyme_records(interpro_pdb_residue_interactions_sugar, ec_records_df)
 
-        cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
+        cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = cath_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_" + cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str") + "_" + cath_pdb_residue_interactions_distinct_sugar_ec["bound_ligand_struct_asym_id"]
         cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = cath_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         cath_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
-        scop_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
+        scop_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = scop_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_" + scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str") + "_" + scop_pdb_residue_interactions_distinct_sugar_ec["bound_ligand_struct_asym_id"]
         scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = scop_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         scop_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
-        interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"]
+        interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] = interpro_pdb_residue_interactions_distinct_sugar_ec["bound_molecule_id"] + "_" + interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype("str") + "_" + interpro_pdb_residue_interactions_distinct_sugar_ec["bound_ligand_struct_asym_id"]
         interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"] = interpro_pdb_residue_interactions_distinct_sugar_ec["ligand_entity_id_numerical"].astype(int)
         interpro_pdb_residue_interactions_distinct_sugar_ec["type"] = "sugar"
+
+        assert(len(cath_pdb_residue_interactions_distinct_sugar_ec.loc[(cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"].isna()) | (cath_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] == "")]) == 0)
+        assert(len(scop_pdb_residue_interactions_distinct_sugar_ec.loc[(scop_pdb_residue_interactions_distinct_sugar_ec["uniqueID"].isna()) | (scop_pdb_residue_interactions_distinct_bl_ec["uniqueID"] == "")]) == 0)
+        assert(len(interpro_pdb_residue_interactions_distinct_sugar_ec.loc[(interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"].isna()) | (interpro_pdb_residue_interactions_distinct_sugar_ec["uniqueID"] == "")]) == 0)
 
         cath_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
         scop_pdb_residue_interactions_distinct_sugar_ec.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz", index = False, compression = "gzip")
