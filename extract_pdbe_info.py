@@ -243,7 +243,7 @@ def main():
                 task = progress.add_task(f"[cyan]Processing {db} bound ligands...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
-                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_query.head(100).iterrows()]
+                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
                         results.extend(future.result())
 
@@ -273,7 +273,7 @@ def main():
                 task = progress.add_task(f"[cyan]Processing {db} bound sugars...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
-                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugar_query.head(100).iterrows()]
+                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugar_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
                         results.extend(future.result())
 
@@ -387,18 +387,18 @@ def main():
         bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x, glycoct_cache))
         new_glycoct_values = bound_sugars_to_score.loc[bound_sugars_to_score.WURCS.isin(glycoct_cache.WURCS.values) == False, ["glycoct","WURCS"]].drop_duplicates()
         glycoct_cache = pd.concat([glycoct_cache, new_glycoct_values], ignore_index = True)
-        glycoct_cache.to_pickle(f"{args.outdir}/glycoct_cache.pkl")
+        glycoct_cache.to_pickle(f"{args.glycoct_cache}")
         bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isna() == False]
 
         bound_sugars_to_score["csdb"] = bound_sugars_to_score["glycoct"].apply(lambda x: get_csdb_from_glycoct(x, csdb_linear_cache))
         new_csdb_values = bound_sugars_to_score.loc[bound_sugars_to_score.glycoct.isin(csdb_linear_cache.glycoct.values) == False, ["csdb","glycoct"]].drop_duplicates()
         csdb_linear_cache = pd.concat([csdb_linear_cache, new_csdb_values], ignore_index = True)
-        csdb_linear_cache.to_pickle(f"{args.outdir}/csdb_linear_cache.pkl")
+        csdb_linear_cache.to_pickle(f"{args.csdb_linear_cache}")
         bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.csdb.isna() == False]
         bound_sugars_to_score["descriptor"] = bound_sugars_to_score["csdb"].apply(lambda x: get_smiles_from_csdb(x, smiles_cache))
         new_smiles_values = bound_sugars_to_score.loc[bound_sugars_to_score.csdb.isin(smiles_cache.csdb.values) == False, ["descriptor","csdb"]].drop_duplicates()
         smiles_cache = pd.concat([smiles_cache, new_smiles_values], ignore_index = True)
-        smiles_cache.to_pickle(f"{args.outdir}/smiles_cache.pkl")
+        smiles_cache.to_pickle(f"{args.smiles_cache}")
         bound_sugars_to_score = bound_sugars_to_score.loc[bound_sugars_to_score.descriptor.isna() == False]
 
         bound_sugars_to_score = bound_sugars_to_score.reset_index()
