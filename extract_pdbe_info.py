@@ -133,6 +133,8 @@ def main():
         help = "smiles cache file")
     parser.add_argument('--csdb_linear_cache', type = str,
         help = "csdb linear cache file")
+    parser.add_argument('--sifts_ec_mapping', type = str,
+        help = "sifts ec mapping file")
     
     args = parser.parse_args()
 
@@ -194,7 +196,7 @@ def main():
             ec_records_df["TRANSFER"] = ec_records_df.apply(lambda x: get_terminal_record(x["ID"], x, ec_records_df), axis = 1)
             ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
 
-            sifts_chains = pd.read_csv("pdb_chain_enzyme.tsv.gz", sep = "\t", comment="#")
+            sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
             sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
 
             sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
