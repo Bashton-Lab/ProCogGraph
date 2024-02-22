@@ -94,7 +94,7 @@ class Neo4jConnection:
 def process_row(conn, progress, task, row, query):
     if len(row.bm_bl_sym_ops) == 0:
         row.bm_bl_sym_ops = [""]
-    result = conn.query(query, db='neo4j', pdb_id=row.pdb_id, protein_entity_uniqid=row.protein_entity_id, ligand_entity_uniqid=row.ligand_entity_id, bl_uniqid=row.bl_uniqid, bm_uniqid=row.bm_uniqids[0], bm_uniqids=row.bm_uniqids, sym_op = row.bm_bl_sym_ops[0], sym_ops=row.bm_bl_sym_ops, chain=row.protein_chain_ids[0], chain_list=row.protein_chain_ids, ec=row.protein_entity_ec, ec_list=row.ec_list, uniprot=row.uniprot_accession)
+    result = conn.query(query, db='neo4j', pdb_id=row.pdb_id, protein_entity_uniqid=row.protein_entity_id, ligand_entity_uniqid=row.ligand_entity_id, bl_uniqid=row.bl_uniqid, bm_uniqid=row.bm_uniqids[0], bm_uniqids=row.bm_uniqids, sym_op = row.bm_bl_sym_ops[0], sym_ops=row.bm_bl_sym_ops, chain=row.chain_id, ec=row.protein_entity_ec, ec_list=row.ec_list, uniprot=row.uniprot_accession)
     progress.update(task, advance=1)
     return result
 
@@ -135,6 +135,8 @@ def main():
         help = "csdb linear cache file")
     parser.add_argument('--sifts_ec_mapping', type = str,
         help = "sifts ec mapping file")
+    parser.add_argument('--threads', type = int, default = 1,
+        help = "Number of threads to use")
     
     args = parser.parse_args()
 
@@ -207,7 +209,7 @@ def main():
             for query_type, query in sifts_queries.items():
                 task = progress.add_task(f"[cyan]Processing SIFTS {query_type}...", total=total_rows)
                 results = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
                     futures = [executor.submit(process_row_sifts, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in sifts_chains_ec.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
                         results.extend(future.result())
@@ -219,8 +221,6 @@ def main():
                 result_df.drop(columns = ["_merge", "auth_chain_id", "CHAIN", "PDB"], inplace = True)
                 result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join(",")
                 result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join(",")
-                result_df = result_df.groupby([col for col in result_df.columns if col != "chain_id"]).agg({"chain_id": list}).rename(columns = {"chain_id": "protein_chain_ids"}).reset_index()
-                result_df["protein_chain_ids"] = result_df["protein_chain_ids"].str.join(",")
                 ec_results[query_type] = result_df
                 del(results)
             with open(f"{args.outdir}/entities_search.pkl", 'wb') as f:
@@ -242,7 +242,7 @@ def main():
             for db, query in bl_queries.items():
                 task = progress.add_task(f"[cyan]Processing {db} bound ligands...", total=total_rows)
                 results = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
                     futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
                         results.extend(future.result())
@@ -274,7 +274,7 @@ def main():
             for db, query in bs_queries.items():
                 task = progress.add_task(f"[cyan]Processing {db} bound sugars...", total=total_rows)
                 results = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers = 50) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
                     futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugar_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
                         results.extend(future.result())
@@ -291,7 +291,6 @@ def main():
             with open(f"{args.outdir}/bs_results.pkl", 'wb') as f:
                 pickle.dump(bs_results, f)
         else:
-            #result_df = pd.read_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
             with open(f"{args.outdir}/bs_results.pkl", 'rb') as f:
                 bs_results = pickle.load(f)
             console.print(f"Loaded bound sugar results from file {args.outdir}/bs_results.pkl")
@@ -309,16 +308,6 @@ def main():
     cath_pdb_residue_interactions_bs = bs_results["CATH"]
     scop_pdb_residue_interactions_bs = bs_results["SCOP"]
     interpro_pdb_residue_interactions_bs = pd.concat([bs_results["InterProDomain"], bs_results["InterProFamily"], bs_results["InterProHomologousSuperfamily"]])
-    
-    cath_pdb_residue_interactions_bs["uniqueID"] = cath_pdb_residue_interactions_bs["bound_molecule_id"] + "_" + cath_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype("str") + "_" + cath_pdb_residue_interactions_bs["bound_ligand_struct_asym_id"]
-    cath_pdb_residue_interactions_bs["ligand_entity_id_numerical"] = cath_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype(int)
-    cath_pdb_residue_interactions_bs["type"] = "sugar"
-    scop_pdb_residue_interactions_bs["uniqueID"] = scop_pdb_residue_interactions_bs["bound_molecule_id"] + "_" + scop_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype("str") + "_" + scop_pdb_residue_interactions_bs["bound_ligand_struct_asym_id"]
-    scop_pdb_residue_interactions_bs["ligand_entity_id_numerical"] = scop_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype(int)
-    scop_pdb_residue_interactions_bs["type"] = "sugar"
-    interpro_pdb_residue_interactions_bs["uniqueID"] = interpro_pdb_residue_interactions_bs["bound_molecule_id"] + "_" + interpro_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype("str") + "_" + interpro_pdb_residue_interactions_bs["bound_ligand_struct_asym_id"]
-    interpro_pdb_residue_interactions_bs["ligand_entity_id_numerical"] = interpro_pdb_residue_interactions_bs["ligand_entity_id_numerical"].astype(int)
-    interpro_pdb_residue_interactions_bs["type"] = "sugar"
      
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz"):
         bound_molecules_sugars = pd.concat([
