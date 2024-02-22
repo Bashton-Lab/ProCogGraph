@@ -251,6 +251,8 @@ def main():
                 result_df = pd.DataFrame([dict(_) for _ in results])
                 result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
                 result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
+                result_df["uniqueID"] = result_df["bound_ligand_id"].astype("str")
+                result_df["type"] = "ligand"
                 bl_results[db] = result_df
                 del(results)
             with open(f"{args.outdir}/bl_results.pkl", 'wb') as f:
@@ -281,6 +283,9 @@ def main():
                 result_df = pd.DataFrame([dict(_) for _ in results])
                 result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
                 result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
+                result_df["uniqueID"] = result_df["bound_molecule_id"] + "_" + result_df["ligand_entity_id_numerical"].astype("str") + "_" + result_df["bound_ligand_struct_asym_id"]
+                result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
+                result_df["type"] = "sugar"
                 bs_results[db] = result_df
                 del(results)
             with open(f"{args.outdir}/bs_results.pkl", 'wb') as f:
@@ -294,13 +299,6 @@ def main():
     cath_pdb_residue_interactions_bl = bl_results["CATH"]
     scop_pdb_residue_interactions_bl = bl_results["SCOP"]
     interpro_pdb_residue_interactions_bl = pd.concat([bl_results["InterProDomain"], bl_results["InterProFamily"], bl_results["InterProHomologousSuperfamily"]])
-    
-    cath_pdb_residue_interactions_bl["uniqueID"] = cath_pdb_residue_interactions_bl["bound_ligand_id"].astype("str")
-    cath_pdb_residue_interactions_bl["type"] = "ligand"
-    scop_pdb_residue_interactions_bl["uniqueID"] = scop_pdb_residue_interactions_bl["bound_ligand_id"].astype("str")
-    scop_pdb_residue_interactions_bl["type"] = "ligand"
-    interpro_pdb_residue_interactions_bl["uniqueID"] = interpro_pdb_residue_interactions_bl["bound_ligand_id"].astype("str")
-    interpro_pdb_residue_interactions_bl["type"] = "ligand"
     
     #check what we are using this for again
     bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_bl[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_bl[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(),
