@@ -182,7 +182,7 @@ def main():
     with Progress() as progress:
         if not os.path.exists(f"{args.outdir}/entities_search.pkl"):
             
-            with open(f"{args.enzyme_dat}") as handle:
+            with open(f"{args.enzyme_dat_file}") as handle:
                 ec_records = EEnzyme.parse(handle)
                 ec_records_list = []
                 for record in ec_records: 
