@@ -60,6 +60,33 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
     df_merged = df_merged.loc[df_merged.ec_list != ""] #remove any rows where the ec_list is empty - we cant process these anyway.
     return(df_merged)
 
+def clean_and_merge_scop_col(df, column_id, description_df):
+    level = df[column_id].str.split("=").str.get(0).values[0]
+    df[column_id] = df[column_id].str.split("=").str.get(1).astype(int)
+    df = df.merge(description_df.loc[description_df.level == level, ["level_sunid", "level", "level_description"]],left_on = column_id, right_on = "level_sunid", indicator = True)
+    df.rename(columns = {"level_description": f"{level}_description"}, inplace = True)
+    assert len(df.loc[df._merge != "both"]) == 0
+    df.drop(columns = ["_merge", "level_sunid", "level"], inplace = True)
+    return df
+
+def complete_unmatched_domains(df, class_codes, fold_codes, superfamily_codes):
+    df = df.merge(class_codes, left_on = "scop_class_id", right_on = "cl_id", how = "left", indicator = True)
+    df["cl_description_x"] = df["cl_description_x"].fillna(df["cl_description_y"])
+    df["cl_id_x"] = df["cl_id_x"].fillna(df["scop_class_id"])
+    df.rename(columns = {"cl_id_x" : "cl_id", "cl_description_x": "cl_description"}, inplace = True)
+    df.drop(columns = ["_merge", "cl_description_y", "cl_id_y"], inplace = True)
+    df = df.merge(fold_codes, left_on = "scop_fold_id", right_on = "cf_id", how = "left", indicator = True)
+    df["cf_description_x"] = df["cf_description_x"].fillna(df["cf_description_y"])
+    df["cf_id_x"] = df["cf_id_x"].fillna(df["scop_fold_id"])
+    df.rename(columns = {"cf_id_x" : "cf_id", "cf_description_x": "cf_description"}, inplace = True)
+    df.drop(columns = [ "_merge", "cf_description_y", "cf_id_y"], inplace = True)
+    df = df.merge(superfamily_codes, left_on = "scop_superfamily_id", right_on = "sf_id", how = "left", indicator = True)
+    df["sf_description_x"] = df["sf_description_x"].fillna(df["sf_description_y"])
+    df["sf_id_x"] = df["sf_id_x"].fillna(df["scop_superfamily_id"])
+    df.rename(columns = {"sf_id_x" : "sf_id", "sf_description_x": "sf_description"}, inplace = True)
+    df.drop(columns = ["_merge", "sf_description_y", "sf_id_y"], inplace = True)
+    return df
+
 #class is adapted from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
 class Neo4jConnection:
     
@@ -232,6 +259,21 @@ def main():
 
         bl_results = {}
         bs_results = {}
+
+        scop_domains_info = pd.read_csv(f"{args.scop_domains_info_file}", sep = "\t", comment = "#", header = None, names = ["scop_id", "pdb_id", "description", "sccs", "domain_sunid", "ancestor_sunid"])
+        scop_id_levels = ["cl_id", "cf_id", "sf_id", "fa_id", "dm_id", "sp_id", "px_id"]
+        scop_domains_info[scop_id_levels] = scop_domains_info.ancestor_sunid.str.split(",", expand = True)
+        scop_descriptions = pd.read_csv(f"{args.scop_descriptions_file}", sep = "\t", comment = "#" , header = None, names = ["level_sunid", "level", "level_sccs", "level_sid", "level_description"])
+
+        for column in scop_id_levels:
+            scop_domains_info = clean_and_merge_scop_col(scop_domains_info, column, scop_descriptions)
+        
+        scop_domains_info.drop(columns = ["pdb_id"], inplace = True)
+
+        class_codes = scop_domains_info[["cl_id", "cl_description"]].drop_duplicates()
+        fold_codes = scop_domains_info[["cf_id", "cf_description"]].drop_duplicates()
+        superfamily_codes = scop_domains_info[["sf_id", "sf_description"]].drop_duplicates()
+
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
             bound_ligand_query = ec_results["bound_ligands"]
             bound_ligand_query["bm_uniqids"] = bound_ligand_query["bm_uniqids"].str.split(",")
@@ -244,16 +286,23 @@ def main():
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
                     futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
-                        results.extend(future.result())
+                        if future.result() != None:
+                            results.extend(future.result())
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
-                result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
                 result_df["uniqueID"] = result_df["bound_ligand_id"].astype("str")
+                result_df["chainUniqueID"] = result_df["protein_entity_id"] + "_" + result_df["protein_chain_id"]
                 result_df["type"] = "ligand"
                 bl_results[db] = result_df
-                del(results)
+            if db == "SCOP":
+                result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
+                scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
+                scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
+                scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
+                result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+            bl_results[db] = result_df
+            del(results)
             with open(f"{args.outdir}/bl_results.pkl", 'wb') as f:
                 pickle.dump(bl_results, f)
 
@@ -275,15 +324,21 @@ def main():
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
                     futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugar_query.iterrows()]
                     for future in concurrent.futures.as_completed(futures):
-                        results.extend(future.result())
+                        if future.result() != None:
+                            results.extend(future.result())
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join("|")
-                result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join("|")
                 result_df["uniqueID"] = result_df["bound_molecule_id"] + "_" + result_df["ligand_entity_id_numerical"].astype("str") + "_" + result_df["bound_ligand_struct_asym_id"]
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
+                result_df["chainUniqueID"] = result_df["protein_entity_id"] + "_" + result_df["protein_chain_id"]
                 result_df["type"] = "sugar"
+                if db == "SCOP":
+                    result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
+                    scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
+                    result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 bs_results[db] = result_df
                 del(results)
             with open(f"{args.outdir}/bs_results.pkl", 'wb') as f:
