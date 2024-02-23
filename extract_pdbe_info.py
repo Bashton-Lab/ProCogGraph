@@ -236,7 +236,6 @@ def main():
             bound_ligand_query = ec_results["bound_ligands"]
             bound_ligand_query["bm_uniqids"] = bound_ligand_query["bm_uniqids"].str.split(",")
             bound_ligand_query["bm_bl_sym_ops"] = bound_ligand_query["bm_bl_sym_ops"].str.split(",")
-            bound_ligand_query["protein_chain_ids"] = bound_ligand_query["protein_chain_ids"].str.split(",")
 
             total_rows = len(bound_ligand_query)
             for db, query in bl_queries.items():
@@ -268,7 +267,6 @@ def main():
             bound_sugar_query = ec_results["bound_sugars"]
             bound_sugar_query["bm_uniqids"] = bound_sugar_query["bm_uniqids"].str.split(",")
             bound_sugar_query["bm_bl_sym_ops"] = bound_sugar_query["bm_bl_sym_ops"].str.split(",")
-            bound_sugar_query["protein_chain_ids"] = bound_sugar_query["protein_chain_ids"].str.split(",")
 
             total_rows = len(bound_sugar_query)
             for db, query in bs_queries.items():
