@@ -164,6 +164,10 @@ def main():
         help = "sifts ec mapping file")
     parser.add_argument('--threads', type = int, default = 1,
         help = "Number of threads to use")
+    parser.add_argument('--scop_domains_info_file', type = str,
+        help = "scop domains info file")
+    parser.add_argument('--scop_descriptions_file', type = str,
+        help="scop descriptions file")
     
     args = parser.parse_args()
 
