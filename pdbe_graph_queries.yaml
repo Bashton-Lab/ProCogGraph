@@ -51,8 +51,26 @@ cath_bl_query: |
     CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
     WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) RETURN cath_rel, cath}
-    WITH a.ID as pdb_id, a.DESCRIPTOR as pdb_descriptor, a.TITLE as pdb_title, a.KEYWORDS as pdb_keywords, e.UNIQID as protein_entity_id , e.DESCRIPTION as protein_entity_description,  Arp.STRUCT_ASYM_ID_2 as chain_id, Arp.AUTH_SEQ_ID_1 as auth_1, Arp.AUTH_SEQ_ID_2 as auth_2, Arp.STRUCT_ASYM_ID_2 as struct_chain_id, p.UNIQID as ligand_entity_id, p.ID as ligand_entity_id_numerical, p.DESCRIPTION as description, bl.UNIQID as bound_ligand_id, bl.UNIQID as uniqueID, bl.CHEM_COMP_ID as bound_ligand_name, bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, cd.DESCRIPTOR as descriptor, bl.CHEM_COMP_ID as bl_name, split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
-    WHERE cath_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WITH a.ID as pdb_id, a.DESCRIPTOR as pdb_descriptor, a.TITLE as pdb_title, a.KEYWORDS as pdb_keywords, e.UNIQID as protein_entity_id , e.DESCRIPTION as protein_entity_description,  
+    Arp.STRUCT_ASYM_ID_2 as chain_id, 
+    Arp.AUTH_SEQ_ID_1 as auth_1, 
+    Arp.AUTH_SEQ_ID_2 as auth_2, 
+    p.UNIQID as ligand_entity_id, 
+    p.ID as ligand_entity_id_numerical, 
+    p.DESCRIPTION as description, 
+    bl.UNIQID as bound_ligand_id, 
+    bl.UNIQID as uniqueID, 
+    bl.CHEM_COMP_ID as bound_ligand_name, 
+    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
+    cd.DESCRIPTOR as descriptor, bl.CHEM_COMP_ID as bl_name, 
+    split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, 
+    cath.DOMAIN as cath_name, cath.CLASS as cath_class, 
+    cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
+    cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, 
+    cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, 
+    bm.ID as bound_molecule_display_id, 
+    part.SYM_OPERATOR as bm_bl_sym_op
+    WHERE cath_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -68,7 +86,6 @@ cath_bl_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -102,8 +119,7 @@ cath_sugar_query: |
     a.KEYWORDS as pdb_keywords, e.UNIQID as protein_entity_id , 
     e.DESCRIPTION as protein_entity_description, 
     Arp.AUTH_SEQ_ID_1 as auth_1, 
-    Arp.AUTH_SEQ_ID_2 as auth_2, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id, 
+    Arp.AUTH_SEQ_ID_2 as auth_2,  
     p.UNIQID as ligand_entity_id, 
     p.ID as ligand_entity_id_numerical, 
     p.DESCRIPTION as description, 
@@ -113,7 +129,7 @@ cath_sugar_query: |
     bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, 
     cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
-    WHERE cath_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE cath_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -128,8 +144,7 @@ cath_sugar_query: |
     apoc.text.join(collect(DISTINCT(auth_1)), "|") as auth_1, 
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
-    size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
+    size(collect(contact_type)) as contact_type_count, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -189,8 +204,7 @@ scop_bl_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE scop_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE scop_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -205,8 +219,7 @@ scop_bl_query: |
     apoc.text.join(collect(DISTINCT(auth_1)), "|") as auth_1, 
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
-    size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
+    size(collect(contact_type)) as contact_type_count, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -264,8 +277,7 @@ scop_sugar_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE scop_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE scop_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -280,8 +292,7 @@ scop_sugar_query: |
     apoc.text.join(collect(DISTINCT(auth_1)), "|") as auth_1, 
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
-    size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
+    size(collect(contact_type)) as contact_type_count, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -339,8 +350,7 @@ interpro_d_bl_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -356,7 +366,6 @@ interpro_d_bl_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -406,8 +415,7 @@ interpro_d_sugar_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -423,7 +431,6 @@ interpro_d_sugar_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -477,8 +484,7 @@ interpro_f_bl_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -494,7 +500,6 @@ interpro_f_bl_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -544,8 +549,7 @@ interpro_f_sugar_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -560,8 +564,7 @@ interpro_f_sugar_query: |
     apoc.text.join(collect(DISTINCT(auth_1)), "|") as auth_1, 
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
-    size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
+    size(collect(contact_type)) as contact_type_count, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -615,8 +618,7 @@ interpro_h_bl_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op, 
-    Arp.STRUCT_ASYM_ID_2 as struct_chain_id
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -632,7 +634,6 @@ interpro_h_bl_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
@@ -682,7 +683,7 @@ interpro_h_sugar_query: |
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op
-    WHERE interpro_chain = struct_chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
+    WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
     RETURN
@@ -698,7 +699,6 @@ interpro_h_sugar_query: |
     apoc.text.join(collect(DISTINCT(auth_2)), "|") as auth_2,
     apoc.coll.occurrences(apoc.coll.flatten(collect(contact_type)), "hbond") as hbond_count, 
     size(collect(contact_type)) as contact_type_count,
-    struct_chain_id, 
     ligand_entity_id, 
     ligand_entity_id_numerical, 
     description, 
