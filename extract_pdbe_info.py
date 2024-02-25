@@ -118,10 +118,8 @@ class Neo4jConnection:
                 session.close()
         return response
 
-def process_row(conn, progress, task, row, query):
-    if len(row.bm_bl_sym_ops) == 0:
-        row.bm_bl_sym_ops = [""]
-    result = conn.query(query, db='neo4j', pdb_id=row.pdb_id, protein_entity_uniqid=row.protein_entity_id, ligand_entity_uniqid=row.ligand_entity_id, bl_uniqid=row.bl_uniqid, bm_uniqid=row.bm_uniqids[0], bm_uniqids=row.bm_uniqids, sym_op = row.bm_bl_sym_ops[0], sym_ops=row.bm_bl_sym_ops, chain=row.chain_id, ec=row.protein_entity_ec, ec_list=row.ec_list, uniprot=row.uniprot_accession)
+def process_row(conn, progress, task, pdb, query):
+    result = conn.query(query, db='neo4j', pdb_id=pdb)
     progress.update(task, advance=1)
     return result
 
@@ -208,58 +206,34 @@ def main():
         "InterProFamily" : pdbe_graph_queries["interpro_f_sugar_query"],
         "InterProHomologousSuperfamily" : pdbe_graph_queries["interpro_h_sugar_query"]}
 
-    sifts_queries = {"bound_ligands": pdbe_graph_queries["bound_ligand_sifts"], "bound_sugars": pdbe_graph_queries["bound_sugar_sifts"]}
     console.print("Connecting to neo4j")
     conn = Neo4jConnection(uri="bolt://localhost:7687", user="neo4j", pwd="yTJutYQ$$d%!9h")
     console.print("Connected to neo4j")
     console.print("Generating EC record dataframe")
     
     with Progress() as progress:
-        if not os.path.exists(f"{args.outdir}/entities_search.pkl"):
             
-            with open(f"{args.enzyme_dat_file}") as handle:
-                ec_records = EEnzyme.parse(handle)
-                ec_records_list = []
-                for record in ec_records: 
-                    ec_record_series = pd.Series(record)
-                    ec_records_list.append(ec_record_series)
+        with open(f"{args.enzyme_dat_file}") as handle:
+            ec_records = EEnzyme.parse(handle)
+            ec_records_list = []
+            for record in ec_records: 
+                ec_record_series = pd.Series(record)
+                ec_records_list.append(ec_record_series)
 
 
-            ec_records_df = pd.DataFrame(ec_records_list)
-            ec_records_df["TRANSFER"] = ec_records_df.apply(lambda x: get_terminal_record(x["ID"], x, ec_records_df), axis = 1)
-            ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
+        ec_records_df = pd.DataFrame(ec_records_list)
+        ec_records_df["TRANSFER"] = ec_records_df.apply(lambda x: get_terminal_record(x["ID"], x, ec_records_df), axis = 1)
+        ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
 
-            sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
-            sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
+        sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
+        sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
 
-            sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
-            sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec", "ACCESSION" : "uniprot_accession"}, inplace = True)
-            
-            total_rows = len(sifts_chains_ec)
-            ec_results = {}
-            for query_type, query in sifts_queries.items():
-                task = progress.add_task(f"[cyan]Processing SIFTS {query_type}...", total=total_rows)
-                results = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
-                    futures = [executor.submit(process_row_sifts, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in sifts_chains_ec.iterrows()]
-                    for future in concurrent.futures.as_completed(futures):
-                        results.extend(future.result())
+        sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
+        sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec", "ACCESSION" : "uniprot_accession"}, inplace = True)
+        
 
-                # Convert results to DataFrame
-                result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
-                assert(len(result_df.loc[result_df._merge != "both"]) == 0)
-                result_df.drop(columns = ["_merge", "auth_chain_id", "CHAIN", "PDB"], inplace = True)
-                result_df["bm_uniqids"] = result_df["bm_uniqids"].str.join(",")
-                result_df["bm_bl_sym_ops"] = result_df["bm_bl_sym_ops"].str.join(",")
-                ec_results[query_type] = result_df
-                del(results)
-            with open(f"{args.outdir}/entities_search.pkl", 'wb') as f:
-                pickle.dump(ec_results, f)
-        else:
-            with open(f"{args.outdir}/entities_search.pkl", 'rb') as f:
-                ec_results = pickle.load(f)
-                console.print(f"Loaded entities search from file {args.outdir}/entities_search.pkl")
+        all_pdbs = sifts_chains_ec.PDB.unique()
+        total_rows = len(all_pdbs)
 
         bl_results = {}
         bs_results = {}
@@ -279,25 +253,18 @@ def main():
         superfamily_codes = scop_domains_info[["sf_id", "sf_description"]].drop_duplicates()
 
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
-            bound_ligand_query = ec_results["bound_ligands"]
-            bound_ligand_query["bm_uniqids"] = bound_ligand_query["bm_uniqids"].str.split(",")
-            bound_ligand_query["bm_bl_sym_ops"] = bound_ligand_query["bm_bl_sym_ops"].str.split(",")
 
-            total_rows = len(bound_ligand_query)
             for db, query in bl_queries.items():
                 task = progress.add_task(f"[cyan]Processing {db} bound ligands...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
-                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_ligand_query.iterrows()]
+                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, pdb = pdb, query = query) for pdb in all_pdbs]
                     for future in concurrent.futures.as_completed(futures):
                         if future.result() != None:
                             results.extend(future.result())
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df["uniqueID"] = result_df["bound_ligand_id"].astype("str")
-                result_df["chainUniqueID"] = result_df["protein_entity_id"] + "_" + result_df["protein_chain_id"]
-                result_df["type"] = "ligand"
                 bl_results[db] = result_df
             if db == "SCOP":
                 result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
@@ -317,26 +284,18 @@ def main():
             console.print(f"Loaded bound ligand results from file {args.outdir}/bl_results.pkl")
 
         if not os.path.exists(f"{args.outdir}/bs_results.pkl"):
-            bound_sugar_query = ec_results["bound_sugars"]
-            bound_sugar_query["bm_uniqids"] = bound_sugar_query["bm_uniqids"].str.split(",")
-            bound_sugar_query["bm_bl_sym_ops"] = bound_sugar_query["bm_bl_sym_ops"].str.split(",")
-
-            total_rows = len(bound_sugar_query)
             for db, query in bs_queries.items():
                 task = progress.add_task(f"[cyan]Processing {db} bound sugars...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
-                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, row = row, query = query) for _, row in bound_sugar_query.iterrows()]
+                    futures = [executor.submit(process_row, conn = conn, progress = progress, task = task, pdb = pdb, query = query) for pdb in all_pdbs]
                     for future in concurrent.futures.as_completed(futures):
                         if future.result() != None:
                             results.extend(future.result())
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df["uniqueID"] = result_df["bound_molecule_id"] + "_" + result_df["ligand_entity_id_numerical"].astype("str") + "_" + result_df["bound_ligand_struct_asym_id"]
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
-                result_df["chainUniqueID"] = result_df["protein_entity_id"] + "_" + result_df["protein_chain_id"]
-                result_df["type"] = "sugar"
                 if db == "SCOP":
                     result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
