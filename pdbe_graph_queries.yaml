@@ -40,8 +40,6 @@ bound_sugar_sifts: |
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bl_uniqid
     RETURN pdb_id, protein_entity_id, chain_id, auth_chain_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
 
-
-
 cath_bl_query: |
     MATCH
     (a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:HAS_PDB_RESIDUE]->(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})-[:IS_AN_INSTANCE_OF]->(bl)
@@ -51,7 +49,11 @@ cath_bl_query: |
     CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
     WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) RETURN cath_rel, cath}
-    WITH a.ID as pdb_id, a.DESCRIPTOR as pdb_descriptor, a.TITLE as pdb_title, a.KEYWORDS as pdb_keywords, e.UNIQID as protein_entity_id , e.DESCRIPTION as protein_entity_description,  
+    WITH a.ID as pdb_id, a.DESCRIPTOR as pdb_descriptor, 
+    a.TITLE as pdb_title, 
+    a.KEYWORDS as pdb_keywords, 
+    e.UNIQID as protein_entity_id , 
+    e.DESCRIPTION as protein_entity_description,  
     Arp.STRUCT_ASYM_ID_2 as chain_id, 
     Arp.AUTH_SEQ_ID_1 as auth_1, 
     Arp.AUTH_SEQ_ID_2 as auth_2, 
