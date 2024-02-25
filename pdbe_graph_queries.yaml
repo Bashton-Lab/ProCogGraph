@@ -96,8 +96,6 @@ cath_sugar_query: |
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR part.SYM_OPERATOR IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR) AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     WITH *
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) RETURN cath_rel, cath}
     WITH a.ID as pdb_id, a.DESCRIPTOR as pdb_descriptor, 
     a.TITLE as pdb_title, 
@@ -238,8 +236,6 @@ scop_sugar_query: |
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR part.SYM_OPERATOR IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR) AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     WITH *
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[scop_rel:IS_IN_SCOP_DOMAIN]->(scop:SCOP) RETURN scop_rel, scop}
     WITH a.ID as pdb_id, 
     a.DESCRIPTOR as pdb_descriptor,
@@ -256,7 +252,6 @@ scop_sugar_query: |
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
     bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, 
     scop.SUNID as scop_sunid,
@@ -387,8 +382,6 @@ interpro_d_sugar_query: |
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR part.SYM_OPERATOR IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR) AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     WITH *
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "D"}) RETURN ip, i}
     WITH a.ID as pdb_id, 
     a.DESCRIPTOR as pdb_descriptor,
@@ -405,7 +398,6 @@ interpro_d_sugar_query: |
     bl.UNIQID as bound_ligand_id 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
     bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
@@ -528,8 +520,6 @@ interpro_f_sugar_query: |
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR part.SYM_OPERATOR IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR) AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     WITH *
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "F"}) RETURN ip, i}
     WITH a.ID as pdb_id, 
     a.DESCRIPTOR as pdb_descriptor,
@@ -546,7 +536,6 @@ interpro_f_sugar_query: |
     bl.UNIQID as bound_ligand_id,
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
     bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\[\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
@@ -669,8 +658,6 @@ interpro_h_sugar_query: |
     WHERE
     NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND (Arp.SYM_OP_1 IS NULL OR part.SYM_OPERATOR IS NULL OR Arp.SYM_OP_1 = part.SYM_OPERATOR) AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
     WITH *
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH e,pr  MATCH (e)-[:HAS_PDB_RESIDUE]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "H"}) RETURN ip, i}
     WITH a.ID as pdb_id, 
     a.DESCRIPTOR as pdb_descriptor,
@@ -687,7 +674,6 @@ interpro_h_sugar_query: |
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
     bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]\\' ]", ""), ",") as contact_type,
     i.ABBREV as interpro_type,
