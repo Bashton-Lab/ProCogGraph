@@ -22,7 +22,7 @@ from math import isnan
 from pdbeccdutils.computations.parity_method import compare_molecules    
 from contextlib import redirect_stderr
 
-def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, compound_df_subset):
+def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, compound_df_subset, threshold):
     f = io.StringIO()
     scores = []
     
@@ -53,7 +53,7 @@ def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, 
                 else:
                     #repeat canonicalisation to ensure best possible parity score
                     rdkit_compound = Chem.MolFromSmiles(Chem.CanonSmiles(row["canonical_smiles"]))
-                    parity = compare_molecules(ligand_rdkit, rdkit_compound)
+                    parity = compare_molecules(ligand_rdkit, rdkit_compound, threshold = threshold)
                     score = parity.similarity_score
                     mol1_atom_count = ligand_rdkit.GetNumAtoms()
                     mol2_atom_count = rdkit_compound.GetNumAtoms()
@@ -84,7 +84,7 @@ parser.add_argument('--chunk', metavar = '', type = int,
     help = "Chunk index")
 parser.add_argument('--chunk_size', metavar = '', type = int, default= 100,
     help = "Chunk size")
-parser.add_argument('--threshold', metavar = '', type = float, default= 0.01,
+parser.add_argument('--threshold', metavar = '', type = float, default= 0.1,
     help = "Threshold for PARITY score calculation.")
 
 args = parser.parse_args()
@@ -113,7 +113,7 @@ if not os.path.exists(pickle_filename):
         
         cognate_ligands_df_subset = cognate_ligands_df.loc[(cognate_ligands_df.entry.isin(ec)), ["entry", "canonical_smiles", "ROMol"]].copy()
         cognate_ligands_df_subset = cognate_ligands_df_subset.groupby("canonical_smiles").agg({"entry" : list, "ROMol" : "first"}).reset_index()
-        scores_list = parity_score_smiles(ligand_id, ligand_representation, ec, bl_name, ligand_description,cognate_ligands_df_subset)
+        scores_list = parity_score_smiles(ligand_id, ligand_representation, ec, bl_name, ligand_description,cognate_ligands_df_subset, args.threshold)
         chunk_results.extend(scores_list)
         print(f"Chunk {args.chunk}, row {index}")
     # Save the smiles_ec_pairs for the chunk as a pickle file
