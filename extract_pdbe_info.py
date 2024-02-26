@@ -265,14 +265,16 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
+                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
+                assert(len(result_df.loc[result_df._merge != "both"]) == 0)
+                result_df.drop(columns = "_merge", inplace = True)
+                if db == "SCOP":
+                    result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
+                    scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
+                    result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 bl_results[db] = result_df
-            if db == "SCOP":
-                result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
-                scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
-                scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
-                scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
-                result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
-            bl_results[db] = result_df
             del(results)
             with open(f"{args.outdir}/bl_results.pkl", 'wb') as f:
                 pickle.dump(bl_results, f)
@@ -295,6 +297,9 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
+                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
+                assert(len(result_df.loc[result_df._merge != "both"]) == 0)
+                result_df.drop(columns = "_merge", inplace = True)
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
                 if db == "SCOP":
                     result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
@@ -303,7 +308,7 @@ def main():
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 bs_results[db] = result_df
-                del(results)
+            del(results)
             with open(f"{args.outdir}/bs_results.pkl", 'wb') as f:
                 pickle.dump(bs_results, f)
         else:
@@ -327,9 +332,9 @@ def main():
      
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz"):
         bound_molecules_sugars = pd.concat([
-                cath_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() , 
-                scop_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
-                interpro_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "ligand_entity_description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates()
+                cath_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() , 
+                scop_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
+                interpro_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates()
                 ])
 
         cif_ids = bound_molecules_sugars.pdb_id.unique()
@@ -384,8 +389,8 @@ def main():
         console.print(f"Loaded bound sugar WURCS from file {args.outdir}/bound_molecules_sugars_wurcs.csv.gz")
     
     if not os.path.exists(f"{args.outdir}/bound_sugars_to_score.pkl"):
-        bound_sugars_to_score = bound_molecules_sugars_wurcs.loc[bound_molecules_sugars_wurcs.WURCS != "WURCS not available", ["ligand_entity_description","WURCS", "ec_list"]].drop_duplicates()
-        bound_sugars_to_score = bound_sugars_to_score.groupby(["ligand_entity_description","WURCS"]).agg({"ec_list": set}).reset_index()
+        bound_sugars_to_score = bound_molecules_sugars_wurcs.loc[bound_molecules_sugars_wurcs.WURCS != "WURCS not available", ["description","WURCS", "ec_list"]].drop_duplicates()
+        bound_sugars_to_score = bound_sugars_to_score.groupby(["description","WURCS"]).agg({"ec_list": set}).reset_index()
 
         bound_sugars_to_score["glycoct"] = bound_sugars_to_score["WURCS"].apply(lambda x: get_glycoct_from_wurcs(x, glycoct_cache))
         new_glycoct_values = bound_sugars_to_score.loc[bound_sugars_to_score.WURCS.isin(glycoct_cache.WURCS.values) == False, ["glycoct","WURCS"]].drop_duplicates()
@@ -408,9 +413,9 @@ def main():
         bound_sugars_to_score.drop(columns = ["index"], inplace = True)
         bound_sugars_to_score = bound_sugars_to_score.reset_index().rename(columns = {"index": "ligand_index"})
 
-        bound_molecules_sugars_smiles = bound_molecules_sugars_wurcs.merge(bound_sugars_to_score[["ligand_entity_description", "ligand_index", "WURCS", "descriptor"]], on = ["ligand_entity_description","WURCS"], how = "left")
+        bound_molecules_sugars_smiles = bound_molecules_sugars_wurcs.merge(bound_sugars_to_score[["description", "ligand_index", "WURCS", "descriptor"]], on = ["description","WURCS"], how = "left")
 
-        bound_sugars_to_score["bl_name"] = bound_sugars_to_score["ligand_entity_description"]
+        bound_sugars_to_score["bl_name"] = bound_sugars_to_score["description"]
 
         bound_sugars_to_score.rename(columns = {"ligand_index": "ligand_entity_id"}, inplace = True) #do this to run sugars in parity calcs
         bound_sugars_to_score.to_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
@@ -452,11 +457,11 @@ def main():
     
     
     if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
-        bound_ligands_to_score = pd.concat([cath_pdb_residue_interactions_bl[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]],
-                                            scop_pdb_residue_interactions_bl[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]],
-                                            interpro_pdb_residue_interactions_bl[["ligand_entity_description", "bound_ligand_name", "descriptor", "ec_list"]]]).drop_duplicates()
+        bound_ligands_to_score = pd.concat([cath_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]],
+                                            scop_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]],
+                                            interpro_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]]]).drop_duplicates()
 
-        bound_ligands_to_score = bound_ligands_to_score.groupby(["bound_ligand_name", "descriptor"]).agg({"ec_list": set, "ligand_entity_description": "first"}).reset_index()
+        bound_ligands_to_score = bound_ligands_to_score.groupby(["bound_ligand_name", "descriptor"]).agg({"ec_list": set, "description": "first"}).reset_index()
 
         bound_ligands_to_score = bound_ligands_to_score.reset_index().rename(columns = {"index" : "ligand_entity_id"})
         bound_ligands_to_score["ligand_entity_id"] = bound_ligands_to_score["ligand_entity_id"] + bound_molecules_sugars_smiles.ligand_index.max() + 1 #plus one because of 0 index to avoid overlaps
@@ -483,7 +488,7 @@ def main():
         console.print(f"Loaded bound ligands to score from file {args.outdir}/bound_ligands_to_score.pkl")
 
     if not os.path.exists(f"{args.outdir}/bound_entities_to_score.pkl"):
-        bound_entities_to_score = pd.concat([bound_sugars_to_score[["ligand_entity_id", "bl_name", "ligand_entity_description", "descriptor", "ec_list"]], bound_ligands_to_score])
+        bound_entities_to_score = pd.concat([bound_sugars_to_score[["ligand_entity_id", "bl_name", "description", "descriptor", "ec_list"]], bound_ligands_to_score])
         assert(bound_entities_to_score.ligand_entity_id.value_counts().max() == 1)
         bound_entities_to_score.to_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
     else:
