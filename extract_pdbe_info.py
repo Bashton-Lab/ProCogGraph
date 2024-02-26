@@ -265,9 +265,7 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
-                assert(len(result_df.loc[result_df._merge != "both"]) == 0)
-                result_df.drop(columns = "_merge", inplace = True)
+                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "inner") #keeping only pdbs with sifts ec annotations 
                 if db == "SCOP":
                     result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
@@ -297,9 +295,7 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
-                assert(len(result_df.loc[result_df._merge != "both"]) == 0)
-                result_df.drop(columns = "_merge", inplace = True)
+                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "inner") #keeping only pdbs with sifts ec annotations 
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
                 if db == "SCOP":
                     result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
