@@ -137,6 +137,29 @@ def parse_table_data(elem):
         data[len(data)] = row_data
     return data
 
+def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", domain_grouping_key = "cath_domain"):
+    ligands_df["total_contact_counts"]  =  ligands_df.groupby([unique_id])["contact_type_count"].transform("sum")
+    ligands_df[["domain_contact_counts", "domain_hbond_counts", "domain_covalent_counts"]]  = ligands_df.groupby([unique_id, domain_grouping_key])[["contact_type_count", "hbond_count", "covalent_count"]].transform("sum")
+    ligands_df["domain_hbond_perc"] = ligands_df.domain_hbond_counts / ligands_df.total_contact_counts
+    ligands_df["domain_contact_perc"] = ligands_df.domain_contact_counts / ligands_df.total_contact_counts
+    ligands_df["domain_ownership"] = np.where(
+        ligands_df["domain_covalent_counts"] > 0, "covalent",
+        np.where(
+            ligands_df["domain_contact_perc"] == 1, "unique",
+            np.where(
+                ligands_df["domain_contact_perc"] >= 0.7, "dominant",
+                np.where(
+                    (ligands_df["domain_contact_perc"] >= 0.3)
+                    & (ligands_df["domain_contact_perc"] < 0.7), "partner",
+                    np.where(
+                        ligands_df["domain_contact_perc"] < 0.3, "minor", np.nan)
+                )
+            )
+        )
+    )
+    
+    return ligands_df
+
 def main():
 
     parser = argparse.ArgumentParser(description = 'TO DO')
@@ -193,18 +216,18 @@ def main():
             print(exc)
 
     bl_queries = {
-        "CATH" : pdbe_graph_queries["cath_bl_query"],
-        "SCOP" : pdbe_graph_queries["scop_bl_query"],
-        "InterProDomain" : pdbe_graph_queries["interpro_d_bl_query"],
-        "InterProFamily" : pdbe_graph_queries["interpro_f_bl_query"],
-        "InterProHomologousSuperfamily" : pdbe_graph_queries["interpro_h_bl_query"]}
+        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_domain"},
+        "SCOP" : {"query" :pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
+        "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_bl_query"], "domain_id": "interpro_accession"},
+        "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_bl_query"], "domain_id": "interpro_accession"},
+        "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_accession"}}
 
     bs_queries = {
-        "CATH" : pdbe_graph_queries["cath_sugar_query"],
-        "SCOP" : pdbe_graph_queries["scop_sugar_query"],
-        "InterProDomain" : pdbe_graph_queries["interpro_d_sugar_query"],
-        "InterProFamily" : pdbe_graph_queries["interpro_f_sugar_query"],
-        "InterProHomologousSuperfamily" : pdbe_graph_queries["interpro_h_sugar_query"]}
+        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_domain"},
+        "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_id"},
+        "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_sugar_query"], "domain_id": "interpro_accession"},
+        "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_sugar_query"], "domain_id": "interpro_accession"},
+        "InterProHomologousSuperfamily" : {"query" : pdbe_graph_queries["interpro_h_sugar_query"], "domain_id": "interpro_accession"}}
 
     console.print("Connecting to neo4j")
     conn = Neo4jConnection(uri="bolt://localhost:7687", user="neo4j", pwd="yTJutYQ$$d%!9h")
@@ -236,7 +259,9 @@ def main():
         total_rows = len(all_pdbs)
 
         bl_results = {}
+        bl_results_unmatched = {}
         bs_results = {}
+        bs_results_unmatched = {}
 
         scop_domains_info = pd.read_csv(f"{args.scop_domains_info_file}", sep = "\t", comment = "#", header = None, names = ["scop_id", "pdb_id", "scop_description", "sccs", "domain_sunid", "ancestor_sunid"])
         scop_id_levels = ["cl_id", "cf_id", "sf_id", "fa_id", "dm_id", "sp_id", "px_id"]
@@ -254,7 +279,9 @@ def main():
 
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
 
-            for db, query in bl_queries.items():
+            for db, data in bl_queries.items():
+                query = data["query"]
+                domain_identifier = data["domain_id"]
                 task = progress.add_task(f"[cyan]Processing {db} bound ligands...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
@@ -265,26 +292,34 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "inner") #keeping only pdbs with sifts ec annotations 
+                result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
+                result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
+                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
                 if db == "SCOP":
-                    result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
+                    result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
-                    result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
-                bl_results[db] = result_df
+                    result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                console.print("Assigning ownership categories")
+                result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
+                bl_results[db] = result_df_ec_ownership
+                bl_results_unmatched[db] = result_df_ec_unmatched
             del(results)
+            console.print("Saving bound ligand results to file")
             with open(f"{args.outdir}/bl_results.pkl", 'wb') as f:
                 pickle.dump(bl_results, f)
-
+            with open(f"{args.outdir}/bl_results_sifts_unmatched.pkl", 'wb') as f:
+                pickle.dump(bl_results_unmatched, f)
         else:
-            #result_df = pd.read_csv(f"{args.outdir}/{db}_pdb_residue_interactions_distinct_bl.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
             with open(f"{args.outdir}/bl_results.pkl", 'rb') as f:
                 bl_results = pickle.load(f)
             console.print(f"Loaded bound ligand results from file {args.outdir}/bl_results.pkl")
 
         if not os.path.exists(f"{args.outdir}/bs_results.pkl"):
-            for db, query in bs_queries.items():
+            for db, data in bs_queries.items():
+                query = data["query"]
+                domain_identifier = data["domain_id"]
                 task = progress.add_task(f"[cyan]Processing {db} bound sugars...", total=total_rows)
                 results = []
                 with concurrent.futures.ThreadPoolExecutor(max_workers = args.threads) as executor:
@@ -295,18 +330,26 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "inner") #keeping only pdbs with sifts ec annotations 
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
+                result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
+                result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
+                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"]) 
                 if db == "SCOP":
-                    result_df = result_df.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
+                    result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
-                    result_df = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
-                bs_results[db] = result_df
+                    result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                console.print("Assigning ownership categories")
+                result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
+                bs_results[db] = result_df_ec
+                bs_results_unmatched[db] = result_df_ec_unmatched
             del(results)
+            console.print("Saving bound sugar results to file")
             with open(f"{args.outdir}/bs_results.pkl", 'wb') as f:
                 pickle.dump(bs_results, f)
+            with open(f"{args.outdir}/bs_results_sifts_unmatched.pkl", 'wb') as f:
+                pickle.dump(bs_results_unmatched, f)
         else:
             with open(f"{args.outdir}/bs_results.pkl", 'rb') as f:
                 bs_results = pickle.load(f)
