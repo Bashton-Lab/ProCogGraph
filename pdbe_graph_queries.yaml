@@ -206,7 +206,7 @@ scop_bl_query: |
     scop_rel.STRUCT_ASYM_ID as scop_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE scop_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -279,7 +279,7 @@ scop_sugar_query: |
     scop_rel.STRUCT_ASYM_ID as scop_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE scop_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -352,7 +352,7 @@ interpro_d_bl_query: |
     ip.STRUCT_ASYM_ID as interpro_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op
     WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -417,7 +417,7 @@ interpro_d_sugar_query: |
     ip.STRUCT_ASYM_ID as interpro_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -486,7 +486,7 @@ interpro_f_bl_query: |
     ip.STRUCT_ASYM_ID as interpro_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -551,7 +551,7 @@ interpro_f_sugar_query: |
     ip.STRUCT_ASYM_ID as interpro_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -620,7 +620,7 @@ interpro_h_bl_query: |
     ip.STRUCT_ASYM_ID as interpro_chain, 
     bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
-    part.SYM_OPERATOR as bm_bl_sym_op, 
+    part.SYM_OPERATOR as bm_bl_sym_op 
     WHERE interpro_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
