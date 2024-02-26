@@ -354,7 +354,7 @@ interpro_d_sugar_query: |
     p.UNIQID as ligand_entity_id, 
     p.ID as ligand_entity_id_numerical, 
     p.DESCRIPTION as description, 
-    bl.UNIQID as bound_ligand_id 
+    bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
