@@ -53,7 +53,7 @@ def parity_score_smiles(pdb_ligand_id, smiles, ec, bl_name, ligand_description, 
                 else:
                     #repeat canonicalisation to ensure best possible parity score
                     rdkit_compound = Chem.MolFromSmiles(Chem.CanonSmiles(row["canonical_smiles"]))
-                    parity = compare_molecules(ligand_rdkit, rdkit_compound, threshold = threshold)
+                    parity = compare_molecules(ligand_rdkit, rdkit_compound, thresh = threshold)
                     score = parity.similarity_score
                     mol1_atom_count = ligand_rdkit.GetNumAtoms()
                     mol2_atom_count = rdkit_compound.GetNumAtoms()
