@@ -94,8 +94,6 @@ args = parser.parse_args()
 all_chem_descriptors_ligands_unique_pairs = pd.read_pickle(f"{args.processed_ligands_file}")
 all_chem_descriptors_ligands_unique_pairs = all_chem_descriptors_ligands_unique_pairs.head(1000)
 cognate_ligands_df = pd.read_pickle(f"{args.cognate_ligands_file}")
-chunk_index = args.chunk
-chunk_size = args.chunk_size
 
 pickle_filename = f"{args.outdir}/all_parity_calcs.pkl"
 
