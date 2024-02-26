@@ -108,7 +108,7 @@ if not os.path.exists(pickle_filename):
             for index, row in all_chem_descriptors_ligands_unique_pairs.iterrows():
                 cognate_ligands_df_subset = cognate_ligands_df.loc[(cognate_ligands_df.entry.isin(row.ec_list)), ["entry", "canonical_smiles", "ROMol"]].copy()
                 cognate_ligands_df_subset = cognate_ligands_df_subset.groupby("canonical_smiles").agg({"entry" : list, "ROMol" : "first"}).reset_index()
-                futures.append(executor.submit(parity_score_smiles, row, cognate_ligands_df_subset, progress,task) for _, row in all_chem_descriptors_ligands_unique_pairs.iterrows())
+                futures.append(executor.submit(parity_score_smiles, row, cognate_ligands_df_subset, progress,task))
             for future in concurrent.futures.as_completed(futures):
                 results.extend(future.result())
                 del futures[future]
