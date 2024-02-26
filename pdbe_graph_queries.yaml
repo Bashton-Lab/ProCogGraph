@@ -120,6 +120,7 @@ cath_sugar_query: |
     a.TITLE as pdb_title, 
     a.KEYWORDS as pdb_keywords, e.UNIQID as protein_entity_id , 
     e.DESCRIPTION as protein_entity_description, 
+    Arp.STRUCT_ASYM_ID_2 as chain_id,
     Arp.AUTH_SEQ_ID_1 as auth_1, 
     Arp.AUTH_SEQ_ID_2 as auth_2,  
     p.UNIQID as ligand_entity_id, 
