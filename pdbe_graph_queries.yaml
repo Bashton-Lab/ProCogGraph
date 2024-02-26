@@ -96,7 +96,7 @@ cath_bl_query: |
     cath_topology, 
     cath_homology, 
     cath_code, 
-    cath_chain
+    cath_chain,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
