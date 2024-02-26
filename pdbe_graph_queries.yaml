@@ -1,45 +1,3 @@
-make_index: |
-  CREATE INDEX FOR (i:Interpro) ON (i.ENTRY_TYPE);
-  CREATE INDEX FOR (p:Entity) ON (p.TYPE);
-
-bound_ligand_query: |
-    MATCH
-    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})<-[c:HAS_ENTITY]-(a:Entry)-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})
-    WHERE
-    e.EC IS NOT NULL AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
-    ORDER BY bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, ligand_entity_id, bl_uniqid, COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
-
-bound_ligand_sifts: |
-    MATCH
-    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})<-[c:HAS_ENTITY]-(a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:HAS_ARP_CONTACT]->(pr:PDBResidue)-[:HAS_ARP_CONTACT {AUTH_ASYM_ID_2: $chain}]->(bl)
-    WHERE
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , ch.STRUCT_ASYM_ID as chain_id, ch.AUTH_ASYM_ID as auth_chain_id, p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
-    ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, chain_id, auth_chain_id, ligand_entity_id, bl_uniqid, COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
-
-bound_sugar_query: |
-    MATCH
-    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "s", POLYMER_TYPE: "S"})<-[c:HAS_ENTITY]-(a:Entry)-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})
-    WHERE
-    e.EC IS NOT NULL AND
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
-    ORDER BY bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
-
-bound_sugar_sifts: |
-    MATCH
-    (bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "s", POLYMER_TYPE: "S"})<-[c:HAS_ENTITY]-(a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:CONTAINS_CHAIN]->(ch:Chain {AUTH_ASYM_ID : $chain})
-    WHERE
-    NOT bl.CHEM_COMP_ID in ["UNX", "UNL"] AND bl.CHEM_COMP_ID in split(p.CHEM_COMP_LIST, ",")
-    WITH a.ID as pdb_id, e.UNIQID as protein_entity_id , ch.STRUCT_ASYM_ID as chain_id, ch.AUTH_ASYM_ID as auth_chain_id, p.UNIQID as ligand_entity_id, bl.UNIQID as bl_uniqid, bm.UNIQID as bm_uniqid, part.SYM_OPERATOR as bm_bl_sym_op 
-    ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bl_uniqid
-    RETURN pdb_id, protein_entity_id, chain_id, auth_chain_id, ligand_entity_id, bl_uniqid,  COLLECT(bm_uniqid) as bm_uniqids, COLLECT(bm_bl_sym_op) as bm_bl_sym_ops
-
 cath_bl_query: |
     MATCH
     (a:Entry {ID: $pdb_id})-[z:HAS_ENTITY]->(e:Entity  {TYPE : 'p', POLYMER_TYPE : 'P'})-[:HAS_PDB_RESIDUE]->(pr:PDBResidue)<-[Arp:HAS_ARP_CONTACT]-(bl:BoundLigand)-[part:IS_PART_OF]-(bm:BoundMolecule)-[k:HAS_ENTITY]->(p:Entity {TYPE: "b", POLYMER_TYPE: "B"})-[:IS_AN_INSTANCE_OF]->(bl)
@@ -64,7 +22,7 @@ cath_bl_query: |
     bl.UNIQID as uniqueID, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, bl.CHEM_COMP_ID as bl_name, 
+    cd.DESCRIPTOR as descriptor, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     cath.DOMAIN as cath_name, cath.CLASS as cath_class, 
     cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
@@ -97,7 +55,6 @@ cath_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
-    bl_name, 
     cath_name, 
     cath_class, 
     cath_architecture, 
@@ -129,7 +86,6 @@ cath_sugar_query: |
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
     WHERE cath_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
@@ -154,8 +110,7 @@ cath_sugar_query: |
     bound_ligand_id,  
     "sugar" as type,
     bound_ligand_name, 
-    bound_ligand_struct_asym_id,  
-    bl_name, 
+    bound_ligand_struct_asym_id, 
     cath_name, 
     cath_class, 
     cath_architecture, 
@@ -194,7 +149,6 @@ scop_bl_query: |
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     cd.DESCRIPTOR as descriptor, 
-    bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     scop.SUNID as scop_sunid,
     scop.DESCRIPTION as scop_description,
@@ -231,8 +185,7 @@ scop_bl_query: |
     "ligand" as type,
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
-    descriptor, 
-    bl_name, 
+    descriptor,
     scop_sunid, 
     scop_description, 
     scop_sccs, 
@@ -266,8 +219,7 @@ scop_sugar_query: |
     p.DESCRIPTION as description, 
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
-    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    bl.CHEM_COMP_ID as bl_name, 
+    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     scop.SUNID as scop_sunid,
     scop.DESCRIPTION as scop_description,
@@ -303,7 +255,6 @@ scop_sugar_query: |
     "sugar" as type,
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
-    bl_name, 
     scop_sunid, 
     scop_description, 
     scop_sccs, 
@@ -343,7 +294,6 @@ interpro_d_bl_query: |
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     cd.DESCRIPTOR as descriptor, 
-    bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -377,7 +327,6 @@ interpro_d_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
-    bl_name, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
@@ -408,7 +357,6 @@ interpro_d_sugar_query: |
     bl.UNIQID as bound_ligand_id 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    bl.CHEM_COMP_ID as bl_name, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -439,8 +387,7 @@ interpro_d_sugar_query: |
     bound_ligand_id, 
     "sugar" as type,
     bound_ligand_name, 
-    bound_ligand_struct_asym_id,
-    bl_name, 
+    bound_ligand_struct_asym_id, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
@@ -475,8 +422,7 @@ interpro_f_bl_query: |
     bl.UNIQID as uniqueID, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
-    bl.CHEM_COMP_ID as bl_name, 
+    cd.DESCRIPTOR as descriptor,
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -510,7 +456,6 @@ interpro_f_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
-    bl_name, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
@@ -540,8 +485,7 @@ interpro_f_sugar_query: |
     p.DESCRIPTION as description, 
     bl.UNIQID as bound_ligand_id,
     bl.CHEM_COMP_ID as bound_ligand_name, 
-    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    bl.CHEM_COMP_ID as bl_name, 
+    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -573,7 +517,6 @@ interpro_f_sugar_query: |
     "sugar" as type,
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
-    bl_name, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
@@ -608,8 +551,7 @@ interpro_h_bl_query: |
     bl.UNIQID as uniqueID, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    cd.DESCRIPTOR as descriptor, 
-    bl.CHEM_COMP_ID as bl_name, 
+    cd.DESCRIPTOR as descriptor,
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -643,7 +585,6 @@ interpro_h_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
-    bl_name, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
@@ -673,8 +614,7 @@ interpro_h_sugar_query: |
     p.DESCRIPTION as description, 
     bl.UNIQID as bound_ligand_id, 
     bl.CHEM_COMP_ID as bound_ligand_name, 
-    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
-    bl.CHEM_COMP_ID as bl_name, 
+    bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]\\' ]", ""), ",") as contact_type,
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
@@ -707,7 +647,6 @@ interpro_h_sugar_query: |
     "sugar" as type,
     bound_ligand_name, 
     bound_ligand_struct_asym_id,
-    bl_name, 
     interpro_type, 
     interpro_accession, 
     interpro_name, 
