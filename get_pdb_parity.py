@@ -108,7 +108,7 @@ if not os.path.exists(pickle_filename):
         bl_name = row['bl_name']
         ligand_id = row['ligand_entity_id']
         ligand_representation = row['descriptor']
-        ligand_description = row["ligand_entity_description"]
+        ligand_description = row["description"]
         ec = row['ec_list']
         
         cognate_ligands_df_subset = cognate_ligands_df.loc[(cognate_ligands_df.entry.isin(ec)), ["entry", "canonical_smiles", "ROMol"]].copy()
