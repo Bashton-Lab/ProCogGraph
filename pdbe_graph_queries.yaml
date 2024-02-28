@@ -25,7 +25,8 @@ cath_bl_query: |
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     cd.DESCRIPTOR as descriptor, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
-    cath.DOMAIN as cath_name, cath.CLASS as cath_class, 
+    cath.DOMAIN as cath_domain, 
+    cath.NAME as cath_name, cath.CLASS as cath_class, 
     cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
     cath.HOMOL as cath_homologous_superfamily, 
     cath.CATHCODE as cath_code, 
@@ -59,6 +60,7 @@ cath_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
+    cath_domain,
     cath_name, 
     cath_class, 
     cath_architecture, 
@@ -93,6 +95,7 @@ cath_bl_query: |
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
     descriptor, 
+    cath_domain,
     cath_name, 
     cath_class, 
     cath_architecture, 
@@ -128,7 +131,7 @@ cath_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
-    cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homologous_superfamily, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
+    cath.DOMAIN as cath_domain, cath.NAME as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homologous_superfamily, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
     WHERE cath_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -153,7 +156,8 @@ cath_sugar_query: |
     bound_ligand_id,  
     "sugar" as type,
     bound_ligand_name, 
-    bound_ligand_struct_asym_id, 
+    bound_ligand_struct_asym_id,
+    cath_domain, 
     cath_name, 
     cath_class, 
     cath_architecture, 
@@ -187,6 +191,7 @@ cath_sugar_query: |
     "sugar" as type,
     bound_ligand_name, 
     bound_ligand_struct_asym_id, 
+    cath_domain,
     cath_name, 
     cath_class, 
     cath_architecture, 
