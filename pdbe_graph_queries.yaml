@@ -27,7 +27,8 @@ cath_bl_query: |
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
     cath.DOMAIN as cath_name, cath.CLASS as cath_class, 
     cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
-    cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, 
+    cath.HOMOL as cath_homologous_superfamily, 
+    cath.CATHCODE as cath_code, 
     cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, 
     bm.ID as bound_molecule_display_id, 
     part.SYM_OPERATOR as bm_bl_sym_op
@@ -62,7 +63,7 @@ cath_bl_query: |
     cath_class, 
     cath_architecture, 
     cath_topology, 
-    cath_homology, 
+    cath_homologous_superfamily, 
     cath_code, 
     cath_chain, 
     bm_uniqid,
@@ -96,9 +97,10 @@ cath_bl_query: |
     cath_class, 
     cath_architecture, 
     cath_topology, 
-    cath_homology, 
+    cath_homologous_superfamily, 
     cath_code, 
     cath_chain,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -126,7 +128,7 @@ cath_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id, 
     split(apoc.text.replace(Arp.CONTACT_TYPE, "[\\[\\]' ]", ""), ",") as contact_type, 
-    cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homology, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
+    cath.DOMAIN as cath_name, cath.CLASS as cath_class, cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, cath.HOMOL as cath_homologous_superfamily, cath.CATHCODE as cath_code, cath_rel.STRUCT_ASYM_ID as cath_chain, bm.UNIQID as bm_uniqid, bm.ID as bound_molecule_display_id, part.SYM_OPERATOR as bm_bl_sym_op
     WHERE cath_chain = chain_id AND contact_type <> ['vdw_clash'] AND contact_type <> ['clash']
     WITH *
     ORDER BY pdb_id, protein_entity_id, chain_id, bm_uniqid, bound_ligand_id
@@ -156,7 +158,7 @@ cath_sugar_query: |
     cath_class, 
     cath_architecture, 
     cath_topology, 
-    cath_homology, 
+    cath_homologous_superfamily, 
     cath_code, 
     cath_chain,
     collect(DISTINCT(bm_uniqid))[0] + "_" + ligand_entity_id_numerical + "_" + bound_ligand_struct_asym_id as uniqueID,
@@ -189,10 +191,11 @@ cath_sugar_query: |
     cath_class, 
     cath_architecture, 
     cath_topology, 
-    cath_homology, 
+    cath_homologous_superfamily, 
     cath_code, 
     cath_chain,
     uniqueID,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -306,6 +309,7 @@ scop_bl_query: |
     scop_superfamily_id, 
     scop_id,
     scop_chain,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -413,6 +417,7 @@ scop_sugar_query: |
     scop_id,
     scop_chain,
     uniqueID,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -514,6 +519,7 @@ interpro_d_bl_query: |
     interpro_accession, 
     interpro_name, 
     interpro_chain,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -609,6 +615,7 @@ interpro_d_sugar_query: |
     interpro_name, 
     interpro_chain,
     uniqueID,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -710,6 +717,7 @@ interpro_f_bl_query: |
     interpro_accession, 
     interpro_name, 
     interpro_chain,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -805,6 +813,7 @@ interpro_f_sugar_query: |
     interpro_name, 
     interpro_chain,
     uniqueID,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
@@ -874,10 +883,10 @@ interpro_h_bl_query: |
     interpro_type, 
     interpro_accession, 
     interpro_name, 
-    interpro_chain, 
-    apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
-    apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
-    apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
+    interpro_chain,
+    bm_uniqid,
+    bound_molecule_display_id,
+    bm_bl_sym_op
     RETURN
     pdb_id, 
     pdb_descriptor, 
@@ -905,10 +914,11 @@ interpro_h_bl_query: |
     interpro_type, 
     interpro_accession, 
     interpro_name, 
-    interpro_chain, 
-    bm_uniqids, 
-    bound_molecule_display_ids, 
-    bm_bl_sym_ops
+    interpro_chain,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
+    apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
+    apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
+    apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
 
 interpro_h_sugar_query: |
     MATCH
@@ -1001,6 +1011,7 @@ interpro_h_sugar_query: |
     interpro_name, 
     interpro_chain,
     uniqueID,
+    collect(DISTINCT(bound_molecule_display_id)[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm_uniqid)), "|") as bm_uniqids, 
     apoc.text.join(collect(DISTINCT(bound_molecule_display_id)), "|") as bound_molecule_display_ids, 
     apoc.text.join(collect(DISTINCT(bm_bl_sym_op)), "|") as bm_bl_sym_ops
