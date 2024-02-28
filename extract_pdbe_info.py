@@ -19,6 +19,8 @@ from rich.progress import Progress
 from rich.console import Console
 import pickle
 from neo4j import __version__ as neo4j_version,  GraphDatabase
+import gzip 
+import re
 
 def return_partial_EC_list(ec, total_ec_list):
     if not isinstance(ec, str) and np.isnan(ec):
@@ -160,6 +162,48 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     
     return ligands_df
 
+def extract_domain_annotations(xml_file):
+    with gzip.open(xml_file, 'rb') as f:
+        tree = ET.parse(f)
+        root = tree.getroot()
+
+        # Find all interpro elements in the XML file
+        interpro_elements = root.findall('.//interpro')
+
+        pfam_annotations = {}
+        superfamily_annotations = {}
+        gene3d_annotations = {}
+        # Iterate through each interpro element
+        for interpro in interpro_elements:
+            interpro_id = interpro.attrib['id']
+            # Find db_xref elements with db attribute as PFAM
+            pfam_refs = interpro.findall('.//db_xref[@db="PFAM"]')
+            superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
+            gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
+            #GENE3D 
+            #SUPERRFAMILY
+            pfam_accessions = []
+            superfamily_accessions = []
+            gene3d_accessions = []
+            # Extract PFAM accessions for the current interpro element
+            for pfam_ref in pfam_refs:
+                pfam_accessions.append("PFAM:" + pfam_ref.attrib.get('dbkey'))
+            for superfamily_ref in superfamily_refs:
+                superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
+            for gene3d_ref in gene3d_refs:
+                gene3d_accessions.append("CATH-Gene3D:" + gene3d_ref.attrib.get('dbkey'))
+
+            # Store PFAM annotations for the interpro ID
+            pfam_annotations[interpro_id] = pfam_accessions
+            superfamily_annotations[interpro_id] = superfamily_accessions
+            gene3d_annotations[interpro_id] = gene3d_accessions
+
+    interpro_annotations = pd.DataFrame([pfam_annotations, superfamily_annotations, gene3d_annotations], index = ["pfam_annotations", "superfamily_annotations", "gene3d_annotations"]).T
+    interpro_annotations["dbxref"] = interpro_annotations["pfam_annotations"].str.join("|") + "|" + interpro_annotations["superfamily_annotations"].str.join("|") + "|" + interpro_annotations["gene3d_annotations"].str.join("|")
+    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].str.rstrip("|").str.lstrip("|")
+    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].replace("", np.nan)
+    return interpro_annotations[["dbxref"]]
+
 def main():
 
     parser = argparse.ArgumentParser(description = 'TO DO')
@@ -189,6 +233,9 @@ def main():
         help = "scop domains info file")
     parser.add_argument('--scop_descriptions_file', type = str,
         help="scop descriptions file")
+    parser.add_argument('--interpro_xml', metavar='interpro_xml', type=str,
+        help = "path to interpro xml file (gzipped)")
+    
     
     args = parser.parse_args()
 
@@ -277,6 +324,8 @@ def main():
         fold_codes = scop_domains_info[["cf_id", "cf_description"]].drop_duplicates()
         superfamily_codes = scop_domains_info[["sf_id", "sf_description"]].drop_duplicates()
 
+        interpro_annotations = extract_domain_annotations(args.interpro_xml)
+
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
 
             for db, data in bl_queries.items():
@@ -301,6 +350,8 @@ def main():
                     scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
+                    result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
                 bl_results[db] = result_df_ec_ownership
@@ -340,6 +391,9 @@ def main():
                     scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
+                    result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
+
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
                 bs_results[db] = result_df_ec
