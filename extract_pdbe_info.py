@@ -346,8 +346,8 @@ def main():
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
-                    scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_matched = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
@@ -387,8 +387,8 @@ def main():
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"]) 
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
-                    scop_bl_domains_matched = result_df.loc[result_df._merge == "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = result_df.loc[result_df._merge != "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_matched = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge"])
+                    scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
