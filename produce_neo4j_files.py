@@ -12,49 +12,6 @@ from utils import process_ec_records
 import xml.etree.ElementTree as ET
 import gzip
 
-def extract_domain_annotations(xml_file):
-    with gzip.open(xml_file, 'rb') as f:
-        tree = ET.parse(f)
-        root = tree.getroot()
-
-        # Find all interpro elements in the XML file
-        interpro_elements = root.findall('.//interpro')
-
-        pfam_annotations = {}
-        superfamily_annotations = {}
-        gene3d_annotations = {}
-        # Iterate through each interpro element
-        for interpro in interpro_elements:
-            interpro_id = interpro.attrib['id']
-            # Find db_xref elements with db attribute as PFAM
-            pfam_refs = interpro.findall('.//db_xref[@db="PFAM"]')
-            superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
-            gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
-            #GENE3D 
-            #SUPERRFAMILY
-            pfam_accessions = []
-            superfamily_accessions = []
-            gene3d_accessions = []
-            # Extract PFAM accessions for the current interpro element
-            for pfam_ref in pfam_refs:
-                pfam_accessions.append("PFAM:" + pfam_ref.attrib.get('dbkey'))
-            for superfamily_ref in superfamily_refs:
-                superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
-            for gene3d_ref in gene3d_refs:
-                gene3d_accessions.append("CATH-Gene3D:" + gene3d_ref.attrib.get('dbkey'))
-
-            # Store PFAM annotations for the interpro ID
-            pfam_annotations[interpro_id] = pfam_accessions
-            superfamily_annotations[interpro_id] = superfamily_accessions
-            gene3d_annotations[interpro_id] = gene3d_accessions
-
-    interpro_annotations = pd.DataFrame([pfam_annotations, superfamily_annotations, gene3d_annotations], index = ["pfam_annotations", "superfamily_annotations", "gene3d_annotations"]).T
-    interpro_annotations["dbxref"] = interpro_annotations["pfam_annotations"].str.join("|") + "|" + interpro_annotations["superfamily_annotations"].str.join("|") + "|" + interpro_annotations["gene3d_annotations"].str.join("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].str.rstrip("|").str.lstrip("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].replace("", np.nan)
-    return interpro_annotations[["dbxref"]]
-
-
 def main():
 
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -78,8 +35,6 @@ def main():
                         help = "path to bound molecules sugars ec dataframe")
     parser.add_argument('--parity_calcs', metavar='parity_calcs', type=str,
                         help = "path to parity calcs dataframe")
-    parser.add_argument('--interpro_xml', metavar='interpro_xml', type=str,
-                        help = "path to interpro xml file (gzipped)")
 
     args = parser.parse_args()
 
@@ -125,9 +80,6 @@ def main():
     cath_domains["chainUniqueID"] = cath_domains["protein_entity_id"] + "_" + cath_domains["protein_chain_id"]
     scop_domains["chainUniqueID"] = scop_domains["protein_entity_id"] + "_" + scop_domains["protein_chain_id"]
     interpro_domains["chainUniqueID"] = interpro_domains["protein_entity_id"] + "_" + interpro_domains["protein_chain_id"]
-
-    interpro_annotations = extract_domain_annotations(args.interpro_xml)
-    interpro_domains = interpro_domains.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
 
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]]]).drop_duplicates()
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
