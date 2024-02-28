@@ -351,9 +351,9 @@ def main():
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                     if db in ["InterProDomain", "InterProFamily"]:
-                        result_df_ec = result_df_ec.loc[result_df_ec.dbxref.str.contains("PFAM")]
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & (result_df_ec.dbxref.str.contains("PFAM"))]
                     elif db == "InterProHomologousSuperfamily":
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA"))] 
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
 
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
@@ -397,9 +397,9 @@ def main():
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                     if db in ["InterProDomain", "InterProFamily"]:
-                        result_df_ec = result_df_ec.loc[result_df_ec.dbxref.str.contains("PFAM")]
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & (result_df_ec.dbxref.str.contains("PFAM"))]
                     elif db == "InterProHomologousSuperfamily":
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA"))] 
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
 
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
