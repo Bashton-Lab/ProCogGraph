@@ -180,8 +180,6 @@ def extract_domain_annotations(xml_file):
             pfam_refs = interpro.findall('.//db_xref[@db="PFAM"]')
             superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
             gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
-            #GENE3D 
-            #SUPERRFAMILY
             pfam_accessions = []
             superfamily_accessions = []
             gene3d_accessions = []
@@ -191,7 +189,7 @@ def extract_domain_annotations(xml_file):
             for superfamily_ref in superfamily_refs:
                 superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
             for gene3d_ref in gene3d_refs:
-                gene3d_accessions.append("CATH-Gene3D:" + gene3d_ref.attrib.get('dbkey'))
+                gene3d_accessions.append(gene3d_ref.attrib.get('dbkey')) #no prefix for gene3d as it is prefixed in ref
 
             # Store PFAM annotations for the interpro ID
             pfam_annotations[interpro_id] = pfam_accessions
@@ -352,6 +350,11 @@ def main():
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
+                    if db in ["InterProDomain", "InterProFamily"]:
+                        result_df_ec = result_df_ec.loc[result_df_ec.dbxref.str.contains("PFAM")]
+                    elif db == "InterProHomologousSuperfamily":
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA"))] 
+
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
                 bl_results[db] = result_df_ec_ownership
@@ -393,6 +396,10 @@ def main():
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
                 elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
+                    if db in ["InterProDomain", "InterProFamily"]:
+                        result_df_ec = result_df_ec.loc[result_df_ec.dbxref.str.contains("PFAM")]
+                    elif db == "InterProHomologousSuperfamily":
+                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA"))] 
 
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
