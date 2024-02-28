@@ -263,14 +263,14 @@ def main():
             print(exc)
 
     bl_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_domain"},
+        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_name"},
         "SCOP" : {"query" :pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
         "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_bl_query"], "domain_id": "interpro_accession"},
         "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_bl_query"], "domain_id": "interpro_accession"},
         "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_accession"}}
 
     bs_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_domain"},
+        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_name"},
         "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_id"},
         "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_sugar_query"], "domain_id": "interpro_accession"},
         "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_sugar_query"], "domain_id": "interpro_accession"},
