@@ -295,7 +295,8 @@ def main():
 
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
-
+        sifts_chains_ec = sifts_chains_ec.groupby(["PDB", "CHAIN", "ACCESSION"]).agg({"EC_NUMBER": list}).reset_index()
+        sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function
         sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
         sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec", "ACCESSION" : "uniprot_accession"}, inplace = True)
         
