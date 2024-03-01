@@ -77,10 +77,6 @@ def main():
     scop_domains = pd.read_csv(f"{args.scop_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
     interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
 
-    cath_domains["chainUniqueID"] = cath_domains["protein_entity_id"] + "_" + cath_domains["protein_chain_id"]
-    scop_domains["chainUniqueID"] = scop_domains["protein_entity_id"] + "_" + scop_domains["protein_chain_id"]
-    interpro_domains["chainUniqueID"] = interpro_domains["protein_entity_id"] + "_" + interpro_domains["protein_chain_id"]
-
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]]]).drop_duplicates()
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_title"] = pdb_nodes["pdb_title"].str.replace("\n", " ", regex = True)
@@ -115,9 +111,9 @@ def main():
     scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["cath_domain", "cath_name", "cath_homology"]].drop_duplicates()
+    cath_domains_nodes = cath_domains[["cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
-    cath_domains_nodes.rename(columns = {"cath_domain": "domain:ID(cath-domain-id)", "cath_name": "name", "cath_homology": "homologousSuperfamily"}, inplace = True)
+    cath_domains_nodes.rename(columns = {"cath_domain": "domain:ID(cath-domain-id)", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
@@ -163,49 +159,46 @@ def main():
     cath_class_nodes = cath_domains.cath_class.unique()
     cath_architecture_nodes = cath_domains.cath_architecture.unique()
     cath_topology_nodes = cath_domains.cath_topology.unique()
-    cath_homology_nodes = cath_domains.cath_homology.unique()
+    cath_homologous_superfamily_nodes = cath_domains.cath_homologous_superfamily.unique()
 
     np.savetxt(f"{args.outdir}/cath_class_nodes.csv.gz", cath_class_nodes, delimiter='\t',fmt='%s', header='cathClass:ID(cath-class-ID)', comments='')
     np.savetxt(f"{args.outdir}/cath_architecture_nodes.csv.gz", cath_architecture_nodes, delimiter='\t',fmt='%s', header='cathArchitecture:ID(cath-architecture-ID)', comments='')
     np.savetxt(f"{args.outdir}/cath_topology_nodes.csv.gz", cath_topology_nodes, delimiter='\t',fmt='%s', header='cathTopology:ID(cath-topology-ID)', comments='')
-    np.savetxt(f"{args.outdir}/cath_homology_nodes.csv.gz", cath_homology_nodes, delimiter='\t',fmt='%s', header='cathHomology:ID(cath-homology-ID)', comments='')
+    np.savetxt(f"{args.outdir}/cath_homologous_superfamily_nodes.csv.gz", cath_homologous_superfamily_nodes, delimiter='\t',fmt='%s', header='cathHomology:ID(cath-homologous-superfamily-ID)', comments='')
 
     cath_class_architecture_rels = cath_domains[["cath_class", "cath_architecture"]].rename(columns = {"cath_class": ":END_ID(cath-class-ID)", "cath_architecture" : ":START_ID(cath-architecture-ID)"}).drop_duplicates()
     cath_architecture_topology_rels = cath_domains[["cath_architecture", "cath_topology"]].rename(columns = {"cath_architecture": ":END_ID(cath-architecture-ID)", "cath_topology" : ":START_ID(cath-topology-ID)"}).drop_duplicates()
-    cath_topology_homology_rels = cath_domains[["cath_topology", "cath_homology"]].rename(columns = {"cath_topology": ":END_ID(cath-topology-ID)", "cath_homology" : ":START_ID(cath-homology-ID)"}).drop_duplicates()
-    cath_homology_domain_rels = cath_domains[["cath_homology", "cath_domain"]].rename(columns = {"cath_domain": ":START_ID(cath-domain-id)", "cath_homology" : ":END_ID(cath-homology-ID)"}).drop_duplicates()
+    cath_topology_homology_rels = cath_domains[["cath_topology", "cath_homologous_superfamily"]].rename(columns = {"cath_topology": ":END_ID(cath-topology-ID)", "cath_homologous_superfamily" : ":START_ID(cath-homologous-superfamily-ID)"}).drop_duplicates()
+    cath_homologous_superfamily_domain_rels = cath_domains[["cath_homologous_superfamily", "cath_domain"]].rename(columns = {"cath_domain": ":START_ID(cath-domain-id)", "cath_homologous_superfamily" : ":END_ID(cath-homologous-superfamily-ID)"}).drop_duplicates()
 
     cath_class_architecture_rels.to_csv(f"{args.outdir}/cath_class_architecture_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_architecture_topology_rels.to_csv(f"{args.outdir}/cath_architecture_topology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_topology_homology_rels.to_csv(f"{args.outdir}/cath_topology_homology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    cath_homology_domain_rels.to_csv(f"{args.outdir}/cath_homology_domain_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    cath_homologous_superfamily_domain_rels.to_csv(f"{args.outdir}/cath_homologous_superfamily_domain_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    
+    bound_entities = pd.concat([cath_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
+                            scop_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id', 'type' , "ec_list"]], 
+                                interpro_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID','bound_ligand_id',  'type', "ec_list"]]]).drop_duplicates()
 
-    bound_entities = pd.concat([cath_domains[['bm_uniqids', 'bound_molecule_display_id', 'name', 'uniqueID', 'ligand_uniqueID', "bound_ligand_id", 'type' , "bound_ligand_struct_asym_id", "bound_ligand_auth_id", "ec_list"]], 
-                                scop_domains[['bm_uniqids', 'bound_molecule_display_id', 'name', 'uniqueID', 'ligand_uniqueID', "bound_ligand_id", 'type', "bound_ligand_struct_asym_id", "bound_ligand_auth_id", "ec_list"]], 
-                                interpro_domains[['bm_uniqids', 'bound_molecule_display_id', 'name', 'uniqueID', 'ligand_uniqueID', "bound_ligand_id", 'type', "bound_ligand_struct_asym_id", "bound_ligand_auth_id", "ec_list"]]]).drop_duplicates()
+    #sometimes a ligand is bound by two different protein chains with different ec. here we join the ec lists for these together.
+    bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list", "bound_ligand_id"]]).agg({"ec_list": list, "bound_ligand_id": set}).reset_index() #joining the multiple bound ligands making up a sugar, and multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
+    bound_entities["bound_ligand_id"] = bound_entities.bound_ligand_id.str.join("|")
+    bound_entities["ec_list"] = bound_entities.ec_list.str.join("|")
 
-    bound_entities["ec_list"] = bound_entities["ec_list"].str.split(",") #cases where two chains with different ec interact with same ligand
-    bound_entities = bound_entities.explode("ec_list")
-    bound_entities = bound_entities.groupby(['bm_uniqids', 'bound_molecule_display_id', 'name', 'uniqueID',  "bound_ligand_struct_asym_id", 'ligand_uniqueID', 'type']).agg({"bound_ligand_auth_id": "first", "bound_ligand_id": list, "ec_list": set}).reset_index()
-
-    bound_entities["bound_ligand_id"] = bound_entities["bound_ligand_id"].str.join("|")
-    bound_entities["ec_list"] = bound_entities["ec_list"].str.join("|")
-    bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "entityName", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]"}, inplace = True)
-
+    bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "entityName", "bound_molecule_display_id" : "displayName", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]"}, inplace = True)
+    
     bound_ligand_descriptors = pd.read_pickle(args.bound_ligand_descriptors)
     bound_molecules_sugar_smiles = pd.read_pickle(args.bound_molecules_sugars_smiles)
-    bound_sugar_descriptors = bound_molecules_sugar_smiles[["ligand_index", "ligand_entity_description", "descriptor", "ec_list"]].copy()
-    bound_sugar_descriptors = bound_sugar_descriptors.groupby(["ligand_index", "ligand_entity_description", "descriptor"]).agg({"ec_list": set}).reset_index()
-    bound_sugar_descriptors["bl_name"] = bound_sugar_descriptors["ligand_entity_description"]
+    bound_sugar_descriptors = bound_molecules_sugar_smiles[["ligand_index", "description", "descriptor", "ec_list"]].copy()
+    bound_sugar_descriptors = bound_sugar_descriptors.groupby(["ligand_index", "description", "descriptor"]).agg({"ec_list": set}).reset_index()
+    bound_sugar_descriptors["bl_name"] = bound_sugar_descriptors["description"]
     bound_sugar_descriptors.rename(columns = {"ligand_index": "ligand_entity_id"}, inplace = True)
     bound_descriptors = pd.concat([bound_ligand_descriptors, bound_sugar_descriptors])
     bound_descriptors["ec_list"] = bound_descriptors.ec_list.str.join("|")
 
-    bound_entities.rename(columns = {"ligand_uniqueID": "ligandUniqueID", "bm_uniqids": "boundMolecules:string[]", "bound_molecule_display_id": "boundMoleculeID", "ec_list": "ecList:string[]"}, inplace = True)
-    bound_entities["displayName"] = bound_entities['boundMoleculeID'] + ":" + bound_entities['entityName'] + ":" + bound_entities["bound_ligand_auth_id"].astype("str") + ":" + bound_entities['bound_ligand_struct_asym_id']
-    bound_entities.drop(columns = ["boundMoleculeID", "bound_ligand_struct_asym_id", "bound_ligand_auth_id"], inplace = True)
+    bound_entities.rename(columns = {"ligand_uniqueID": "ligandUniqueID", "bm_ids": "boundMolecules:string[]", "bound_molecule_display_id": "boundMoleculeID"}, inplace = True)
 
-    bound_descriptors.rename(columns = {"bl_name": "name", "ligand_entity_id": "uniqueID:ID(bd-id)", "ligand_entity_description": "description"}, inplace = True)
+    bound_descriptors.rename(columns = {"bl_name": "name", "ligand_entity_id": "uniqueID:ID(bd-id)"}, inplace = True)
     bound_descriptors.drop(columns = "ec_list", inplace = True)
     bound_descriptors.to_csv(f"{args.outdir}/bound_descriptors.csv.gz", compression = "gzip", sep = "\t", index = False)
     bound_entities_descriptors_rels = bound_entities[["uniqueID:ID(be-id)", "ligandUniqueID"]].rename(columns = {"uniqueID:ID(be-id)": ":START_ID(be-id)", "ligandUniqueID": ":END_ID(bd-id)"}).drop_duplicates()
@@ -234,16 +227,16 @@ def main():
     parity_rels.rename(columns = {"score": "parityScore:float", "pdbl_subparity": "subParityScore:float", "ec": "ecList:string[]"}, inplace = True)
     parity_rels.to_csv(f"{args.outdir}/bound_entity_parity_score_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domain_ligand_interactions = cath_domains[["cath_domain", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc" , "domain_ownership" : "interactionMode"}, inplace = True)
+    cath_domain_ligand_interactions = cath_domains[["cath_domain", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID"]].drop_duplicates()
+    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domain_ligand_interactions = scop_domains[["scop_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
+    scop_domain_ligand_interactions = scop_domains[["scop_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID"]].drop_duplicates()
+    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    interpro_domain_ligand_interactions = interpro_domains[["interpro_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_ownership", "uniqueID"]].drop_duplicates()
-    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_ownership" : "interactionMode"}, inplace = True)
+    interpro_domain_ligand_interactions = interpro_domains[["interpro_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID"]].drop_duplicates()
+    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode"}, inplace = True)
     interpro_domain_ligand_interactions.to_csv(f"{args.outdir}/interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
