@@ -422,8 +422,8 @@ def main():
     interpro_pdb_residue_interactions_bl = pd.concat([bl_results["InterProDomain"], bl_results["InterProFamily"], bl_results["InterProHomologousSuperfamily"]])
     
     #check what we are using this for again
-    bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_bl[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_bl[["bm_uniqids", "bound_ligand_id"]].drop_duplicates(),
-            interpro_pdb_residue_interactions_bl[["bm_uniqids", "bound_ligand_id"]].drop_duplicates()])
+    bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_bl[["bm_ids", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_bl[["bm_ids", "bound_ligand_id"]].drop_duplicates(),
+            interpro_pdb_residue_interactions_bl[["bm_ids", "bound_ligand_id"]].drop_duplicates()])
     
     bound_molecules_ligands.to_csv(f"{args.outdir}/bound_molecules_ligands.csv.gz", index = False, compression = "gzip")
     
@@ -433,9 +433,9 @@ def main():
      
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz"):
         bound_molecules_sugars = pd.concat([
-                cath_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() , 
-                scop_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
-                interpro_pdb_residue_interactions_bs[["pdb_id", "bm_uniqids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates()
+                cath_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() , 
+                scop_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
+                interpro_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates()
                 ])
 
         cif_ids = bound_molecules_sugars.pdb_id.unique()
