@@ -12,7 +12,7 @@ cath_bl_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) WHERE cath_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN cath_rel, cath}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -29,14 +29,12 @@ cath_bl_query: |
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "ligand" as type,
     cd.DESCRIPTOR as descriptor,
-    scop.SUNID as scop_sunid,
-    scop.DESCRIPTION as scop_description,
-    scop.SCCS as scop_sccs,
-    scop_rel.CLASS_ID as scop_class_id,
-    scop_rel.FOLD_ID as scop_fold_id,
-    scop_rel.SUPERFAMILY_ID as scop_superfamily_id,
-    scop_rel.SCOP_ID as scop_id,
-    scop_rel.STRUCT_ASYM_ID as scop_chain, 
+    cath.DOMAIN as cath_domain, 
+    cath.NAME as cath_name, cath.CLASS as cath_class, 
+    cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
+    cath.HOMOL as cath_homologous_superfamily, 
+    cath.CATHCODE as cath_code, 
+    cath_rel.STRUCT_ASYM_ID as cath_chain, 
     a.ID + "_" + bound_molecule_display_id + "_" + bl.STRUCT_ASYM_ID as uniqueID, 
     bm_ids,
     apoc.text.join(collect(DISTINCT(Arp.AUTH_SEQ_ID_2)), "|") as pdb_residue_auth_id, 
@@ -60,7 +58,7 @@ cath_sugar_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) WHERE cath_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN cath_rel, cath}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -77,14 +75,12 @@ cath_sugar_query: |
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
     cd.DESCRIPTOR as descriptor,
-    scop.SUNID as scop_sunid,
-    scop.DESCRIPTION as scop_description,
-    scop.SCCS as scop_sccs,
-    scop_rel.CLASS_ID as scop_class_id,
-    scop_rel.FOLD_ID as scop_fold_id,
-    scop_rel.SUPERFAMILY_ID as scop_superfamily_id,
-    scop_rel.SCOP_ID as scop_id,
-    scop_rel.STRUCT_ASYM_ID as scop_chain, 
+    cath.DOMAIN as cath_domain, 
+    cath.NAME as cath_name, cath.CLASS as cath_class, 
+    cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
+    cath.HOMOL as cath_homologous_superfamily, 
+    cath.CATHCODE as cath_code, 
+    cath_rel.STRUCT_ASYM_ID as cath_chain,
     a.ID + "_" + bound_molecule_display_id + "_" + bl.STRUCT_ASYM_ID as uniqueID, 
     bm_ids,
     apoc.text.join(collect(DISTINCT(Arp.AUTH_SEQ_ID_2)), "|") as pdb_residue_auth_id, 
@@ -107,7 +103,7 @@ scop_bl_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[scop_rel:IS_IN_SCOP_DOMAIN]->(scop:SCOP) WHERE scop_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN scop_rel, scop}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -154,7 +150,7 @@ scop_sugar_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[scop_rel:IS_IN_SCOP_DOMAIN]->(scop:SCOP) WHERE scop_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN scop_rel, scop}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -201,7 +197,7 @@ interpro_d_bl_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "D"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -244,7 +240,7 @@ interpro_d_sugar_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "D"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -287,7 +283,7 @@ interpro_f_bl_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "F"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -330,7 +326,7 @@ interpro_f_sugar_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "F"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -373,7 +369,7 @@ interpro_h_bl_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "H"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
@@ -416,7 +412,7 @@ interpro_h_sugar_query: |
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "H"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
     RETURN
-    a.ID as pdb_id
+    a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
     a.TITLE as pdb_title,
     a.KEYWORDS as pdb_keywords,
