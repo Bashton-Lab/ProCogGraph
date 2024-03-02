@@ -207,8 +207,8 @@ def main():
     #bound_entities.drop(columns = ["ligandUniqueID"], inplace = True)
     bound_entities.to_csv(f"{args.outdir}/bound_entities.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    bound_entities_pdb_rels = pd.concat([cath_domains[["uniqueID", "pdb_id"]], scop_domains[["uniqueID", "pdb_id"]], scop_domains[["uniqueID", "pdb_id"]]]).drop_duplicates()
-    bound_entities_pdb_rels.rename(columns = {"uniqueID": ":START_ID(be-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
+    bound_entities_pdb_rels = pd.concat([cath_domains[["uniqueID:ID(be-id)", "pdb_id"]], scop_domains[["uniqueID:ID(be-id)", "pdb_id"]], interpro_domains[["uniqueID:ID(be-id)", "pdb_id"]]]).drop_duplicates()
+    bound_entities_pdb_rels.rename(columns = {"uniqueID:ID(be-id)": ":START_ID(be-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
     bound_entities_pdb_rels.to_csv(f"{args.outdir}/be_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     parity_calcs = pd.read_pickle(f"{args.parity_calcs}")
