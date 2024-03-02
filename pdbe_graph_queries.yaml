@@ -53,8 +53,6 @@ cath_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[cath_rel:IS_IN_CATH_DOMAIN]->(cath:CATH) WHERE cath_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN cath_rel, cath}
@@ -75,7 +73,6 @@ cath_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
-    cd.DESCRIPTOR as descriptor,
     cath.DOMAIN as cath_domain, 
     cath.NAME as cath_name, cath.CLASS as cath_class, 
     cath.ARCH as cath_architecture, cath.TOPOL as cath_topology, 
@@ -147,8 +144,6 @@ scop_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[scop_rel:IS_IN_SCOP_DOMAIN]->(scop:SCOP) WHERE scop_rel.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN scop_rel, scop}
@@ -169,7 +164,6 @@ scop_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
-    cd.DESCRIPTOR as descriptor,
     scop.SUNID as scop_sunid,
     scop.DESCRIPTION as scop_description,
     scop.SCCS as scop_sccs,
@@ -239,8 +233,6 @@ interpro_d_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "D"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
@@ -261,7 +253,6 @@ interpro_d_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
-    cd.DESCRIPTOR as descriptor,
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
@@ -327,8 +318,6 @@ interpro_f_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "F"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
@@ -349,7 +338,6 @@ interpro_f_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
-    cd.DESCRIPTOR as descriptor,
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
@@ -415,8 +403,6 @@ interpro_h_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
-    WITH *
     CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
     CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ip:IS_IN_INTERPRO]->(i:Interpro {ENTRY_TYPE: "H"}) WHERE ip.STRUCT_ASYM_ID = Arp.STRUCT_ASYM_ID_2 RETURN ip, i}
@@ -437,7 +423,6 @@ interpro_h_sugar_query: |
     bl.CHEM_COMP_ID as bound_ligand_name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "sugar" as type,
-    cd.DESCRIPTOR as descriptor,
     i.ABBREV as interpro_type,
     i.INTERPRO_ACCESSION as interpro_accession,
     i.NAME as interpro_name,
