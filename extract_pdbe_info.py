@@ -555,7 +555,11 @@ def main():
     else:
         bound_molecules_sugars_smiles = pd.read_pickle(f"{args.outdir}/bound_molecules_sugars_smiles.pkl")
         bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
-        console.print(f"Loaded bound molecules sugars smiles from file {args.outdir}/bound_molecules_sugars_smiles.csv.gz and bound sugars to score from {args.outdir}/bound_sugars_to_score.pkl")
+        cath_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        scop_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        interpro_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+
+        console.print(f"Loaded bound molecules sugars smiles from file {args.outdir}/bound_molecules_sugars_smiles.csv.gz and bound sugars to score from {args.outdir}/bound_sugars_to_score.pkl and bound sugar residue interaction ID files")
     
     
     if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
@@ -587,15 +591,30 @@ def main():
         bound_ligands_to_score.to_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
     else:
         bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
-        console.print(f"Loaded bound ligands to score from file {args.outdir}/bound_ligands_to_score.pkl")
+        cath_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        scop_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        interpro_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        console.print(f"Loaded bound ligands to score from file {args.outdir}/bound_ligands_to_score.pkl and bound ligand residue interaction ID files")
 
     if not os.path.exists(f"{args.outdir}/bound_entities_to_score.pkl"):
         bound_entities_to_score = pd.concat([bound_sugars_to_score[["ligand_entity_id", "bl_name", "description", "descriptor", "ec_list"]], bound_ligands_to_score])
         assert(bound_entities_to_score.ligand_entity_id.value_counts().max() == 1)
         bound_entities_to_score.to_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
+
+        cath_pdb_residue_interactions = pd.concat([cath_pdb_residue_interactions_bl_id, cath_pdb_residue_interactions_bs_index])
+        cath_pdb_residue_interactions.to_csv(f"{args.outdir}/cath_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
+        scop_pdb_residue_interactions = pd.concat([scop_pdb_residue_interactions_bl_id, scop_pdb_residue_interactions_bs_index])
+        scop_pdb_residue_interactions.to_csv(f"{args.outdir}/scop_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
+        interpro_pdb_residue_interactions = pd.concat([interpro_pdb_residue_interactions_bl_id, interpro_pdb_residue_interactions_bs_index])
+        interpro_pdb_residue_interactions.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
+
+
     else:
         bound_entities_to_score = pd.read_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
-        console.print(f"Loaded bound entities to score from file {args.outdir}/bound_entities_to_score.pkl")
+        cath_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        scop_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        interpro_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        console.print(f"Loaded bound entities to score from file {args.outdir}/bound_entities_to_score.pkl and residue interaction files")
 
 if __name__ == "__main__":
     main()
