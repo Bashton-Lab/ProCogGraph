@@ -21,7 +21,7 @@ def main():
                         help = "path to enzclass.txt file")
     parser.add_argument('--outdir', metavar='outdir', type=str,
                         help = "path to output directory")
-    parser.add_argument('--biological_ligands', metavar='biological_ligands', type=str,
+    parser.add_argument('--cognate_ligands', metavar='cognate_ligands', type=str,
                         help = "path to biological ligands dataframe")
     parser.add_argument('--cath_domain_ownership', metavar='cath_domain_ownership', type=str,
                         help = "path to cath domain ownership file")
@@ -184,6 +184,7 @@ def main():
     bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list", "bound_ligand_id"]]).agg({"ec_list": list, "bound_ligand_id": set}).reset_index() #joining the multiple bound ligands making up a sugar, and multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
     bound_entities["bound_ligand_id"] = bound_entities.bound_ligand_id.str.join("|")
     bound_entities["ec_list"] = bound_entities.ec_list.str.join("|")
+
 
     bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "entityName", "bound_molecule_display_id" : "displayName", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]"}, inplace = True)
     
