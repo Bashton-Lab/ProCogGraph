@@ -84,9 +84,9 @@ def main():
     pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords"}, inplace = True)
     pdb_nodes.to_csv(f"{args.outdir}/pdb_entry_nodes.csv.gz", sep='\t', compression = "gzip", index = False)
 
-    cath_protein_entities = cath_domains[["chainUniqueID", "protein_chain_id",  "protein_entity_ec", "ec_list"]]
-    scop_protein_entities = scop_domains[["chainUniqueID", "protein_chain_id","protein_entity_ec", "ec_list"]]
-    interpro_protein_entities = interpro_domains[["chainUniqueID", "protein_chain_id", "protein_entity_ec", "ec_list"]]
+    cath_protein_entities = cath_domains[["chainUniqueID", "chain_id",  "protein_entity_ec", "ec_list"]]
+    scop_protein_entities = scop_domains[["chainUniqueID", "chain_id","protein_entity_ec", "ec_list"]]
+    interpro_protein_entities = interpro_domains[["chainUniqueID", "chain_id", "protein_entity_ec", "ec_list"]]
 
     protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, interpro_protein_entities])
     protein_entities = protein_entities.drop_duplicates(subset = ["chainUniqueID", "protein_entity_ec"])
@@ -96,7 +96,7 @@ def main():
     protein_entities.loc[(protein_entities.protein_entity_ec.str.contains("-")), "partialEC"] = "True"
     protein_entities["partialEC"] = protein_entities["partialEC"].fillna("False")
     protein_entities["updatedEC"] = protein_entities["updatedEC"].fillna("False")
-    protein_entities.rename(columns = {"chainUniqueID": "pdbProteinChain:ID(pdbp-id)", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC", "protein_chain_id" : "chainID"}, inplace = True)
+    protein_entities.rename(columns = {"chainUniqueID": "pdbProteinChain:ID(pdbp-id)", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC", "chain_id" : "chainID"}, inplace = True)
     protein_entities.to_csv(f"{args.outdir}/pdb_protein_chain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     protein_ec_rels = protein_entities[["pdbProteinChain:ID(pdbp-id)","ecList:string[]"]].copy()
