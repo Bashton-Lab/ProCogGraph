@@ -184,6 +184,7 @@ def main():
     bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list", "bound_ligand_id"]]).agg({"ec_list": list, "bound_ligand_id": set}).reset_index() #joining the multiple bound ligands making up a sugar, and multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
     bound_entities["bound_ligand_id"] = bound_entities.bound_ligand_id.str.join("|")
     bound_entities["ec_list"] = bound_entities.ec_list.str.join("|")
+    bound_entities["ec_list"] = bound_entities.ec_list.str.replace(",", "|") #replace comma separated lists that already existed with pipe delimiter
 
 
     bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "entityName", "bound_molecule_display_id" : "displayName", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]"}, inplace = True)
