@@ -212,6 +212,7 @@ def main():
     bound_entities_pdb_rels.to_csv(f"{args.outdir}/be_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     parity_calcs = pd.read_pickle(f"{args.parity_calcs}")
+    parity_calcs["ec"] = parity_calcs["ec"].str.split(",")
     parity_calcs = parity_calcs.explode("ec")
     parity_calcs_filtered = parity_calcs.loc[parity_calcs.score >= 0.25]
 
