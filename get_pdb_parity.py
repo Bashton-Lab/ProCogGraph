@@ -78,6 +78,7 @@ def parity_score_smiles(row, threshold, progress, task): #,
 
 def get_compound_pairs(row, cognate_ligands_df):
     ec = row.ec_list
+    ec = [ec_number for sublist in (ec_list.split(',') for ec_list in ec) for ec_number in sublist] #split each list of ECs into individual ECs
     pdb_ligand_id = row.ligand_entity_id
     smiles = row.descriptor
     bl_name = row.bl_name
