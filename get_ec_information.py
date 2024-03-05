@@ -122,6 +122,7 @@ def get_kegg_reactions(chunk, reactions_string_file = None):
         response = requests.get(f'https://rest.kegg.jp/get/{ "+".join(chunk)}')
         if response.status_code == 200:
             responses_string = response.text
+            response_status = 200
         else:
             for reaction in chunk:
                 kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
@@ -130,6 +131,7 @@ def get_kegg_reactions(chunk, reactions_string_file = None):
     else:
         with open(reactions_string_file, "r") as file:
             responses_string = file.read()
+            response_status = "Missing from file"
         
     responses_string_split = responses_string.split("///")
     for item in responses_string_split:
@@ -155,7 +157,7 @@ def get_kegg_reactions(chunk, reactions_string_file = None):
                                             "reaction_product_codes" : product_codes}
         for reaction in chunk:
             if reaction not in kegg_reaction_dictionary.keys():
-                kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : f"KEGG Reaction not found (Error: {response.status_code}"}
+                kegg_reaction_dictionary[reaction] = {"reaction_id": reaction, "reaction_definition" : [f"KEGG Reaction not found (Error: {response_status}"]}
     
     return kegg_reaction_dictionary, responses_string
 
