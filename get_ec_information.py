@@ -34,10 +34,10 @@ def get_kegg_enzymes(ec_list, enzyme_string_file = None):
             react_list = []
             if line.startswith("ALL_REAC"):
                 start_appending = True
-                react_list = line.lstrip("ALL_REAC").rstrip(";").replace(">", "").strip().split()
+                react_list = re.sub(r'\(.*?\)', '', line.lstrip("ALL_REAC").rstrip(";").replace(">", "").strip()).split()
             elif line.startswith("    "):
                 if start_appending:
-                    react_list = line.rstrip(";").strip().replace(">", "").split()
+                    react_list = re.sub(r'\(.*?\)', '', line.rstrip(";").strip().replace(">", "")).split()
             else:
                 start_appending = False
             react_list = [item for item in react_list if item.startswith("(") == False]
