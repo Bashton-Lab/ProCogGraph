@@ -22,7 +22,7 @@ from Bio.ExPASy import Enzyme as EEnzyme
 import argparse
 from pathlib import Path
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
-from utils import get_terminal_record, get_csdb_from_glycoct
+from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
@@ -217,25 +217,6 @@ def get_kegg_compound_smiles(kegg_id):
     else:
         canonical_smiles = np.nan
     return canonical_smiles
-
-def get_smiles_from_csdb(csdb_linear):
-    if csdb_linear is np.nan:
-        return np.nan
-    else:
-        response = requests.get(f"http://csdb.glycoscience.ru/database/core/convert_api.php?csdb={quote(csdb_linear)}&format=smiles")
-        mol = np.nan
-        smiles = np.nan
-        if response.status_code == 200:
-            html = response.text
-            soup = BeautifulSoup(html, 'html.parser')
-            for a in soup.find_all("a"):
-                title = a.get('title')
-                if title == "Find this structure in ChemSpider":
-                    smiles = a.contents[0].strip()
-                    break
-        else:
-            smiles = np.nan   
-        return smiles
     
 def get_gtc_info(gtcids):
     glytoucan_df_list = []
@@ -305,6 +286,8 @@ def main():
     parser.add_argument('--outdir', type=str, help='Path to output directory')
     parser.add_argument('--kegg_enzyme_string', type=str, default = None, help='Path to kegg_enzyme_strings.txt file, cached from previous run')
     parser.add_argument('--kegg_reaction_string', type=str, default = None, help='Path to kegg_reaction_strings.txt file, cached from previous run')
+    parser.add_argument('--smiles_cache', type=str, default = None, help='Path to smiles_cache.pkl file, cached from previous run')
+    parser.add_argument('--csdb_cache', type=str, default = None, help='Path to csdb_cache.pkl file, cached from previous run')
     
     args = parser.parse_args()
 
@@ -326,6 +309,9 @@ def main():
     ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
 
     ec_list = ec_records_df.TRANSFER.unique()
+    
+    smiles_cache = pd.read_pickle(args.smiles_cache)
+    csdb_cache = pd.read_pickle(args.csdb_cache)
 
     if not os.path.exists(f"{args.outdir}/kegg_enzyme_df.pkl"):
         print("Getting KEGG Enzyme records")
@@ -552,8 +538,8 @@ def main():
 
         #now need to convert this through into an smiles representation.
         #convert to csdb linear and then smiles
-        glycan_compounds_df_merged["csdb_linear"] = glycan_compounds_df_merged.glycoct.apply(lambda x: get_csdb_from_glycoct(x))
-        glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb_linear"]), axis = 1)
+        glycan_compounds_df_merged["csdb_linear"] = glycan_compounds_df_merged.glycoct.apply(lambda x: get_csdb_from_glycoct(x, csdb_cache))
+        glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb_linear"], smiles_cache), axis = 1)
         glycan_compounds_df_merged = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.smiles.isna() == False]
         glycan_compounds_df_merged["name"] = glycan_compounds_df_merged["secondary_id"]
         kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded.merge(glycan_compounds_df_merged, left_on="entities", right_on="compound_id", how = "inner")
