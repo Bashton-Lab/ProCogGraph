@@ -27,16 +27,23 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 
 def get_kegg_enzymes(ec_list, enzyme_string_file = None):
-    def extract_reaction(enzyme_record):
-        reaction_list = enzyme_record.reaction
-        rn_numbers = []
-        for reaction_str in reaction_list:
-                reaction_ids = re.findall(r'\[RN:(.*)\]', reaction_str)
-                for reaction in reaction_ids:
-                    reactions = set(reaction.split())
-                    rn_numbers.extend(reactions)
-        if len(rn_numbers) > 0:
-            return rn_numbers
+    def extract_reaction(ec):
+        all_reacts = []
+        start_appending = False
+        for line in ec:
+            react_list = []
+            if line.startswith("ALL_REAC"):
+                start_appending = True
+                react_list = line.lstrip("ALL_REAC").rstrip(";").replace(">", "").strip().split()
+            elif line.startswith("    "):
+                if start_appending:
+                    react_list = line.rstrip(";").strip().replace(">", "").split()
+            else:
+                start_appending = False
+            react_list = [item for item in react_list if item.startswith("(") == False]
+            all_reacts.extend(react_list)
+        if len(all_reacts) > 0:
+            return all_reacts
         else:
             return np.nan
         
@@ -59,8 +66,14 @@ def get_kegg_enzymes(ec_list, enzyme_string_file = None):
     else:
         with open(enzyme_string_file, "r") as file:
             response_string = file.read()
+
+    #biopython only extracts iubmb reactions, so here we process the records manually to get all kegg reactions
+    ecs = response_string.strip("\n").split("\n///\n")
+    ecs_split = [response.split("\n") for response in ecs]
+    reactions = [extract_reaction(ec) for ec in ecs_split]
+
     enzyme_dict = {}
-    
+
     enzyme_list = list(Enzyme.parse(io.StringIO(response_string)))
     enzyme_dict = {item.entry : {"entry": item.entry, 
                                     "error" : np.nan, 
@@ -69,7 +82,7 @@ def get_kegg_enzymes(ec_list, enzyme_string_file = None):
                                     "EC_substrate_codes" : extract_compound_codes(','.join(item.substrate)) if isinstance(item.substrate, list) else [],
                                     "EC_product_codes" : extract_compound_codes(','.join(item.product)) if isinstance(item.product, list) else [],
                                     "EC_dbxrefs": item.dblinks, 
-                                    "EC_reactions" : extract_reaction(item)} for item in enzyme_list}
+                                    "EC_reactions" : reactions[idx]} for idx, item in enumerate(enzyme_list)}
                 
     if set(enzyme_dict.keys()) != set(ec_list):
         missing_ecs = list(set(ec_list) - set(enzyme_dict.keys()))
