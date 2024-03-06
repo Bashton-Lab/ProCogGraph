@@ -261,21 +261,21 @@ def main():
             print(exc)
 
     bl_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_name"},
+        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_domain"},
         "SCOP" : {"query" :pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
         "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_bl_query"], "domain_id": "interpro_accession"},
         "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_bl_query"], "domain_id": "interpro_accession"},
         "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_accession"}}
 
     bs_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_name"},
+        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_domain"},
         "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_id"},
         "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_sugar_query"], "domain_id": "interpro_accession"},
         "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_sugar_query"], "domain_id": "interpro_accession"},
         "InterProHomologousSuperfamily" : {"query" : pdbe_graph_queries["interpro_h_sugar_query"], "domain_id": "interpro_accession"}}
 
     console.print("Connecting to neo4j")
-    conn = Neo4jConnection(uri="bolt://localhost:7687", user="neo4j", pwd="yTJutYQ$$d%!9h")
+    conn = Neo4jConnection(uri=args.neo4j_bolt_uri, user=args.neo4j_user, pwd=args.neo4j_password)
     console.print("Connected to neo4j")
     console.print("Generating EC record dataframe")
     
@@ -318,7 +318,7 @@ def main():
         for column in scop_id_levels:
             scop_domains_info = clean_and_merge_scop_col(scop_domains_info, column, scop_descriptions)
         
-        scop_domains_info.drop(columns = ["pdb_id"], inplace = True)
+        scop_domains_info.drop(columns = ["pdb_id", "scop_description"], inplace = True)
 
         class_codes = scop_domains_info[["cl_id", "cl_description"]].drop_duplicates()
         fold_codes = scop_domains_info[["cf_id", "cf_description"]].drop_duplicates()
