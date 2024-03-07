@@ -323,6 +323,7 @@ def main():
             enzyme_dict, enzyme_string = get_kegg_enzymes(ec_list, enzyme_string_file = args.kegg_enzyme_string)
             enzyme_records.update(enzyme_dict)
         else:
+            #run this indiviudally, and save the results to a file for each enzyme. Adapt function to take a cache dir and check for matching filename before making api call
             print("Fetching enzyme records from KEGG API")
             for i in range(0, len(ec_list), n):
                 print(f"Processing chunk {i} of {len(ec_list)}")
@@ -346,6 +347,7 @@ def main():
     reactions = kegg_enzyme_df.EC_reactions.dropna().unique()
     #we should first of all compile all of the function outputs into a single text file.
     if not os.path.exists(f"{args.outdir}/kegg_reaction_df.pkl"):
+        #run this indiviudally, and save the results to a file for each enzyme. Adapt function to take a cache dir and check for matching filename before making api call
         print("Getting KEGG Reaction records")
         kegg_reaction_dictionary = {}
         kegg_reaction_strings = []
