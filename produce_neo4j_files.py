@@ -166,7 +166,7 @@ def main():
     np.savetxt(f"{args.outdir}/cath_class_nodes.csv.gz", cath_class_nodes, delimiter='\t',fmt='%s', header='cathClass:ID(cath-class-ID)', comments='')
     np.savetxt(f"{args.outdir}/cath_architecture_nodes.csv.gz", cath_architecture_nodes, delimiter='\t',fmt='%s', header='cathArchitecture:ID(cath-architecture-ID)', comments='')
     np.savetxt(f"{args.outdir}/cath_topology_nodes.csv.gz", cath_topology_nodes, delimiter='\t',fmt='%s', header='cathTopology:ID(cath-topology-ID)', comments='')
-    np.savetxt(f"{args.outdir}/cath_homologous_superfamily_nodes.csv.gz", cath_homologous_superfamily_nodes, delimiter='\t',fmt='%s', header='cathHomology:ID(cath-homologous-superfamily-ID)', comments='')
+    np.savetxt(f"{args.outdir}/cath_homologous_superfamily_nodes.csv.gz", cath_homologous_superfamily_nodes, delimiter='\t',fmt='%s', header='cathHomologousSuperfamily:ID(cath-homologous-superfamily-ID)', comments='')
 
     cath_class_architecture_rels = cath_domains[["cath_class", "cath_architecture"]].rename(columns = {"cath_class": ":END_ID(cath-class-ID)", "cath_architecture" : ":START_ID(cath-architecture-ID)"}).drop_duplicates()
     cath_architecture_topology_rels = cath_domains[["cath_architecture", "cath_topology"]].rename(columns = {"cath_architecture": ":END_ID(cath-architecture-ID)", "cath_topology" : ":START_ID(cath-topology-ID)"}).drop_duplicates()
