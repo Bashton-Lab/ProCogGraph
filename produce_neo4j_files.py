@@ -11,6 +11,8 @@ from utils import process_ec_records
 
 import xml.etree.ElementTree as ET
 import gzip
+def sorted_set(x):
+    return [str(val) for val in sorted(set(x))]
 
 def main():
 
@@ -175,20 +177,26 @@ def main():
     cath_architecture_topology_rels.to_csv(f"{args.outdir}/cath_architecture_topology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_topology_homology_rels.to_csv(f"{args.outdir}/cath_topology_homology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_homologous_superfamily_domain_rels.to_csv(f"{args.outdir}/cath_homologous_superfamily_domain_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    
-    bound_entities = pd.concat([cath_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
-                            scop_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id', 'type' , "ec_list"]], 
-                                interpro_domains[['bm_ids', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID','bound_ligand_id',  'type', "ec_list"]]]).drop_duplicates()
+
+    bound_entities = pd.concat([cath_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
+                            scop_domains[['bm_ids', "bound_ligand_struct_asym_id",'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id', 'type' , "ec_list"]], 
+                                interpro_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID','bound_ligand_id',  'type', "ec_list"]]]).drop_duplicates()
 
     #sometimes a ligand is bound by two different protein chains with different ec. here we join the ec lists for these together.
-    bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list", "bound_ligand_id"]]).agg({"ec_list": list, "bound_ligand_id": set}).reset_index() #joining the multiple bound ligands making up a sugar, and multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
+    bound_entities["bound_ligand_auth_id"] = bound_entities["bound_ligand_auth_id"].astype("str").str.split("\|")
+    bound_entities = bound_entities.explode("bound_ligand_auth_id")
+    bound_entities["bound_ligand_auth_id"] = bound_entities["bound_ligand_auth_id"].astype("int")
+    bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list", "bound_ligand_id", "bound_ligand_auth_id", "bound_ligand_struct_asym_id"]]).agg({"ec_list": set, "bound_ligand_id": set, "bound_ligand_auth_id": sorted_set, "bound_ligand_struct_asym_id": "first"}).reset_index() #joining the multiple bound ligands making up a sugar, and multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
+    bound_entities["bound_ligand_auth_id"] = bound_entities["bound_ligand_auth_id"].str.join("|")
     bound_entities["bound_ligand_id"] = bound_entities.bound_ligand_id.str.join("|")
     bound_entities["ec_list"] = bound_entities.ec_list.str.join("|")
     bound_entities["ec_list"] = bound_entities.ec_list.str.replace(",", "|") #replace comma separated lists that already existed with pipe delimiter
 
 
-    bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "entityName", "bound_molecule_display_id" : "displayName", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]"}, inplace = True)
-    
+    bound_entities.rename(columns = {"uniqueID": "uniqueID:ID(be-id)", "name": "hetCode", "bound_ligand_id": "componentLigands:string[]", "ec_list": "ecList:string[]", "bound_ligand_auth_id": "boundLigandResidues", "bound_ligand_struct_asym_id": "boundLigandChain"}, inplace = True)
+    bound_entities.loc[bound_entities.type == "sugar", "hetCode"] = "SUGAR"
+    bound_entities["displayID"] = bound_entities["bound_molecule_display_id"] + ":" + bound_entities["hetCode"] + ":" + bound_entities["boundLigandResidues"] + ":" + bound_entities["boundLigandChain"]
+
     bound_ligand_descriptors = pd.read_pickle(args.bound_ligand_descriptors)
     bound_molecules_sugar_smiles = pd.read_pickle(args.bound_molecules_sugars_smiles)
     bound_sugar_descriptors = bound_molecules_sugar_smiles[["ligand_index", "description", "descriptor", "ec_list"]].copy()
@@ -199,7 +207,7 @@ def main():
     bound_descriptors["ec_list"] = bound_descriptors.ec_list.str.join("|")
 
     bound_entities.rename(columns = {"ligand_uniqueID": "ligandUniqueID", "bm_ids": "boundMolecules:string[]", "bound_molecule_display_id": "boundMoleculeID"}, inplace = True)
-
+    
     bound_descriptors.rename(columns = {"bl_name": "name", "ligand_entity_id": "uniqueID:ID(bd-id)"}, inplace = True)
     bound_descriptors.drop(columns = "ec_list", inplace = True)
     bound_descriptors.to_csv(f"{args.outdir}/bound_descriptors.csv.gz", compression = "gzip", sep = "\t", index = False)
