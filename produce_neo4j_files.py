@@ -110,6 +110,7 @@ def main():
 
     scop_domains_nodes = scop_domains[["scop_id", "dm_description", "scop_sccs"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
+    
     scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -126,8 +127,8 @@ def main():
     #domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
     #domain_nodes.to_csv(f"{args.outdir}/domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_family_nodes = scop_domains[["scop_sunid", "sf_description"]].drop_duplicates()
-    scop_family_nodes.rename(columns = {"scop_sunid": "scopFamily:ID(scop-family-id)", "sf_description": "familyDescription"}, inplace = True)
+    scop_family_nodes = scop_domains[["fa_id", "fa_description"]].drop_duplicates()
+    scop_family_nodes.rename(columns = {"fa_id": "scopFamily:ID(scop-family-id)", "fa_description": "familyDescription"}, inplace = True)
     scop_family_nodes.to_csv(f"{args.outdir}/scop_family_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_superfamily_nodes = scop_domains[["sf_id", "sf_description"]].drop_duplicates()
