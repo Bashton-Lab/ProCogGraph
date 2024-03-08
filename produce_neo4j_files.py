@@ -45,9 +45,9 @@ def main():
     ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
 
     ec_id_nodes = ec_records_df_grouped[["TRANSFER", "DE"]].rename(columns = {"TRANSFER" : "ecID:ID(ec-id)", "DE" : "description"}).drop_duplicates()
-    ec_nodes_class = ec_records_df_grouped[["class", "class_description"]].rename(columns = {"class": "ecClass:ID(class-id)", "class_description": "description"}).drop_duplicates()
-    ec_nodes_subclass = ec_records_df_grouped[["subclass", "subclass_description"]].rename(columns = {"subclass": "ecSubClass:ID(subclass-id)", "subclass_description": "description"}).drop_duplicates()
-    ec_nodes_subsubclass = ec_records_df_grouped[["subsubclass", "subsubclass_description"]].rename(columns = {"subsubclass": "ecSubSubClass:ID(subsubclass-id)", "subsubclass_description": "description"}).drop_duplicates()
+    ec_nodes_class = ec_records_df_grouped[["class", "class_description"]].rename(columns = {"class": "ecID:ID(class-id)", "class_description": "description"}).drop_duplicates()
+    ec_nodes_subclass = ec_records_df_grouped[["subclass", "subclass_description"]].rename(columns = {"subclass": "ecID:ID(subclass-id)", "subclass_description": "description"}).drop_duplicates()
+    ec_nodes_subsubclass = ec_records_df_grouped[["subsubclass", "subsubclass_description"]].rename(columns = {"subsubclass": "ecID:ID(subsubclass-id)", "subsubclass_description": "description"}).drop_duplicates()
 
     ec_id_nodes.to_csv(f"{args.outdir}/ec_id_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
     ec_nodes_class.to_csv(f"{args.outdir}/ec_nodes_class.csv.gz", compression = "gzip", sep = "\t", index = False)
