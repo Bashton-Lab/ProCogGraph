@@ -195,9 +195,9 @@ pfam_bl_query: |
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
     CALL {WITH p MATCH (p)-[:IS_A]->(cc:ChemicalComponent)-[:DESCRIBED_BY]->(cd:ChemicalComponentDesc {TYPE : "SMILES_CANONICAL"}) RETURN cd LIMIT 1}
     WITH *
-    CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
+    CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[prr:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e, prr}
     WITH *
-    CALL {WITH bl, Arp, pr MATCH (bl)-[Arp]->(pr)-[ur:MAP_TO_UNIPROT_RESIDUE]->(unp:UNPResidue)-[pfam_rel:IS_IN_PFAM]->(pf:Pfam) WHERE Arp.STRUCT_ASYM_ID_2 in ur.IN_STRUCT_ASYMS RETURN pf}
+    CALL {WITH bl, Arp, pr, e,prr MATCH (bl)-[Arp]->(pr)<-[prr]-(e)-[pfr:HAS_PFAM]->(pf:Pfam) WHERE toInteger(Arp.AUTH_SEQ_ID_2) in RANGE(toInteger(pfr.START),toInteger(pfr.END)) RETURN pf}
     RETURN
     a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
@@ -236,9 +236,9 @@ pfam_sugar_query: |
     WITH a, p, bl, collect(DISTINCT(bm.ID))[0] as bound_molecule_display_id,
     apoc.text.join(collect(DISTINCT(bm.ID)), "|") as bm_ids,  
     collect(DISTINCT(part.SYM_OPERATOR)) as bm_bl_sym_ops
-    CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
+    CALL {WITH bl, bm_bl_sym_ops MATCH (bl)-[Arp:HAS_ARP_CONTACT]->(pr:PDBResidue)<-[prr:HAS_PDB_RESIDUE]-(e:Entity  {TYPE : 'p', POLYMER_TYPE: "P"}) WHERE Arp.SYM_OP_1 IS NULL OR Arp.SYM_OP_1 = bm_bl_sym_ops[0] AND Arp.CONTACT_TYPE <> "['vdw_clash']" AND Arp.CONTACT_TYPE <> "['clash']" RETURN Arp, pr, e}
     WITH *
-    CALL {WITH bl, Arp, pr MATCH  (bl)-[Arp]->(pr)-[ur:MAP_TO_UNIPROT_RESIDUE]->(unp:UNPResidue)-[pfam_rel:IS_IN_PFAM]->(pf:Pfam) WHERE Arp.STRUCT_ASYM_ID_2 in ur.IN_STRUCT_ASYMS RETURN pf}
+    CALL {WITH bl, Arp, pr, e,prr MATCH (bl)-[Arp]->(pr)<-[prr]-(e)-[pfr:HAS_PFAM]->(pf:Pfam) WHERE toInteger(Arp.AUTH_SEQ_ID_2) in RANGE(toInteger(pfr.START),toInteger(pfr.END)) RETURN pf}
     RETURN
     a.ID as pdb_id,
     a.DESCRIPTOR as pdb_descriptor,
