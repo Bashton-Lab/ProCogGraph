@@ -216,6 +216,7 @@ pfam_bl_query: |
     bl.CHEM_COMP_ID as name,
     bl.STRUCT_ASYM_ID as bound_ligand_struct_asym_id,
     "ligand" as type,
+    cd.DESCRIPTOR as descriptor,
     pf.PFAM_ACCESSION as pfam_accession,
     pf.NAME as pfam_name,
     pf.DESCRIPTION as pfam_description,
