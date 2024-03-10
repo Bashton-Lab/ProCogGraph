@@ -416,7 +416,7 @@ def main():
     cath_pdb_residue_interactions_bl = bl_results["CATH"]
     scop_pdb_residue_interactions_bl = bl_results["SCOP"]
     pfam_pdb_residue_interactions_bl = bl_results["PFAM"]
-    interpro_pdb_residue_interactions_bl = pd.concat([bl_results["InterProDomain"], bl_results["InterProFamily"], bl_results["InterProHomologousSuperfamily"]])
+    interpro_pdb_residue_interactions_bl = bl_results["InterProHomologousSuperfamily"]
     
     #check what we are using this for again
     bound_molecules_ligands = pd.concat([cath_pdb_residue_interactions_bl[["bm_ids", "bound_ligand_id"]].drop_duplicates(), scop_pdb_residue_interactions_bl[["bm_ids", "bound_ligand_id"]].drop_duplicates(),
@@ -427,7 +427,7 @@ def main():
     cath_pdb_residue_interactions_bs = bs_results["CATH"]
     scop_pdb_residue_interactions_bs = bs_results["SCOP"]
     pfam_pdb_residue_interactions_bs = bs_results["PFAM"]
-    interpro_pdb_residue_interactions_bs = pd.concat([bs_results["InterProDomain"], bs_results["InterProFamily"], bs_results["InterProHomologousSuperfamily"]])
+    interpro_pdb_residue_interactions_bs = bs_results["InterProHomologousSuperfamily"]
      
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz"):
         bound_molecules_sugars = pd.concat([
