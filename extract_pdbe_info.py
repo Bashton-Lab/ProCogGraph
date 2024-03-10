@@ -262,16 +262,14 @@ def main():
 
     bl_queries = {
         "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_domain"},
-        "SCOP" : {"query" :pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
-        "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_bl_query"], "domain_id": "interpro_accession"},
-        "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_bl_query"], "domain_id": "interpro_accession"},
+        "SCOP" : {"query" : pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
+        "PFAM" : {"query" : pdbe_graph_queries["pfam_bl_query"], "domain_id": "pfam_accession"},
         "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_accession"}}
 
     bs_queries = {
         "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_domain"},
         "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_id"},
-        "InterProDomain" : {"query": pdbe_graph_queries["interpro_d_sugar_query"], "domain_id": "interpro_accession"},
-        "InterProFamily" : {"query": pdbe_graph_queries["interpro_f_sugar_query"], "domain_id": "interpro_accession"},
+        "PFAM" : {"query" : pdbe_graph_queries["pfam_sugar_query"], "domain_id": "pfam_accession"},
         "InterProHomologousSuperfamily" : {"query" : pdbe_graph_queries["interpro_h_sugar_query"], "domain_id": "interpro_accession"}}
 
     console.print("Connecting to neo4j")
@@ -350,12 +348,9 @@ def main():
                     scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
-                elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
+                elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
-                    if db in ["InterProDomain", "InterProFamily"]:
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & (result_df_ec.dbxref.str.contains("PFAM"))]
-                    elif db == "InterProHomologousSuperfamily":
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
+                    result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
 
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
@@ -420,6 +415,7 @@ def main():
 
     cath_pdb_residue_interactions_bl = bl_results["CATH"]
     scop_pdb_residue_interactions_bl = bl_results["SCOP"]
+    pfam_pdb_residue_interactions_bl = bl_results["PFAM"]
     interpro_pdb_residue_interactions_bl = pd.concat([bl_results["InterProDomain"], bl_results["InterProFamily"], bl_results["InterProHomologousSuperfamily"]])
     
     #check what we are using this for again
@@ -430,12 +426,14 @@ def main():
     
     cath_pdb_residue_interactions_bs = bs_results["CATH"]
     scop_pdb_residue_interactions_bs = bs_results["SCOP"]
+    pfam_pdb_residue_interactions_bs = bs_results["PFAM"]
     interpro_pdb_residue_interactions_bs = pd.concat([bs_results["InterProDomain"], bs_results["InterProFamily"], bs_results["InterProHomologousSuperfamily"]])
      
     if not os.path.exists(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz"):
         bound_molecules_sugars = pd.concat([
                 cath_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() , 
                 scop_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
+                pfam_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates() ,
                 interpro_pdb_residue_interactions_bs[["pdb_id", "bm_ids", "ligand_entity_id", "uniqueID", "description", "ligand_entity_id_numerical", "protein_entity_ec", "ec_list"]].drop_duplicates()
                 ])
 
@@ -545,6 +543,13 @@ def main():
         scop_pdb_residue_interactions_bs_index.drop(columns = ["_merge"], inplace = True)
         scop_pdb_residue_interactions_bs_index.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_bs_index.csv.gz", index = False, compression = "gzip")
 
+        pfam_pre_shape = len(pfam_pdb_residue_interactions_bs)
+        pfam_pdb_residue_interactions_bs_index = pfam_pdb_residue_interactions_bs.merge(bound_molecules_sugars_smiles[["ligand_index", "uniqueID", "descriptor"]].drop_duplicates().rename(columns = {"ligand_index": "ligand_uniqueID"}), on = "uniqueID", how = "left", indicator = True, validate = "many_to_one")
+        assert(len(pfam_pdb_residue_interactions_bs_index) == pfam_pre_shape)
+        assert(len(pfam_pdb_residue_interactions_bs_index.loc[pfam_pdb_residue_interactions_bs_index._merge != "both"]) == 0)
+        pfam_pdb_residue_interactions_bs_index.drop(columns = ["_merge"], inplace = True)
+        pfam_pdb_residue_interactions_bs_index.to_csv(f"{args.outdir}/pfam_pdb_residue_interactions_bs_index.csv.gz", index = False, compression = "gzip")
+
         interpro_pre_shape = len(interpro_pdb_residue_interactions_bs)
         interpro_pdb_residue_interactions_bs_index = interpro_pdb_residue_interactions_bs.merge(bound_molecules_sugars_smiles[["ligand_index", "uniqueID", "descriptor"]].drop_duplicates().rename(columns = {"ligand_index": "ligand_uniqueID"}), on = "uniqueID", how = "left", indicator = True, validate = "many_to_one")
         assert(len(interpro_pdb_residue_interactions_bs_index) == interpro_pre_shape)
@@ -557,6 +562,7 @@ def main():
         bound_sugars_to_score = pd.read_pickle(f"{args.outdir}/bound_sugars_to_score.pkl")
         cath_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         scop_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        pfam_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/pfam_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         interpro_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
 
         console.print(f"Loaded bound molecules sugars smiles from file {args.outdir}/bound_molecules_sugars_smiles.csv.gz and bound sugars to score from {args.outdir}/bound_sugars_to_score.pkl and bound sugar residue interaction ID files")
@@ -582,6 +588,11 @@ def main():
         scop_pdb_residue_interactions_bl_id.drop(columns = "_merge", inplace = True)
         scop_pdb_residue_interactions_bl_id.to_csv(f"{args.outdir}/scop_pdb_residue_interactions_bl_id.csv.gz", index = False, compression = "gzip")
 
+        pfam_pdb_residue_interactions_bl_id = pfam_pdb_residue_interactions_bl.merge(bound_ligands_to_score[["bound_ligand_name", "ligand_entity_id"]].rename(columns = {"ligand_entity_id": "ligand_uniqueID"}), on = "bound_ligand_name", how = "left", indicator = True)
+        assert(len(pfam_pdb_residue_interactions_bl_id.loc[pfam_pdb_residue_interactions_bl_id._merge != "both"]) == 0)
+        pfam_pdb_residue_interactions_bl_id.drop(columns = "_merge", inplace = True)
+        pfam_pdb_residue_interactions_bl_id.to_csv(f"{args.outdir}/pfam_pdb_residue_interactions_bl_id.csv.gz", index = False, compression = "gzip")
+
         interpro_pdb_residue_interactions_bl_id = interpro_pdb_residue_interactions_bl.merge(bound_ligands_to_score[["bound_ligand_name", "ligand_entity_id"]].rename(columns = {"ligand_entity_id": "ligand_uniqueID"}), on = "bound_ligand_name", how = "left", indicator = True)
         assert(len(interpro_pdb_residue_interactions_bl_id.loc[interpro_pdb_residue_interactions_bl_id._merge != "both"]) == 0)
         interpro_pdb_residue_interactions_bl_id.drop(columns = "_merge", inplace = True)
@@ -593,6 +604,7 @@ def main():
         bound_ligands_to_score = pd.read_pickle(f"{args.outdir}/bound_ligands_to_score.pkl")
         cath_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         scop_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        pfam_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/pfam_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         interpro_pdb_residue_interactions_bl_id = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bl_id.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         console.print(f"Loaded bound ligands to score from file {args.outdir}/bound_ligands_to_score.pkl and bound ligand residue interaction ID files")
 
@@ -605,6 +617,8 @@ def main():
         cath_pdb_residue_interactions.to_csv(f"{args.outdir}/cath_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
         scop_pdb_residue_interactions = pd.concat([scop_pdb_residue_interactions_bl_id, scop_pdb_residue_interactions_bs_index])
         scop_pdb_residue_interactions.to_csv(f"{args.outdir}/scop_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
+        pfam_pdb_residue_interactions = pd.concat([pfam_pdb_residue_interactions_bl_id, pfam_pdb_residue_interactions_bs_index])
+        pfam_pdb_residue_interactions.to_csv(f"{args.outdir}/pfam_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
         interpro_pdb_residue_interactions = pd.concat([interpro_pdb_residue_interactions_bl_id, interpro_pdb_residue_interactions_bs_index])
         interpro_pdb_residue_interactions.to_csv(f"{args.outdir}/interpro_pdb_residue_interactions.csv.gz", index = False, compression = "gzip")
 
@@ -613,6 +627,7 @@ def main():
         bound_entities_to_score = pd.read_pickle(f"{args.outdir}/bound_entities_to_score.pkl")
         cath_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/cath_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         scop_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/scop_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
+        pfam_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/pfam_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         interpro_pdb_residue_interactions = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         console.print(f"Loaded bound entities to score from file {args.outdir}/bound_entities_to_score.pkl and residue interaction files")
 
