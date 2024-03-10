@@ -233,6 +233,10 @@ def main():
         help="scop descriptions file")
     parser.add_argument('--interpro_xml', metavar='interpro_xml', type=str,
         help = "path to interpro xml file (gzipped)")
+    parser.add_argument('--pfam_clan_rels', type = str,
+        help = "pfam clan relationships file clan_membership.txt.gz")
+    parser.add_argument('--pfam_clans', type = str,
+        help = "pfam clans file clan.txt.gz")
     
     
     args = parser.parse_args()
@@ -324,6 +328,12 @@ def main():
 
         interpro_annotations = extract_domain_annotations(args.interpro_xml)
 
+        pfam_clan_rels = pd.read_csv(f"{args.pfam_clan_rels}", sep = "\t", comment = "#", header = None, names = ["pfam_id", "clan_id"])
+        pfam_clans = pd.read_csv(f"{args.pfam_clans}", sep = "\t", comment = "#", header = None, names = ["clan_id", "clan_name"])
+        pfam_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
+        assert(len(pfam_df.loc[pfam_df._merge != "both"]) == 0)
+        pfam_df.drop(columns = "_merge", inplace = True)
+
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
 
             for db, data in bl_queries.items():
@@ -348,6 +358,8 @@ def main():
                     scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                elif db == "PFAM":
+                    result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                     result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
@@ -391,12 +403,11 @@ def main():
                     scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
                     scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
                     result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
-                elif db in ["InterProDomain", "InterProFamily", "InterProHomologousSuperfamily"]:
+                elif db == "PFAM":
+                    result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
+                elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
-                    if db in ["InterProDomain", "InterProFamily"]:
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & (result_df_ec.dbxref.str.contains("PFAM"))]
-                    elif db == "InterProHomologousSuperfamily":
-                        result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
+                    result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
 
                 console.print("Assigning ownership categories")
                 result_df_ec_ownership = assign_ownership_percentile_categories(result_df_ec, unique_id = "uniqueID", domain_grouping_key = domain_identifier)
