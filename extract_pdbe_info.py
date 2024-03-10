@@ -571,6 +571,7 @@ def main():
     if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
         bound_ligands_to_score = pd.concat([cath_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]],
                                             scop_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]],
+                                            pfam_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]],
                                             interpro_pdb_residue_interactions_bl[["description", "bound_ligand_name", "descriptor", "ec_list"]]]).drop_duplicates()
 
         bound_ligands_to_score = bound_ligands_to_score.groupby(["bound_ligand_name", "descriptor"]).agg({"ec_list": set, "description": "first"}).reset_index()
