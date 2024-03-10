@@ -328,8 +328,8 @@ def main():
 
         interpro_annotations = extract_domain_annotations(args.interpro_xml)
 
-        pfam_clan_rels = pd.read_csv(f"{args.pfam_clan_rels}", sep = "\t", comment = "#", header = None, names = ["pfam_id", "clan_id"])
-        pfam_clans = pd.read_csv(f"{args.pfam_clans}", sep = "\t", comment = "#", header = None, names = ["clan_id", "clan_name"])
+        pfam_clan_rels = pd.read_csv(f"{args.pfam_clan_rels}", sep = "\t", header = None, names = ["clan", "pfam"])
+        pfam_clans = pd.read_csv(f"{args.pfam_clans}", sep = "\t", comment = "#", header = None, names = ["clan_acc", "clan_id", "previous_id", "clan_description", "clan_author", "deposited_by", "clan_comment", "updated", "created", "version", "number_structures", "number_archs", "number_species", "number_sequences", "competed", "uniprot_competed"])
         pfam_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
         assert(len(pfam_df.loc[pfam_df._merge != "both"]) == 0)
         pfam_df.drop(columns = "_merge", inplace = True)
