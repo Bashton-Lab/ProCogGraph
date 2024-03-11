@@ -77,10 +77,10 @@ def main():
     cognate_ligands_ec.rename(columns = {"uniqueID": ":START_ID(bio-id)", "entry": ":END_ID(ec-id)"}, inplace = True)
     cognate_ligands_ec.to_csv(f"{args.outdir}/cognate_ligands_ec.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains = pd.read_csv(f"{args.cath_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
-    scop_domains = pd.read_csv(f"{args.scop_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
-    pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
-    interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
+    cath_domains = pd.read_csv(f"{args.cath_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_auth_id":"str"})
+    scop_domains = pd.read_csv(f"{args.scop_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_auth_id":"str"})
+    pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_auth_id":"str"})
+    interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_auth_id":"str"})
 
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]]]).drop_duplicates()
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
