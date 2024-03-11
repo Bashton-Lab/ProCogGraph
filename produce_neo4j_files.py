@@ -31,6 +31,8 @@ def main():
                         help = "path to scop domain ownership file")
     parser.add_argument('--interpro_domain_ownership', metavar='interpro_domain_ownership', type=str,
                         help = "path to interpro domain ownership file")
+    parser.add_argument('--pfam_domain_ownership', metavar='pfam_domain_ownership', type=str,
+                        help = "path to pfam domain ownership file")
     parser.add_argument('--bound_ligand_descriptors', metavar='bound_ligand_descriptors', type=str, 
                         help = "path to bound ligand descriptors dataframe")
     parser.add_argument('--bound_molecules_sugars_smiles', metavar='bound_molecules_sugars_smiles', type=str,
@@ -77,9 +79,10 @@ def main():
 
     cath_domains = pd.read_csv(f"{args.cath_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
     scop_domains = pd.read_csv(f"{args.scop_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
+    pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
     interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False)
 
-    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]]]).drop_duplicates()
+    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]]]).drop_duplicates()
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_title"] = pdb_nodes["pdb_title"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_descriptor"] = pdb_nodes["pdb_descriptor"].str.replace("\n", " ", regex = True)
@@ -88,9 +91,10 @@ def main():
 
     cath_protein_entities = cath_domains[["chainUniqueID", "chain_id",  "protein_entity_ec", "ec_list"]]
     scop_protein_entities = scop_domains[["chainUniqueID", "chain_id","protein_entity_ec", "ec_list"]]
+    pfam_protein_entities = pfam_domains[["chainUniqueID", "chain_id", "protein_entity_ec", "ec_list"]]
     interpro_protein_entities = interpro_domains[["chainUniqueID", "chain_id", "protein_entity_ec", "ec_list"]]
 
-    protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, interpro_protein_entities])
+    protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, pfam_protein_entities, interpro_protein_entities])
     protein_entities = protein_entities.drop_duplicates(subset = ["chainUniqueID", "protein_entity_ec"])
 
     protein_entities["ec_list"] = protein_entities["ec_list"].str.replace(",", "|")
@@ -110,7 +114,6 @@ def main():
 
     scop_domains_nodes = scop_domains[["scop_id", "dm_description", "scop_sccs"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
-    
     scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -120,9 +123,14 @@ def main():
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
-    interpro_domain_nodes["interpro_type"] = "InterPro" + interpro_domain_nodes["interpro_type"]
+    interpro_domain_nodes["interpro_type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(interpro-domain-id)", "interpro_name": "name", "interpro_type": "type", "dbxref": "dbxref:string[]"}, inplace = True)
     interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    pfam_domains_nodes = pfam_domains[['pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
+    pfam_domains_nodes["type"] = "Pfam"
+    pfam_domains_nodes.rename(columns = {"pfam_accession": "domain:ID(pfam-domain-id)", "pfam_description": "description", "pfam_name": "name"}, inplace = True)
+    pfam_domains_nodes.to_csv(f"{args.outdir}/pfam_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     #domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
     #domain_nodes.to_csv(f"{args.outdir}/domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
@@ -179,8 +187,15 @@ def main():
     cath_topology_homology_rels.to_csv(f"{args.outdir}/cath_topology_homology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_homologous_superfamily_domain_rels.to_csv(f"{args.outdir}/cath_homologous_superfamily_domain_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
+    pfam_clans = pfam_domains[["clan_acc", "clan_description", "clan_comment"]].drop_duplicates()
+    pfam_clans.rename(columns = {"clan_acc": "clanID:ID(pfam-clan-id)", "clan_description": "name", "clan_comment": "description"}, inplace = True)
+    pfam_clans.to_csv(f"{args.outdir}/pfam_clans.csv.gz", compression = "gzip", sep = "\t", index = False)
+    pfam_clan_rels = pfam_domains[["pfam_accession", "clan_acc"]].rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
+    pfam_clan_rels.to_csv(f"{args.outdir}/pfam_clan_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+
     bound_entities = pd.concat([cath_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
                             scop_domains[['bm_ids', "bound_ligand_struct_asym_id",'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id', 'type' , "ec_list"]], 
+                            pfam_domains[['bm_ids', "bound_ligand_struct_asym_id",'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id', 'type' , "ec_list"]], 
                                 interpro_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID','bound_ligand_id',  'type', "ec_list"]]]).drop_duplicates()
 
     #sometimes a ligand is bound by two different protein chains with different ec. here we join the ec lists for these together.
@@ -255,6 +270,14 @@ def main():
     scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface", "pdb_residue_auth_id": "proteinInterface"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
+    pfam_domain_ligand_interactions = pfam_domains[["pfam_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
+    pfam_domain_ligand_interactions["bound_ligand_auth_id"] = pfam_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
+    pfam_domain_ligand_interactions["bound_ligand_auth_id"] = pfam_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    pfam_domain_ligand_interactions["pdb_residue_auth_id"] = pfam_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
+    pfam_domain_ligand_interactions["pdb_residue_auth_id"] = pfam_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    pfam_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "pfam_accession": ":START_ID(pfam-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface", "pdb_residue_auth_id": "proteinInterface"}, inplace = True)
+    pfam_domain_ligand_interactions.to_csv(f"{args.outdir}/pfam_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
+
     interpro_domain_ligand_interactions = interpro_domains[["interpro_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
     interpro_domain_ligand_interactions["bound_ligand_auth_id"] = interpro_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
     interpro_domain_ligand_interactions["bound_ligand_auth_id"] = interpro_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
@@ -265,25 +288,28 @@ def main():
 
     scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     cath_pdb_protein_rels = cath_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    pfam_pdb_protein_rels = pfam_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     interpro_pdb_protein_rels = interpro_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
 
-    pdb_protein_rels = pd.concat([scop_pdb_protein_rels, cath_pdb_protein_rels, interpro_pdb_protein_rels]).drop_duplicates()
+    pdb_protein_rels = pd.concat([scop_pdb_protein_rels, cath_pdb_protein_rels, pfam_pdb_protein_rels, interpro_pdb_protein_rels]).drop_duplicates()
     pdb_protein_rels.rename(columns = {"chainUniqueID": ":START_ID(pdbp-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
     pdb_protein_rels.to_csv(f"{args.outdir}/pdb_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     cath_protein_rels = cath_domains[["cath_domain", "chainUniqueID"]].drop_duplicates().rename(columns = {"cath_domain": ":START_ID(cath-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
     scop_protein_rels = scop_domains[["scop_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"scop_id": ":START_ID(scop-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    pfam_protein_rels = pfam_domains[["pfam_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
     interpro_protein_rels = interpro_domains[["interpro_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"interpro_accession": ":START_ID(interpro-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
 
     cath_protein_rels.to_csv(f"{args.outdir}/cath_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     scop_protein_rels.to_csv(f"{args.outdir}/scop_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    pfam_protein_rels.to_csv(f"{args.outdir}/pfam_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     interpro_protein_rels.to_csv(f"{args.outdir}/interpro_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     procoggraph_node = pd.DataFrame({"procoggraph:ID(procoggraph-id)": ["procoggraph"],
                                     "name": ["ProCogGraph"],
                                     "description": ["procoggraph"],
-                                    "date_created": ["2023"],
-                                    "date_updated": ["2023"],
+                                    "date_created": ["2024"],
+                                    "date_updated": ["2024"],
                                     "database_version": ["0.1"],
                                     "biological_ligands_version": ["0.1"],
                                     "pdbe_graph_version": ["0.1"],
