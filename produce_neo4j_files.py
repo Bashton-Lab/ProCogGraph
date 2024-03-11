@@ -190,7 +190,7 @@ def main():
     pfam_clans = pfam_domains[["clan_acc", "clan_description", "clan_comment"]].drop_duplicates()
     pfam_clans.rename(columns = {"clan_acc": "clanID:ID(pfam-clan-id)", "clan_description": "name", "clan_comment": "description"}, inplace = True)
     pfam_clans.to_csv(f"{args.outdir}/pfam_clans.csv.gz", compression = "gzip", sep = "\t", index = False)
-    pfam_clan_rels = pfam_domains[["pfam_accession", "clan_acc"]].rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
+    pfam_clan_rels = pfam_domains.loc[pfam_domains.clan_acc.isna() == False, ["pfam_accession", "clan_acc"]].rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
     pfam_clan_rels.to_csv(f"{args.outdir}/pfam_clan_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     bound_entities = pd.concat([cath_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
