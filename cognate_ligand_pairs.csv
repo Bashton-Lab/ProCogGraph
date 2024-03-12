@@ -13,7 +13,7 @@ pdb_ligand_uniqueID,ligand_uniqueID,kegg_ligand,biological_ligand_uniqueID,note
 1jut_bm3_E,24498,C00365,11340,
 1tth_bm1_E,20907,C00049,8511,
 2wsi_bm2_C,13835,C00016,7744,
-4xdt_bm1_B,13385,C00016,7744,
+4xdt_bm1_B,13835,C00016,7744,
 1a8r_bm7_S,15090,C00044,8998, multiple other instances
 1wuq_bm17_N,8315,C00044,8998, 8oxo also 1wuq_3_H_1 1wuq_3_N_1 1wuq_3_L_1 1wuq_3_K_1
 1ktg_bm7_J,10064,C00020,9051,caution here on enzyme in kegg also acts on amp problem
