@@ -114,7 +114,7 @@ def main():
 
     scop_domains_nodes = scop_domains[["scop_id", "dm_description", "scop_sccs"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
-    scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["scop_id"].astype("str") + "&ver=1.75"
+    scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
     scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 

@@ -2,7 +2,6 @@
 .DS_Store
 **/.snakemake
 *.pkl
-*.csv
 **/.ipynb_checkpoints
 *.tsv
 *.txt

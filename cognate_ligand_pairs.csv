@@ -1,0 +1,28 @@
+pdb_ligand_uniqueID,ligand_uniqueID,kegg_ligand,biological_ligand_uniqueID,note
+5h1y_bm1_C,23248,C00009,10795,
+1dvr_bm1_C,10217,C00002,9077,also 1dvr_2_D_1
+5cg2_bm1_C,19629,C00003,8281,also 5cg2_2_E_1
+1gp6_bm5_F,12462,C05906,11659,multiple top scores rhea etc
+4hn2_bm1_B,10085,C00002,9077,ANP
+4hn2_bm2_C,1509,C11526,10903, mutliple top scores rhea etc
+1rx0_bm3_G,13835,C00016,7744,multiple instances
+5cns_bm1_I,11552,C04232,1841,CTP also 5cns_3_I_1 5cns_3_X_1 5cns_3_S_1 could add 5cns_bm12_5cns_4_T_1 match is to a generic structure - other higher matches exists for pdb
+1gxo_bm1_B,246,C00470,9779,sugar
+1a8i_bm1_B,14908,C00103,11532,inhibitor
+4km0_bm2_D,10225,C00006,8283,
+1jut_bm3_E,24498,C00365,11340,
+1tth_bm1_E,20907,C00049,8511,
+2wsi_bm2_C,13835,C00016,7744,
+4xdt_bm1_B,13385,C00016,7744,
+1a8r_bm7_S,15090,C00044,8998, multiple other instances
+1wuq_bm17_N,8315,C00044,8998, 8oxo also 1wuq_3_H_1 1wuq_3_N_1 1wuq_3_L_1 1wuq_3_K_1
+1ktg_bm7_J,10064,C00020,9051,caution here on enzyme in kegg also acts on amp problem
+5t14_bm4_M,12847,C00131,9129,
+5uip_bm1_C,8245,C00101,8967,
+6omk_bm1_B,19378,C02593,5459,
+6mgg_bm1_E,11795,C00010,3670,
+4d9p_bm11_H,26411,C01300,8940,lower than 0.5 but is an inhibitor sulfonamide
+4l8w_bm1_G,19303,C00101,8967,methotrexate and hydrofolate
+5jq9_bm1_C,6842,C00921,8936,DHPS inhibitor
+6o82_bm11_O,17337,C00020,9051, amp and an amp-ubiqutin conjugate (but ub not considered in score)
+6e6p_bm1_L,14945,C00044,8998, GTP analog GppNHp
