@@ -12,7 +12,7 @@ import re
 from rich.progress import Progress
 from rdkit import Chem
 from collections import Counter
-import rdkit.Chem as Chem
+
 from rdkit.Chem import BRICS,Recap, rdFMCS
 from rdkit.Chem import Draw
 
@@ -70,24 +70,25 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                     #re-run the mcs to save the graph - or can we highlight the resulting atoms from the dictioanry returned by compare_molecules
                     score = parity.similarity_score
                     parity_match = parity.mapping
-                    try:
-                        mcs_graph = rdFMCS.FindMCS(
-                            [mol1, mol2],
-                            bondCompare=rdFMCS.BondCompare.CompareAny,
-                            atomCompare=rdFMCS.AtomCompare.CompareAny,
-                            timeout=40,
-                            completeRingsOnly=True,
-                        )
-                        mcsMolsMatrix = [[mol1, mcs, mol2]]
-                        mcsLegends = [[f'PDB Ligand UID: {int(pdb_ligand_id)}', f"Parity Score: {round(parity_score,3)}", f"Cognate Ligand UID: {int(cognate_ligand_id)}"]]
-                        mcsHighlightAtomLists = [[(parity_match.keys()), (), (parity_match.values())]]
-                        dos = Draw.MolDrawOptions()
-                        dos.legendFraction = 0.10
-                        img = Draw.MolsMatrixToGridImage(molsMatrix=mcsMolsMatrix, highlightAtomListsMatrix=mcsHighlightAtomLists, legendsMatrix=mcsLegends, returnPNG=True, drawOptions = dos)
-                        with open(f'{image_path}/{int(pdb_ligand_id)}_{int(cognate_ligand_id)}_parity.png', 'wb') as f:
-                            f.write(img.data)
-                    except Exception: 
-                        pass
+                    if score >= threshold:
+                        try:
+                            mcs_graph = rdFMCS.FindMCS(
+                                [ligand_rdkit, rdkit_compound],
+                                bondCompare=rdFMCS.BondCompare.CompareAny,
+                                atomCompare=rdFMCS.AtomCompare.CompareAny,
+                                timeout=40,
+                                completeRingsOnly=True,
+                            )
+                            mcs = Chem.MolFromSmarts(mcs_graph.smartsString)
+                            mcsMolsMatrix = [[ligand_rdkit, mcs, rdkit_compound]]
+                            mcsLegends = [[f'PDB Ligand UID: {int(pdb_ligand_id)}', f"Parity Score: {round(score,3)}", f"Cognate Ligand UID: {int(cognate_ligand_id)}"]]
+                            mcsHighlightAtomLists = [[(parity_match.keys()), (), (parity_match.values())]]
+                            dos = Draw.MolDrawOptions()
+                            dos.legendFraction = 0.10
+                            img = Draw.MolsMatrixToGridImage(molsMatrix=mcsMolsMatrix, highlightAtomListsMatrix=mcsHighlightAtomLists, legendsMatrix=mcsLegends, returnPNG=True, drawOptions = dos)
+                            img.save(f'{image_path}/{int(pdb_ligand_id)}_{int(cognate_ligand_id)}_parity.png')
+                        except Exception: 
+                            pass
                     
                     mol1_atom_count = ligand_rdkit.GetNumAtoms()
                     mol2_atom_count = rdkit_compound.GetNumAtoms()

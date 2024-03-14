@@ -8,6 +8,8 @@ from urllib.parse import quote
 from bs4 import BeautifulSoup
 import json 
 from Bio.ExPASy import Enzyme as EEnzyme
+from pdbeccdutils.helpers.mol_tools import fix_molecule
+from rdkit import Chem
 
 #make this function be applicable to extract_pdbe_info script too - need to check if the grouped output at end is appropriate.
 def process_ec_records(enzyme_dat_file, enzyme_class_file):
