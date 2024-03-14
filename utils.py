@@ -144,3 +144,38 @@ def get_smiles_from_csdb(csdb_linear, cache_df):
         else:
             smiles = np.nan 
         return smiles
+    
+def pdbe_sanitise_smiles(smiles, return_mol = False, return_sanitisation = False):
+    """
+    Sanitises a smiles string using pdbeccdutils fix_molecule functions and
+    returns a canonical smiles string or RDKit molecule object. Requires that
+    smiles string can be loaded into an RDKit molecule object - returns none if
+    this is not possible.
+    """
+    try:
+        mol = Chem.MolFromSmiles(Chem.CanonSmiles(smiles))
+    except:
+        if return_sanitisation:
+            return None, None
+        else:
+            return None
+    
+    sanitisation = fix_molecule(mol)
+    if sanitisation:
+        if return_mol:
+            if return_sanitisation:
+                return mol, sanitisation
+            else:
+                return mol
+        else:
+            sanitised_smiles = Chem.CanonSmiles(Chem.MolToSmiles(mol))
+            if return_sanitisation:
+                return sanitised_smiles, sanitisation
+            else:
+                return sanitised_smiles
+    else:
+        sanitised_smiles = None
+        if return_sanitisation:
+            return sanitised_smiles, sanitisation
+        else:
+            return sanitised_smiles
