@@ -45,7 +45,7 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
     
     ec = ",".join(ec)
     if cognate_ligand_smiles == None:
-        scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": None, "score" : 0, "error" : f"No biological compounds found for ligand", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, parity_match: None}
+        scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": None, "score" : 0, "error" : f"No biological compounds found for ligand", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None}
         return scores_dict
     else:
         with redirect_stderr(f):
@@ -53,7 +53,7 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                 #repeat canonicalisation to ensure best possible parity score
                 ligand_rdkit, ligand_sanitisation = pdbe_sanitise_smiles(smiles, return_mol = True, return_sanitisation=True)
             except Exception as e:
-                scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, parity_match: None}
+                scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None}
                 return scores_dict
 
         out = f.getvalue()
@@ -62,7 +62,7 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
         try:
             rdkit_compound, compound_sanitisation = pdbe_sanitise_smiles(cognate_ligand_smiles, return_mol = True, return_sanitisation=True)
             if rdkit_compound in [None, np.nan]:
-                scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, parity_match: None}
+                scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None}
             else:
                 if ligand_sanitisation and compound_sanitisation:
                     #repeat canonicalisation to ensure best possible parity score
@@ -96,11 +96,11 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                     bl_subparity = matching_atoms/mol2_atom_count
                     
                     cancelled = None
-                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : score, "error" : None, "cancelled" : cancelled, "pdbl_subparity": pdbl_subparity, "bl_subparity": bl_subparity, parity_match: parity_match}
+                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : score, "error" : None, "cancelled" : cancelled, "pdbl_subparity": pdbl_subparity, "bl_subparity": bl_subparity, "parity_match": parity_match}
                 else:
-                    scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Sanitisation error", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, parity_match: None}
+                    scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Sanitisation error", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None}
         except Exception as e:
-            scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Parity error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, parity_match: None}
+            scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Parity error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None}
     progress.update(task, advance=1)
     return scores_dict
 
