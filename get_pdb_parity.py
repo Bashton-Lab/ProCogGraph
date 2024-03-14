@@ -86,6 +86,8 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                         img = Draw.MolsMatrixToGridImage(molsMatrix=mcsMolsMatrix, highlightAtomListsMatrix=mcsHighlightAtomLists, legendsMatrix=mcsLegends, returnPNG=True, drawOptions = dos)
                         with open(f'{image_path}/{int(pdb_ligand_id)}_{int(cognate_ligand_id)}_parity.png', 'wb') as f:
                             f.write(img.data)
+                    except Exception: 
+                        pass
                     
                     mol1_atom_count = ligand_rdkit.GetNumAtoms()
                     mol2_atom_count = rdkit_compound.GetNumAtoms()
