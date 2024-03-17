@@ -11,8 +11,9 @@ from utils import process_ec_records
 
 import xml.etree.ElementTree as ET
 import gzip
-def sorted_set(x):
-    return [str(val) for val in sorted(set(x))]
+
+def sorted_set(x): 
+    return [str(val) for val insorted(set(map(int, x)))]
 
 def main():
 
