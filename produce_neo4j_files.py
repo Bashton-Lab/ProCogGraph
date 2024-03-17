@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 import gzip
 
 def sorted_set(x): 
-    return [str(val) for val insorted(set(map(int, x)))]
+    return [str(val) for val in sorted(set(map(int, x)))]
 
 def main():
 
