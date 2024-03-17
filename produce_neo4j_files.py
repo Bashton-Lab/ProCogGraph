@@ -246,13 +246,19 @@ def main():
     parity_calcs = pd.read_pickle(f"{args.parity_calcs}")
     parity_calcs["ec"] = parity_calcs["ec"].str.split(",")
     parity_calcs = parity_calcs.explode("ec")
+    parity_calcs = parity_calcs.loc[parity_calcs.error.isna()]
+    parity_calcs["parity_match_pdb"] = parity_calcs.parity_match.apply(lambda x: [str(x) for x in x.keys()] if isinstance(x, dict) else [])
+    parity_calcs["parity_match_cognate"] = parity_calcs.parity_match.apply(lambda x: [str(x) for x in x.values()] if isinstance(x, dict) else [])
+    parity_calcs["parity_match_pdb"] = parity_calcs["parity_match_pdb"].str.join("|")
+    parity_calcs["parity_match_cognate"] = parity_calcs["parity_match_cognate"].str.join("|")
+
     parity_calcs_filtered = parity_calcs.loc[parity_calcs.score >= args.parity_threshold]
 
     parity_rels = bound_entities[["uniqueID:ID(be-id)", "ligandUniqueID", "ecList:string[]"]].copy()
     parity_rels["ecList:string[]"] = parity_rels["ecList:string[]"].str.split("|")
     parity_rels = parity_rels.explode("ecList:string[]")
     parity_rels = parity_rels.merge(parity_calcs_filtered, left_on = ["ligandUniqueID", "ecList:string[]"], right_on = ["pdb_ligand", "ec"], how = "inner")
-    parity_rels = parity_rels[["uniqueID:ID(be-id)", "cognate_ligand", "pdbl_subparity", "score", "parity_match", "parity_smarts", "ec"]].rename(columns = {"uniqueID:ID(be-id)": ":START_ID(be-id)", "cognate_ligand": ":END_ID(bio-id)", "parity_match": "parityMatch", "parity_smarts": "paritySMARTS"})
+    parity_rels = parity_rels[["uniqueID:ID(be-id)", "cognate_ligand", "pdbl_subparity", "score", "parity_smarts", "ec", "parity_match_pdb", "parity_match_cognate"]].rename(columns = {"uniqueID:ID(be-id)": ":START_ID(be-id)", "cognate_ligand": ":END_ID(bio-id)", "parity_match_pdb": "parityMatchPDB", "parity_match_cognate": "parityMatchCognate", "parity_smarts": "paritySMARTS"})
     parity_rels = parity_rels.groupby([col for col in parity_rels.columns if col != "ec"]).agg({"ec": list}).reset_index()
     parity_rels["ec"] = parity_rels["ec"].str.join("|")
     parity_rels.rename(columns = {"score": "parityScore:float", "pdbl_subparity": "subParityScore:float", "ec": "ecList:string[]"}, inplace = True)
