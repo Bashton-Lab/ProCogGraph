@@ -40,6 +40,8 @@ def main():
                         help = "path to bound molecules sugars ec dataframe")
     parser.add_argument('--parity_calcs', metavar='parity_calcs', type=str,
                         help = "path to parity calcs dataframe")
+    parser.add_argument('--parity_threshold', metavar='parity_threshold', type=float, default = 0.25,
+                        help = "threshold for parity score")
 
     args = parser.parse_args()
 
@@ -244,7 +246,7 @@ def main():
     parity_calcs = pd.read_pickle(f"{args.parity_calcs}")
     parity_calcs["ec"] = parity_calcs["ec"].str.split(",")
     parity_calcs = parity_calcs.explode("ec")
-    parity_calcs_filtered = parity_calcs.loc[parity_calcs.score >= 0.25]
+    parity_calcs_filtered = parity_calcs.loc[parity_calcs.score >= args.parity_threshold]
 
     parity_rels = bound_entities[["uniqueID:ID(be-id)", "ligandUniqueID", "ecList:string[]"]].copy()
     parity_rels["ecList:string[]"] = parity_rels["ecList:string[]"].str.split("|")
