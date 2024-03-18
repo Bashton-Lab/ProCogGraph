@@ -130,10 +130,10 @@ def main():
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
-    interpro_domain_nodes["interpro_type"] = "InterProHomologousSuperfamily"
+    interpro_domain_nodes["type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_accession"]
     interpro_domain_nodes[":LABEL"] = interpro_domain_nodes["type"] + "|domain"
-    interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(interpro-domain-id)", "interpro_name": "name", "interpro_type": "type", "dbxref": "dbxref:string[]"}, inplace = True)
+    interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(interpro-domain-id)", "interpro_name": "name", "dbxref": "dbxref:string[]"}, inplace = True)
     interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[['pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
