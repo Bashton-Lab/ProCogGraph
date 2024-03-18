@@ -118,24 +118,28 @@ def main():
     scop_domains_nodes = scop_domains[["scop_id", "dm_description", "scop_sccs", "domain_sunid"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
     scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
+    scop_domains_nodes[":LABEL"] = scop_domains_nodes["type"] + "|domain"
     scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     cath_domains_nodes = cath_domains[["cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"]
+    cath_domains_nodes[":LABEL"] = cath_domains_nodes["type"] + "|domain"
     cath_domains_nodes.rename(columns = {"cath_domain": "domain:ID(cath-domain-id)", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
     interpro_domain_nodes["interpro_type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_accession"]
+    interpro_domain_nodes[":LABEL"] = interpro_domain_nodes["type"] + "|domain"
     interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(interpro-domain-id)", "interpro_name": "name", "interpro_type": "type", "dbxref": "dbxref:string[]"}, inplace = True)
     interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[['pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
     pfam_domains_nodes["type"] = "Pfam"
     pfam_domains_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/pfam/" + pfam_domains_nodes["pfam_accession"]
+    pfam_domains_nodes[":LABEL"] = pfam_domains_nodes["type"] + "|domain"
     pfam_domains_nodes.rename(columns = {"pfam_accession": "domain:ID(pfam-domain-id)", "pfam_description": "description", "pfam_name": "name"}, inplace = True)
     pfam_domains_nodes.to_csv(f"{args.outdir}/pfam_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
