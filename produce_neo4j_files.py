@@ -290,7 +290,7 @@ def main():
     cath_interface_mapping["allProteinInterface"] = cath_interface_mapping.apply(lambda x: "|".join([x.chain_id + ":" + y for y in x.allProteinInterface]), axis = 1)
     cath_interface_mapping = cath_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     cath_interface_mapping["allProteinInterface:str[]"] = cath_interface_mapping.allProteinInterface.str.join("|")
-    cath_domain_ligand_interactions.merge(cath_interface_mapping, how = "left", on = "uniqueID")
+    cath_domain_ligand_interactions = cath_domain_ligand_interactions.merge(cath_interface_mapping, how = "left", on = "uniqueID")
     cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -304,7 +304,7 @@ def main():
     scop_interface_mapping["allProteinInterface"] = scop_interface_mapping.apply(lambda x: "|".join([x.chain_id + ":" + y for y in x.allProteinInterface]), axis = 1)
     scop_interface_mapping = scop_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     scop_interface_mapping["allProteinInterface:str[]"] = scop_interface_mapping.allProteinInterface.str.join("|")
-    scop_domain_ligand_interactions.merge(scop_interface_mapping, how = "left", on = "uniqueID")
+    scop_domain_ligand_interactions = scop_domain_ligand_interactions.merge(scop_interface_mapping, how = "left", on = "uniqueID")
     scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -319,7 +319,7 @@ def main():
     pfam_interface_mapping["allProteinInterface"] = pfam_interface_mapping.apply(lambda x: "|".join([x.chain_id + ":" + y for y in x.allProteinInterface]), axis = 1)
     pfam_interface_mapping = pfam_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     pfam_interface_mapping["allProteinInterface:str[]"] = pfam_interface_mapping.allProteinInterface.str.join("|")
-    pfam_domain_ligand_interactions.merge(pfam_interface_mapping, how = "left", on = "uniqueID")
+    pfam_domain_ligand_interactions = pfam_domain_ligand_interactions.merge(pfam_interface_mapping, how = "left", on = "uniqueID")
     pfam_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "pfam_accession": ":START_ID(pfam-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     pfam_domain_ligand_interactions.to_csv(f"{args.outdir}/pfam_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -333,7 +333,7 @@ def main():
     interpro_interface_mapping["allProteinInterface"] = interpro_interface_mapping.apply(lambda x: "|".join([x.chain_id + ":" + y for y in x.allProteinInterface]), axis = 1)
     interpro_interface_mapping = interpro_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     interpro_interface_mapping["allProteinInterface:str[]"] = interpro_interface_mapping.allProteinInterface.str.join("|")
-    interpro_domain_ligand_interactions.merge(interpro_interface_mapping, how = "left", on = "uniqueID")
+    interpro_domain_ligand_interactions = interpro_domain_ligand_interactions.merge(interpro_interface_mapping, how = "left", on = "uniqueID")
     interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     interpro_domain_ligand_interactions.to_csv(f"{args.outdir}/interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
