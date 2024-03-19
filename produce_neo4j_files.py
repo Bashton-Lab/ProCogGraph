@@ -273,8 +273,8 @@ def main():
     parity_rels = parity_rels[["uniqueID:ID(be-id)", "cognate_ligand", "pdbl_subparity", "score", "parity_smarts", "ec", "parity_match_pdb", "parity_match_cognate"]].rename(columns = {"uniqueID:ID(be-id)": ":START_ID(be-id)", "cognate_ligand": ":END_ID(bio-id)", "parity_match_pdb": "parityMatchPDB:int[]", "parity_match_cognate": "parityMatchCognate:int[]", "parity_smarts": "paritySMARTS"})
     parity_rels = parity_rels.groupby([col for col in parity_rels.columns if col != "ec"]).agg({"ec": list}).reset_index()
     parity_rels["ec"] = parity_rels["ec"].str.join("|")
-    parity_rels["max_parity"] = parity_rels.groupby(":START_ID(be-id)")["parityScore:float"].transform("max")
-    parity_rels.loc[parity_rels.max_parity == parity_rels["parityScore:float"], "bestCognate"] = "Y"
+    parity_rels["max_parity"] = parity_rels.groupby(":START_ID(be-id)")["score"].transform("max")
+    parity_rels.loc[parity_rels.max_parity == parity_rels["score"], "bestCognate"] = "Y"
     parity_rels.bestCognate.fillna("N", inplace = True)
     parity_rels.drop(columns = ["max_parity"], inplace = True)
     parity_rels.rename(columns = {"score": "parityScore:float", "pdbl_subparity": "subParityScore:float", "ec": "ecList:string[]"}, inplace = True)
