@@ -10,3 +10,5 @@ enzyme.dat
 *.xml
 __pycache__/utils.cpython-310.pyc
 *.zip
+glycosmos_glycans_wurcs.csv
+chebi_structures.csv
