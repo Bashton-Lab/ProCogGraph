@@ -15,6 +15,14 @@ import gzip
 def sorted_set(x): 
     return [str(val) for val in sorted(set(map(int, x)))]
 
+def get_all_chain_interactions(series):
+    split_series = series.str.split("|")
+    split_series = split_series.explode()
+    split_series = split_series.astype(int)
+    residues = [str(x) for x in sorted(split_series.unique())]
+    residues = "|".join(residues)
+    return residues
+
 def main():
 
     parser = argparse.ArgumentParser(description='Process some integers.')
@@ -273,6 +281,7 @@ def main():
     cath_domain_ligand_interactions["bound_ligand_auth_id"] = cath_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     cath_domain_ligand_interactions["pdb_residue_auth_id"] = cath_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
     cath_domain_ligand_interactions["pdb_residue_auth_id"] = cath_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    cath_domain_ligand_interactions["chainProteinInterface:int[]"] = cath_domain_ligand_interactions.groupby(["pdb_id", "chainUniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
     cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -281,6 +290,7 @@ def main():
     scop_domain_ligand_interactions["bound_ligand_auth_id"] = scop_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     scop_domain_ligand_interactions["pdb_residue_auth_id"] = scop_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
     scop_domain_ligand_interactions["pdb_residue_auth_id"] = scop_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    scop_domain_ligand_interactions["chainProteinInterface:int[]"] = scop_domain_ligand_interactions.groupby(["pdb_id", "chainUniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
     scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -289,6 +299,7 @@ def main():
     pfam_domain_ligand_interactions["bound_ligand_auth_id"] = pfam_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     pfam_domain_ligand_interactions["pdb_residue_auth_id"] = pfam_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
     pfam_domain_ligand_interactions["pdb_residue_auth_id"] = pfam_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    pfam_domain_ligand_interactions["chainProteinInterface:int[]"] = pfam_domain_ligand_interactions.groupby(["pdb_id", "chainUniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
     pfam_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "pfam_accession": ":START_ID(pfam-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     pfam_domain_ligand_interactions.to_csv(f"{args.outdir}/pfam_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
@@ -297,6 +308,7 @@ def main():
     interpro_domain_ligand_interactions["bound_ligand_auth_id"] = interpro_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     interpro_domain_ligand_interactions["pdb_residue_auth_id"] = interpro_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
     interpro_domain_ligand_interactions["pdb_residue_auth_id"] = interpro_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
+    interpro_domain_ligand_interactions["chainProteinInterface:int[]"] = interpro_domain_ligand_interactions.groupby(["pdb_id", "chainUniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
     interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     interpro_domain_ligand_interactions.to_csv(f"{args.outdir}/interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
