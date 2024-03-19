@@ -281,7 +281,7 @@ def main():
     cath_domain_ligand_interactions["bound_ligand_auth_id"] = cath_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     cath_domain_ligand_interactions["pdb_residue_auth_id"] = cath_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
     cath_domain_ligand_interactions["pdb_residue_auth_id"] = cath_domain_ligand_interactions["pdb_residue_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
-    cath_domain_ligand_interactions["chainProteinInterface:int[]"] = cath_domain_ligand_interactions.groupby(["pdb_id", "chainUniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
+    cath_domain_ligand_interactions["chainProteinInterface:int[]"] = cath_domain_ligand_interactions.groupby(["uniqueID"])["pdb_residue_auth_id"].transform(lambda x: get_all_chain_interactions(x))
     cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
