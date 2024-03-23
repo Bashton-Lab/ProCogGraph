@@ -300,6 +300,7 @@ def main():
     parser.add_argument('--smiles_cache', type=str, default = None, help='Path to smiles_cache.pkl file, cached from previous run')
     parser.add_argument('--csdb_cache', type=str, default = None, help='Path to csdb_cache.pkl file, cached from previous run')
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
+    parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
@@ -606,6 +607,21 @@ def main():
         biological_ligands_df = biological_ligands_df.drop_duplicates(subset = ["entry", "canonical_smiles"])
         biological_ligands_df["uniqueID"] = biological_ligands_df.groupby('canonical_smiles').ngroup()
         biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
+        
+        chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
+
+        chebi_cofactors = chebi_relations.loc[(chebi_relations.TYPE == "has_role") & (chebi_relations.INIT_ID.isin([23357,23354,26348,26672])), ["TYPE", "INIT_ID", "FINAL_ID"]]
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "cofactor"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "coenzyme"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "prosthetic group"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "siderophore"
+        chebi_cofactors.drop(columns = ["INIT_ID"], inplace = True)
+        chebi_cofactors.rename(columns = {"TYPE": "isCofactor"}, inplace = True)
+
+        biological_ligands_df["chebi_match"] = biological_ligands_df.ligand_db.str.extract("CHEBI:([0-9]+)").astype("float")
+        biological_ligands_df = biological_ligands_df.merge(chebi_cofactors, how = "left", left_on = "chebi_match", right_on = "FINAL_ID")
+        biological_ligands_df.drop(columns = ["chebi_match", "FINAL_ID"], inplace = True)
+
         #biological_ligands_mol_descriptors = biological_ligands_df['ROMol'].apply(calculate_descriptors)
         #biological_ligands_mol_descriptors_df = pd.DataFrame(list(biological_ligands_mol_descriptors), columns=descriptors)
         #biological_ligands_df = pd.concat([biological_ligands_df, biological_ligands_mol_descriptors_df], axis=1)
