@@ -304,7 +304,6 @@ def main():
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
-    
     if args.compound_cache_dir:
         Path(f"{args.compound_cache_dir}").mkdir(parents=True, exist_ok=True)
 
@@ -507,7 +506,10 @@ def main():
             data.append(record)
 
         kegg_pubchem_mapping = pd.DataFrame(data)
-
+        pubchem_kegg_compound_records = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir = args.compound_cache_dir) for code in kegg_pubchem_mapping.KEGG.unique()])
+        kegg_pubchem_mapping = kegg_pubchem_mapping.merge(pubchem_kegg_compound_records, left_on = "KEGG", right_on = "compound_id", how = "left", indicator = True)
+        assert(len(kegg_pubchem_mapping.loc[kegg_pubchem_mapping._merge != "both"]) == 0)
+        kegg_pubchem_mapping.drop(columns = ["_merge"], inplace = True)
         cids = kegg_pubchem_mapping.loc[(kegg_pubchem_mapping.CID.isna() == False) &
                                         (kegg_pubchem_mapping.KEGG.isin(compound_codes))].CID.unique()
 
@@ -592,7 +594,7 @@ def main():
         biological_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db"]],
                                            kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
-                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
+                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "name", "compound_id","ROMol", "ligand_db"]].rename(columns = {"name": "compound_name"})])
         
         biological_ligands_df = biological_ligands_df.reset_index()
