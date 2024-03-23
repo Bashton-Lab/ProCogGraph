@@ -188,20 +188,31 @@ def pubchem_cid_to_descriptor(compound_list, chunk_size = 200):
 
     return df
 
-def get_kegg_compound_record(kegg_id, glycan = False): 
-    compound_record = requests.get(f'https://rest.kegg.jp/get/{kegg_id}')
-    if compound_record.status_code == 200:
-        compound_record_object = list(Enzyme.parse(io.StringIO(compound_record.text)))[0]
-        dblinks = compound_record_object.dblinks
-        if not glycan:
-            name = compound_record_object.name[0]
-        else:
-            name = None
+def get_kegg_compound_record(kegg_id, glycan = False, compound_cache_dir = None):   
+    if compound_cache_dir and os.path.exists(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt"):
+        with open(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt", "r") as file:
+            compound_record_text = file.read()
     else:
-        compound_record_object = None
-        dblinks = None
-        name = None
-        
+        compound_record = requests.get(f'https://rest.kegg.jp/get/{kegg_id}')
+        if compound_record.status_code == 200:
+            compound_record_text = compound_record.text
+            if compound_cache_dir:
+                with open(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt", "w") as file:
+                    file.write(compound_record_text)
+        else:
+            compound_dict = {"compound_id" : kegg_id, "compound_name": None, "dbxrefs": None, "KEGG_compound_record" : None}
+            return compound_dict
+
+    compound_record_object = list(Enzyme.parse(io.StringIO(compound_record_text)))[0]
+    
+    if hasattr(compound_record_object, 'dblinks'):
+        dblinks = compound_record_object.dblinks
+    else:
+        dblinks = []
+    if hasattr(compound_record_object, 'name') and len(compound_record_object.name) > 0:
+        name = compound_record_object.name[0]
+    else:
+        name = kegg_id
     compound_dict = {"compound_id" : kegg_id, "compound_name": name, "dbxrefs": dblinks, "KEGG_compound_record" : compound_record_object}
     return compound_dict
 
