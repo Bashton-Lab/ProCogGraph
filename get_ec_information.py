@@ -578,7 +578,7 @@ def main():
         new_csdb_values = glycan_compounds_df_merged.loc[(glycan_compounds_df_merged.glycoct.isin(csdb_cache.glycoct.values) == False) & (glycan_compounds_df_merged.glycoct.isna() == False), ["csdb","glycoct"]].drop_duplicates()
         csdb_cache = pd.concat([csdb_cache, new_csdb_values], ignore_index = True)
         csdb_cache.to_pickle(f"{args.csdb_cache}")
-        glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb_linear"], smiles_cache), axis = 1)
+        glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb"], smiles_cache), axis = 1)
         new_smiles_values = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.csdb.isin(smiles_cache.csdb.values) == False, ["descriptor","csdb"]].drop_duplicates()
         smiles_cache = pd.concat([smiles_cache, new_smiles_values], ignore_index = True)
         smiles_cache.to_pickle(f"{args.smiles_cache}")
