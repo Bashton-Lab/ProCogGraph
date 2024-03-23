@@ -188,7 +188,7 @@ def pubchem_cid_to_descriptor(compound_list, chunk_size = 200):
 
     return df
 
-def get_kegg_compound_record(kegg_id, glycan = False, compound_cache_dir = None):   
+def get_kegg_compound_record(kegg_id, compound_cache_dir = None):   
     if compound_cache_dir and os.path.exists(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt"):
         with open(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt", "r") as file:
             compound_record_text = file.read()
@@ -439,7 +439,7 @@ def main():
     if not os.path.exists(f"{args.outdir}/kegg_compounds_df.pkl"):
         print("Getting KEGG Compound records")
         compound_codes = kegg_reaction_enzyme_df_exploded.entities.dropna().unique()
-        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, args.compound_cache_dir) for code in compound_codes if code.startswith("C")])
+        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir =  args.compound_cache_dir) for code in compound_codes if code.startswith("C")])
         kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x))
         kegg_compounds_df.to_pickle(f"{args.outdir}/kegg_compounds_df.pkl")
         print("KEGG Compound records saved")
