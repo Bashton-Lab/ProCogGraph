@@ -5,7 +5,7 @@ import re
 import argparse
 import pandas as pd
 from rdkit.Chem import PandasTools
-
+from pathlib import Path
 #example usage: python preprocess_rhea.py --rhea_ec_mapping rhea_ec_mapping.tsv --rhea_reaction_directions rhea_reaction_directions.tsv --rd_dir /path/to/rhea/rd/files --outdir /path/to/output/directory --chebi_names /path/to/chebi_names.tsv.gz
 
 def main():
@@ -22,7 +22,7 @@ def main():
         help = "Output directory")
 
     args = parser.parse_args()
-    
+    Path(args.outdir).mkdir(parents = True, exist_ok = True)
     if not os.path.exists(f"{args.outdir}/rhea_rd_parsed.pkl"):
         mol_dict = {}
         unique_id = 0
