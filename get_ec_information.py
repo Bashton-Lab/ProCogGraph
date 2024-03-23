@@ -216,53 +216,69 @@ def get_kegg_compound_record(kegg_id, compound_cache_dir = None):
     compound_dict = {"compound_id" : kegg_id, "compound_name": name, "dbxrefs": dblinks, "KEGG_compound_record" : compound_record_object}
     return compound_dict
 
-def get_kegg_compound_smiles(kegg_id):
-    response = requests.get(f'https://rest.kegg.jp/get/{kegg_id}/mol')
-    if response.status_code == 200:
-        compound_split = response.text.split("> <ENTRY>\n")
-        molblock = compound_split[0]
-        if molblock == "":   
-            canonical_smiles = np.nan
-        else:
-            canonical_smiles = canon_smiles(Chem.MolFromMolBlock(molblock))
+def get_kegg_compound_smiles(kegg_id, mol_compound_cache_dir = None):
+    if mol_compound_cache_dir and os.path.exists(f"{mol_compound_cache_dir}/{kegg_id}.mol"):
+        with open(f"{mol_compound_cache_dir}/{kegg_id}.mol", "r") as file:
+            molblock = file.read()
     else:
+        response = requests.get(f'https://rest.kegg.jp/get/{kegg_id}/mol')
+        if response.status_code == 200:
+            compound_split = response.text.split("> <ENTRY>\n")
+            molblock = compound_split[0]
+        else:
+            molblock = ""
+        with open(f"{mol_compound_cache_dir}/{kegg_id}.mol", "w") as file:
+            file.write(molblock)
+    if molblock == "":   
         canonical_smiles = np.nan
+    else:
+        canonical_smiles = canon_smiles(Chem.MolFromMolBlock(molblock))
     return canonical_smiles
     
-def get_gtc_info(gtcids):
+def get_gtc_info(gtcids, cache_df_file):
     glytoucan_df_list = []
+    if os.path.exists(cache_df_file):
+        cache_df = pd.read_pickle(cache_df_file)
+    else:
+        cache_df = None
     for gtcid in gtcids:
-        url = 'https://api.glycosmos.org/sparqlist/gtcid2seqs'
-        data = {'gtcid': gtcid}
-        nested_dict = {}
-
-        response = requests.post(url, data=data)
-
-        if response.status_code == 200:
-            json_result = json.loads(response.text)  # Display the response content
-            # Iterate through each dictionary in the list
-            for item in json_result:
-                id_val = item['id']
-                wurcs_val = item.get('wurcs')
-                glycoct_val = item.get('glycoct')
-
-                # Check if the ID exists in the nested dictionary
-                if id_val not in nested_dict:
-                    # Create a new entry for the ID
-                    nested_dict[id_val] = {'wurcs': wurcs_val, 'glycoct': glycoct_val}
-                else:
-                    # Update the existing ID entry with non-None values
-                    if wurcs_val is not None:
-                        nested_dict[id_val]['wurcs'] = wurcs_val
-                    if glycoct_val is not None:
-                        nested_dict[id_val]['glycoct'] = glycoct_val
-            df_dict = pd.DataFrame(nested_dict).T
-            glytoucan_df_list.append(df_dict)
+        if cache_df is not None and gtcid in cache_df.index:
+            continue
         else:
-            print(f"Request failed with status code: {response.status_code}")
-            
-    gtc_df = pd.concat(glytoucan_df_list)
+            url = 'https://api.glycosmos.org/sparqlist/gtcid2seqs'
+            data = {'gtcid': gtcid}
+            nested_dict = {}
 
+            response = requests.post(url, data=data)
+
+            if response.status_code == 200:
+                json_result = json.loads(response.text)  # Display the response content
+                # Iterate through each dictionary in the list
+                for item in json_result:
+                    id_val = item['id']
+                    wurcs_val = item.get('wurcs')
+                    glycoct_val = item.get('glycoct')
+
+                    # Check if the ID exists in the nested dictionary
+                    if id_val not in nested_dict:
+                        # Create a new entry for the ID
+                        nested_dict[id_val] = {'wurcs': wurcs_val, 'glycoct': glycoct_val}
+                    else:
+                        # Update the existing ID entry with non-None values
+                        if wurcs_val is not None:
+                            nested_dict[id_val]['wurcs'] = wurcs_val
+                        if glycoct_val is not None:
+                            nested_dict[id_val]['glycoct'] = glycoct_val
+                df_dict = pd.DataFrame(nested_dict).T
+                glytoucan_df_list.append(df_dict)
+            else:
+                print(f"Request failed with status code: {response.status_code}")
+    if len(glytoucan_df_list) > 0:
+        new_gtc_df = pd.concat(glytoucan_df_list)
+        gtc_df = pd.concat([cache_df, new_gtc_df])
+    else:
+        gtc_df = cache_df
+    gtc_df.to_pickle(f"{cache_df_file}")
     gtc_df.reset_index(inplace = True)
     return gtc_df
 
@@ -301,6 +317,7 @@ def main():
     parser.add_argument('--csdb_cache', type=str, default = None, help='Path to csdb_cache.pkl file, cached from previous run')
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
+    parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
@@ -530,6 +547,7 @@ def main():
         kegg_reaction_enzyme_df_exploded_pubchem["ligand_db"] = "Pubchem:" + kegg_reaction_enzyme_df_exploded_pubchem["CID"].astype("str")
         kegg_reaction_enzyme_df_exploded_pubchem.to_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_pubchem.pkl")
     else:
+        print("PubChem records loaded from file")
         kegg_reaction_enzyme_df_exploded_pubchem = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_pubchem.pkl")
 
 
@@ -550,16 +568,21 @@ def main():
         glytoucan_ids = glycan_compounds_df.loc[(glycan_compounds_df.secondary_id.isna() == False) &
                                         (glycan_compounds_df.source == "GlyTouCan"), "secondary_id"].unique()
 
-        glytoucan_df = get_gtc_info(glytoucan_ids)
+        glytoucan_df = get_gtc_info(glytoucan_ids, cache_df_file = f"{args.gtc_cache}")
 
         glycan_compounds_df_merged = glycan_compounds_df.merge(glytoucan_df, left_on = "secondary_id", right_on = "index", how = "left")
 
         #now need to convert this through into an smiles representation.
         #convert to csdb linear and then smiles
-        glycan_compounds_df_merged["csdb_linear"] = glycan_compounds_df_merged.glycoct.apply(lambda x: get_csdb_from_glycoct(x, csdb_cache))
+        glycan_compounds_df_merged["csdb"] = glycan_compounds_df_merged.glycoct.apply(lambda x: get_csdb_from_glycoct(x, csdb_cache))
+        new_csdb_values = glycan_compounds_df_merged.loc[(glycan_compounds_df_merged.glycoct.isin(csdb_cache.glycoct.values) == False) & (glycan_compounds_df_merged.glycoct.isna() == False), ["csdb","glycoct"]].drop_duplicates()
+        csdb_cache = pd.concat([csdb_cache, new_csdb_values], ignore_index = True)
+        csdb_cache.to_pickle(f"{args.csdb_cache}")
         glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb_linear"], smiles_cache), axis = 1)
+        new_smiles_values = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.csdb.isin(smiles_cache.csdb.values) == False, ["descriptor","csdb"]].drop_duplicates()
+        smiles_cache = pd.concat([smiles_cache, new_smiles_values], ignore_index = True)
+        smiles_cache.to_pickle(f"{args.smiles_cache}")
         glycan_compounds_df_merged = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.smiles.isna() == False]
-        #glycan_compounds_df_merged["name"] = glycan_compounds_df_merged["secondary_id"] commented out to test if the kegg name assignment will work. 
         kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded.merge(glycan_compounds_df_merged, left_on="entities", right_on="compound_id", how = "inner")
         PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_gtc, smilesCol='smiles')
 
@@ -595,7 +618,7 @@ def main():
                                            kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "name", "compound_id","ROMol", "ligand_db"]].rename(columns = {"name": "compound_name"})])
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]]])
         
         biological_ligands_df = biological_ligands_df.reset_index()
         
