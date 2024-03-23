@@ -299,11 +299,14 @@ def main():
     parser.add_argument('--kegg_reaction_string', type=str, default = None, help='Path to kegg_reaction_strings.txt file, cached from previous run')
     parser.add_argument('--smiles_cache', type=str, default = None, help='Path to smiles_cache.pkl file, cached from previous run')
     parser.add_argument('--csdb_cache', type=str, default = None, help='Path to csdb_cache.pkl file, cached from previous run')
-    
+    parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
     
+    if args.compound_cache_dir:
+        Path(f"{args.compound_cache_dir}").mkdir(parents=True, exist_ok=True)
+
     if os.path.exists(f"{args.outdir}/biological_ligands.pkl"):
         print("Biological ligands file already exists. Exiting.")
         exit(0)
@@ -436,7 +439,7 @@ def main():
     if not os.path.exists(f"{args.outdir}/kegg_compounds_df.pkl"):
         print("Getting KEGG Compound records")
         compound_codes = kegg_reaction_enzyme_df_exploded.entities.dropna().unique()
-        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code) for code in compound_codes if code.startswith("C")])
+        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, args.compound_cache_dir) for code in compound_codes if code.startswith("C")])
         kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x))
         kegg_compounds_df.to_pickle(f"{args.outdir}/kegg_compounds_df.pkl")
         print("KEGG Compound records saved")
@@ -469,7 +472,6 @@ def main():
         chebi_kegg_compounds = pd.read_csv(args.chebi, sep = "\t", index_col = False)
         chebi_kegg_compounds = chebi_kegg_compounds.rename(columns = {"ID" : "ChEBI_ID", "NAME" : "ChEBI_NAME"})
         chebi_kegg_compounds_smiles = chebi_kegg_compounds.loc[chebi_kegg_compounds.SMILES.isna() == False]
-
         ### Merging ChEBI with enzyme df
 
         kegg_reaction_enzyme_df_exploded_chebi = kegg_reaction_enzyme_df_exploded.merge(chebi_kegg_compounds_smiles, left_on = "entities", right_on = "KEGG COMPOUND ACCESSION", how = "inner", indicator = True)
@@ -537,7 +539,7 @@ def main():
         glycan_compounds = []
 
         for glycan in glycans:
-            compound = get_kegg_compound_record(glycan, glycan = True)
+            compound = get_kegg_compound_record(glycan, compound_cache_dir=args.compound_cache_dir)
             glycan_compounds.append(compound)
             
         glycan_compounds_df = pd.DataFrame(glycan_compounds)
@@ -554,7 +556,7 @@ def main():
         glycan_compounds_df_merged["csdb_linear"] = glycan_compounds_df_merged.glycoct.apply(lambda x: get_csdb_from_glycoct(x, csdb_cache))
         glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged.apply(lambda x: get_smiles_from_csdb(x["csdb_linear"], smiles_cache), axis = 1)
         glycan_compounds_df_merged = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.smiles.isna() == False]
-        glycan_compounds_df_merged["name"] = glycan_compounds_df_merged["secondary_id"]
+        #glycan_compounds_df_merged["name"] = glycan_compounds_df_merged["secondary_id"] commented out to test if the kegg name assignment will work. 
         kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded.merge(glycan_compounds_df_merged, left_on="entities", right_on="compound_id", how = "inner")
         PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_gtc, smilesCol='smiles')
 
@@ -564,17 +566,7 @@ def main():
         print("GlyTouCan records saved")
     else:
         print("GlyTouCan records loaded from file")
-        kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl")
-        
-    #append together the dataframes with various representations of biological ligands into a long form dataframe. Should have the EC number, EC name
-    #the kegg compound entry ID, the db identifier for the biological molecule, the unique identifier for the biological ligand molecule, and the descriptor (mol/smiles/inchi)
-    #this will be used to generate the parity scores for the biological ligands. 
-
-    #How do we make a unique identifier for the molecules?
-    #try to also get a name for the compounds.
-
-    #maybe we want to get the name from the kegg entities records for all instances, and then merge that to get a name
-    #need to clean up the dataframes here to remove : "_merge" before import to neo4j file script
+        kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl") 
 
     if not os.path.exists(f"{args.outdir}/biological_ligands_df.pkl"):
         descriptors = ['BalabanJ', 'BertzCT', 'Chi0', 'Chi0n', 'Chi0v', 'Chi1', 'Chi1n', 'Chi1v', 'Chi2n', 'Chi2v', 'Chi3n', 'Chi3v', 'Chi4n', 'Chi4v', 'EState_VSA1', 'EState_VSA10', 'EState_VSA11', 
@@ -594,7 +586,6 @@ def main():
                 'fr_methoxy', 'fr_morpholine', 'fr_nitrile', 'fr_nitro', 'fr_nitro_arom', 'fr_nitro_arom_nonortho', 'fr_nitroso', 'fr_oxazole', 'fr_oxime', 'fr_para_hydroxylation', 'fr_phenol', 
                 'fr_phenol_noOrthoHbond', 'fr_phos_acid', 'fr_phos_ester', 'fr_piperdine', 'fr_piperzine', 'fr_priamide', 'fr_prisulfonamd', 'fr_pyridine', 'fr_quatN', 'fr_sulfide', 'fr_sulfonamd', 
                 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'qed']
-        #,  removign rhea from concat - if adding back 
         # create molecular descriptor calculator
         mol_descriptor_calculator = MolecularDescriptorCalculator(descriptors)
         biological_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db"]],
@@ -605,7 +596,7 @@ def main():
         
         biological_ligands_df = biological_ligands_df.reset_index()
         
-
+        #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
         biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
         biological_ligands_df.drop(columns = ["ChEBI_NAME"], inplace = True)
         biological_ligands_df = biological_ligands_df.groupby(["entry", "compound_id"], dropna = False).agg({"ROMol": "first", "compound_name" : "first", "ligand_db": set}).reset_index()
