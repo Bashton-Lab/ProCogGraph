@@ -596,6 +596,8 @@ def main():
     else:
         print("GlyTouCan records loaded from file")
         kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl")
+    
+    #eventually look at using mol files to load structures instead of inchis - may give more complete annotation (currenty ~7k have no ROMol val)
     if not os.path.exists(f"{args.outdir}/brenda_cognate_ligands.pkl"):
         BKMS_react = pd.read_csv(f"{args.bkms_react}", sep = "\t")
         brenda_ligands = pd.read_csv(f"{args.brenda_ligands}")
@@ -616,8 +618,12 @@ def main():
         brenda_cognate_ligands_bl = brenda_cognate_ligands[["EC_Number", "brenda_ligandid", "entities", "inchi"]].copy()
         brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.drop_duplicates()
         brenda_cognate_ligands_bl["ROMol"] = brenda_cognate_ligands_bl.inchi.apply(lambda x: Chem.inchi.MolFromInchi(x))
-        brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.compound_id.astype("int").astype("str")
+        brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.brenda_ligandid.astype("int").astype("str")
         brenda_cognate_ligands_bl.rename(columns = {"EC_Number":"entry", "brenda_ligandid":"compound_id","entities":"compound_name"}, inplace = True)
+        brenda_cognate_ligands_bl.to_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
+    else:
+        brenda_cognate_ligands_bl = pd.read_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
+        print("BRENDA cognate ligands loaded from file")
 
     if not os.path.exists(f"{args.outdir}/biological_ligands_df.pkl"):
         descriptors = ['BalabanJ', 'BertzCT', 'Chi0', 'Chi0n', 'Chi0v', 'Chi1', 'Chi1n', 'Chi1v', 'Chi2n', 'Chi2v', 'Chi3n', 'Chi3v', 'Chi4n', 'Chi4v', 'EState_VSA1', 'EState_VSA10', 'EState_VSA11', 
