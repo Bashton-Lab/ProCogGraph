@@ -101,8 +101,8 @@ def get_compound_pairs(row, cognate_ligands_df):
     smiles = row.descriptor
     bl_name = row.bl_name
     ligand_description = row.description
-    cognate_ligands_df_subset = cognate_ligands_df.loc[(cognate_ligands_df.entry.isin(ec)), ["entry", "canonical_smiles", "ROMol", "uniqueID"]].copy()
-    cognate_ligands_df_subset = cognate_ligands_df_subset.groupby("canonical_smiles").agg({"entry" : list, "ROMol" : "first", "uniqueID": "first"}).reset_index()
+    cognate_ligands_df_subset = cognate_ligands_df.loc[(cognate_ligands_df.entry.isin(ec)), ["entry", "canonical_smiles", "uniqueID"]].copy()
+    cognate_ligands_df_subset = cognate_ligands_df_subset.groupby("canonical_smiles").agg({"entry" : list, "uniqueID": "first"}).reset_index()
     cognate_ligands_df_subset[["pdb_ligand_id", "smiles", "bl_name", "ligand_description"]] = [pdb_ligand_id, smiles, bl_name, ligand_description]
     return cognate_ligands_df_subset
 
