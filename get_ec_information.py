@@ -643,19 +643,17 @@ def main():
                                            kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]]])
-        
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]],
                                            brenda_cognate_ligands_bl[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
         biological_ligands_df = biological_ligands_df.reset_index()
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
         biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
-        biological_ligands_df.drop(columns = ["ChEBI_NAME"], inplace = True)
-        biological_ligands_df = biological_ligands_df.groupby(["entry", "compound_id"], dropna = False).agg({"ROMol": "first", "compound_name" : "first", "ligand_db": set}).reset_index()
-        biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
+        biological_ligands_df["compound_name_lower"] = biological_ligands_df.compound_name.str.lower()
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
-        biological_ligands_df = biological_ligands_df.groupby(["entry", "canonical_smiles", "compound_id", "compound_name"], dropna = False).agg({"ligand_db": set, "ROMol" : "first"}).reset_index()
+        biological_ligands_df = biological_ligands_df.groupby(["entry", "compound_name_lower"], dropna = False).agg({"ligand_db": set, "compound_name": "first", "canonical_smiles": "first"}).reset_index()
+        biological_ligands_df = biological_ligands_df.explode("ligand_db")
+        biological_ligands_df = biological_ligands_df.groupby(["entry", "canonical_smiles"], dropna = False).agg({"ligand_db": set, "compound_name": "first"}).reset_index()
         biological_ligands_df = biological_ligands_df.drop_duplicates(subset = ["entry", "canonical_smiles"])
         biological_ligands_df["uniqueID"] = biological_ligands_df.groupby('canonical_smiles').ngroup()
         biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
