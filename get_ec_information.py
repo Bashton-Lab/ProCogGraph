@@ -318,6 +318,8 @@ def main():
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
     parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
+    parser.add_argument('--bkms_react', type=str, default = None, help='Path to bkms_react.tsv file for extracting brenda ec information')
+    parser.add_argument('--brenda_ligands', type=str, default = None, help='Path to brenda_ligands.csv file for extracting brenda ligand information')
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
@@ -593,7 +595,29 @@ def main():
         print("GlyTouCan records saved")
     else:
         print("GlyTouCan records loaded from file")
-        kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl") 
+        kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl")
+    if not os.path.exists(f"{args.outdir}/brenda_cognate_ligands.pkl"):
+        BKMS_react = pd.read_csv(f"{args.bkms_react}", sep = "\t")
+        brenda_ligands = pd.read_csv(f"{args.brenda_ligands}")
+
+        BKMS_react["entities"] = BKMS_react.Reaction.str.split(" = | <=> | \+ ")
+        BKMS_react["entities"] = BKMS_react["entities"].apply(lambda x: set(x))
+        BKMS_react["complete_ec"] = np.nan
+        BKMS_react.loc[BKMS_react.EC_Number.str.contains("[A-z0-9]+\.[A-z0-9]+\.[A-z0-9]+\.[A-z0-9]+", regex = True) == True, "complete_ec"] = True
+
+        BKMS_react_ec_filtered = BKMS_react.loc[BKMS_react.complete_ec == True]
+        BKMS_react_exploded = BKMS_react_ec_filtered.explode("entities")
+        BKMS_react_exploded["entities"] = BKMS_react_exploded.entities.str.strip()
+        BKMS_react_exploded["entities"] = BKMS_react_exploded["entities"].str.replace("^([0-9n]+\s+)", "", regex = True)
+        BKMS_react_exploded_merged = BKMS_react_exploded.merge(brenda_ligands, left_on = BKMS_react_exploded["entities"].str.lower(), right_on = brenda_ligands["name"].str.lower(), indicator = True, how = "left")
+        brenda_cognate_ligands = BKMS_react_exploded_merged.loc[BKMS_react_exploded_merged._merge == "both"].drop_duplicates()
+        brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"] = brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"].str.replace("\[side [12]\]", "", regex = True)
+
+        brenda_cognate_ligands_bl = brenda_cognate_ligands[["EC_Number", "brenda_ligandid", "entities", "inchi"]].copy()
+        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.drop_duplicates()
+        brenda_cognate_ligands_bl["ROMol"] = brenda_cognate_ligands_bl.inchi.apply(lambda x: Chem.inchi.MolFromInchi(x))
+        brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.compound_id.astype("int").astype("str")
+        brenda_cognate_ligands_bl.rename(columns = {"EC_Number":"entry", "brenda_ligandid":"compound_id","entities":"compound_name"}, inplace = True)
 
     if not os.path.exists(f"{args.outdir}/biological_ligands_df.pkl"):
         descriptors = ['BalabanJ', 'BertzCT', 'Chi0', 'Chi0n', 'Chi0v', 'Chi1', 'Chi1n', 'Chi1v', 'Chi2n', 'Chi2v', 'Chi3n', 'Chi3v', 'Chi4n', 'Chi4v', 'EState_VSA1', 'EState_VSA10', 'EState_VSA11', 
@@ -621,6 +645,8 @@ def main():
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]]])
         
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]],
+                                           brenda_cognate_ligands_bl[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
         biological_ligands_df = biological_ligands_df.reset_index()
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
