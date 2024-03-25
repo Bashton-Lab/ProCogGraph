@@ -50,6 +50,12 @@ def main():
                         help = "path to parity calcs dataframe")
     parser.add_argument('--parity_threshold', metavar='parity_threshold', type=float, default = 0.25,
                         help = "threshold for parity score")
+    parser.add_argument('--rhea2ec', metavar='rhea2ec', type=str,
+                        help = "path to rhea2ec file")
+    parser.add_argument('--rhea_dir', metavar='rhea_dir', type=str,
+                        help = "path to rhea directions file")
+    parser.add_argument('--rhea_reaction_smiles', metavar='rhea_reaction_smiles', type=str,
+                        help = "path to rhea reaction smiles file")
 
     args = parser.parse_args()
 
@@ -58,6 +64,14 @@ def main():
     ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
 
     ec_id_nodes = ec_records_df_grouped[["TRANSFER", "DE"]].rename(columns = {"TRANSFER" : "ecID:ID(ec-id)", "DE" : "description"}).drop_duplicates()
+    rhea2ec = pd.read_csv(f"{args.rhea2ec}", sep = "\t")
+    rhea_dir = pd.read_csv(f"{args.rhea_dir}", sep = "\t")
+    reaction_smiles = pd.read_csv(f"{args.rhea_reaction_smiles}", sep = "\t", header = None, names = ["RHEA_ID", "SMILES"])
+    rheamerge = rhea2ec.merge(rhea_dir, left_on = "MASTER_ID" , right_on = "RHEA_ID_MASTER", how = "left")
+    reactions_df_merged = reaction_smiles.merge(rheamerge[["RHEA_ID_LR", "ID"]], left_on = "RHEA_ID", right_on = "RHEA_ID_LR", how = "inner")
+    reactions_df_merged[["products", "reactants"]] = reactions_df_merged.SMILES.str.split(">>", expand = True)
+    ec_id_nodes = ec_id_nodes.merge(reactions_df_merged[["ID", "products", "reactants"]], left_on = "ecID:ID(ec-id)", right_on = "ID", how = "left", indicator = True)
+
     ec_nodes_class = ec_records_df_grouped[["class", "class_description"]].rename(columns = {"class": "ecID:ID(class-id)", "class_description": "description"}).drop_duplicates()
     ec_nodes_subclass = ec_records_df_grouped[["subclass", "subclass_description"]].rename(columns = {"subclass": "ecID:ID(subclass-id)", "subclass_description": "description"}).drop_duplicates()
     ec_nodes_subsubclass = ec_records_df_grouped[["subsubclass", "subsubclass_description"]].rename(columns = {"subsubclass": "ecID:ID(subsubclass-id)", "subsubclass_description": "description"}).drop_duplicates()
