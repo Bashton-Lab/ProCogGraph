@@ -50,7 +50,8 @@ def process_ec_records(enzyme_dat_file, enzyme_class_file):
     ec_records_df_grouped.rename(columns = {"ID_x" : "ID"}, inplace = True)
     ec_records_df_grouped.drop(columns = ["ID_y"], inplace = True)
     ec_records_df_grouped[["class", "subclass", "subsubclass", "term"]] = ec_records_df_grouped.TRANSFER.str.split(".", expand = True)
-
+    ec_records_df_grouped = ec_records_df_grouped.loc[ec_records_df_grouped.DE != "Deleted entry."].copy()
+    
     subsubclass = ec_records_df_grouped["class"].astype("str") + "." + ec_records_df_grouped["subclass"] + "." + ec_records_df_grouped["subsubclass"] + ".-"
     subclass = ec_records_df_grouped["class"].astype("str") + "." + ec_records_df_grouped["subclass"] + ".-.-"
     ec_class = ec_records_df_grouped["class"].astype("str") + ".-.-.-"
