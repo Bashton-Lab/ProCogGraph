@@ -459,7 +459,7 @@ def main():
         print("Getting KEGG Compound records")
         compound_codes = kegg_reaction_enzyme_df_exploded.entities.dropna().unique()
         kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir =  args.compound_cache_dir) for code in compound_codes if code.startswith("C")])
-        kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x))
+        kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x, mol_compound_cache_dir = args.compound_cache_dir))
         kegg_compounds_df.to_pickle(f"{args.outdir}/kegg_compounds_df.pkl")
         print("KEGG Compound records saved")
     else:
