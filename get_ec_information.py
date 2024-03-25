@@ -221,6 +221,7 @@ def get_kegg_compound_smiles(kegg_id, mol_compound_cache_dir = None):
         with open(f"{mol_compound_cache_dir}/{kegg_id}.mol", "r") as file:
             molblock = file.read()
     else:
+        time.sleep(1)
         response = requests.get(f'https://rest.kegg.jp/get/{kegg_id}/mol')
         if response.status_code == 200:
             compound_split = response.text.split("> <ENTRY>\n")
@@ -619,6 +620,7 @@ def main():
         brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.loc[brenda_cognate_ligands_bl.EC_Number.isin(ec_list)]
         brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.drop_duplicates()
         brenda_cognate_ligands_bl["ROMol"] = brenda_cognate_ligands_bl.inchi.apply(lambda x: Chem.inchi.MolFromInchi(x))
+        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.loc[brenda_cognate_ligands_bl.ROMol.isna() == False].copy()
         brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.brenda_ligandid.astype("int").astype("str")
         brenda_cognate_ligands_bl.rename(columns = {"EC_Number":"entry", "brenda_ligandid":"compound_id","entities":"compound_name"}, inplace = True)
         brenda_cognate_ligands_bl.to_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
