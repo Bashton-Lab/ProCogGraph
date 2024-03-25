@@ -616,6 +616,7 @@ def main():
         brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"] = brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"].str.replace("\[side [12]\]", "", regex = True)
 
         brenda_cognate_ligands_bl = brenda_cognate_ligands[["EC_Number", "brenda_ligandid", "entities", "inchi"]].copy()
+        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.loc[brenda_cognate_ligands_bl.EC_Number.isin(ec_list)]
         brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.drop_duplicates()
         brenda_cognate_ligands_bl["ROMol"] = brenda_cognate_ligands_bl.inchi.apply(lambda x: Chem.inchi.MolFromInchi(x))
         brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.brenda_ligandid.astype("int").astype("str")
