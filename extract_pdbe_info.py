@@ -71,24 +71,6 @@ def clean_and_merge_scop_col(df, column_id, description_df):
     df.drop(columns = ["_merge", "level_sunid", "level"], inplace = True)
     return df
 
-def complete_unmatched_domains(df, class_codes, fold_codes, superfamily_codes):
-    df = df.merge(class_codes, left_on = "scop_class_id", right_on = "cl_id", how = "left", indicator = True)
-    df["cl_description_x"] = df["cl_description_x"].fillna(df["cl_description_y"])
-    df["cl_id_x"] = df["cl_id_x"].fillna(df["scop_class_id"])
-    df.rename(columns = {"cl_id_x" : "cl_id", "cl_description_x": "cl_description"}, inplace = True)
-    df.drop(columns = ["_merge", "cl_description_y", "cl_id_y"], inplace = True)
-    df = df.merge(fold_codes, left_on = "scop_fold_id", right_on = "cf_id", how = "left", indicator = True)
-    df["cf_description_x"] = df["cf_description_x"].fillna(df["cf_description_y"])
-    df["cf_id_x"] = df["cf_id_x"].fillna(df["scop_fold_id"])
-    df.rename(columns = {"cf_id_x" : "cf_id", "cf_description_x": "cf_description"}, inplace = True)
-    df.drop(columns = [ "_merge", "cf_description_y", "cf_id_y"], inplace = True)
-    df = df.merge(superfamily_codes, left_on = "scop_superfamily_id", right_on = "sf_id", how = "left", indicator = True)
-    df["sf_description_x"] = df["sf_description_x"].fillna(df["sf_description_y"])
-    df["sf_id_x"] = df["sf_id_x"].fillna(df["scop_superfamily_id"])
-    df.rename(columns = {"sf_id_x" : "sf_id", "sf_description_x": "sf_description"}, inplace = True)
-    df.drop(columns = ["_merge", "sf_description_y", "sf_id_y"], inplace = True)
-    return df
-
 #class is adapted from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
 class Neo4jConnection:
     
@@ -352,12 +334,11 @@ def main():
                 result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
+                
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
-                    scop_bl_domains_matched = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
-                    result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                    assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
+                    result_df_ec.drop(columns = "_merge", inplace = True)
                 elif db == "PFAM":
                     result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
@@ -399,10 +380,8 @@ def main():
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"]) 
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
-                    scop_bl_domains_matched = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge"])
-                    scop_bl_domains_unmatched = complete_unmatched_domains(scop_bl_domains_unmatched, class_codes, fold_codes, superfamily_codes)
-                    result_df_ec = pd.concat([scop_bl_domains_matched, scop_bl_domains_unmatched])
+                    assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
+                    result_df_ec.drop(columns = "_merge", inplace = True)
                 elif db == "PFAM":
                     result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
