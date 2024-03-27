@@ -33,7 +33,7 @@ from contextlib import redirect_stderr
 from utils import pdbe_sanitise_smiles
 from rdkit.Chem.Draw import MolsMatrixToGridImage
 
-def parity_score_smiles(row, threshold, progress, task, image_path): #, 
+def parity_score_smiles(row, threshold, progress, task, cache_scores): #, 
     ec = row.entry
     pdb_ligand_id = row.pdb_ligand_id
     smiles = row.smiles
@@ -44,8 +44,15 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
     f = io.StringIO()
     
     ec = ",".join(ec)
+    #first check if there is a valid cached score for this pair
+    if cache_scores:
+        matching_score = cache_results.loc[(cache_results.pdb_ligand_smiles == smiles) & (cache_results.cognate_ligand_smiles == cognate_ligand_smiles) & (cache_results.threshold <= threshold)]
+        if not matching_score.empty:
+            scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : matching_score.score.values[0], "error" : matching_score.error.values[0], "pdbl_subparity": matching_score.pdbl_subparity.values[0], "bl_subparity": matching_score.bl_subparity.values[0], "parity_match": matching_score.parity_match.values[0], "parity_smarts": matching_score.parity_smarts.values[0], "threshold": matching_score.threshold.values[0]}
+            return scores_dict
+
     if cognate_ligand_smiles == None:
-        scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "compound": None, "score" : 0, "error" : f"No biological compounds found for ligand", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None}
+        scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"No biological compounds found for ligand", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
         return scores_dict
     else:
         with redirect_stderr(f):
@@ -53,7 +60,7 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                 #repeat canonicalisation to ensure best possible parity score
                 ligand_rdkit, ligand_sanitisation = pdbe_sanitise_smiles(smiles, return_mol = True, return_sanitisation=True)
             except Exception as e:
-                scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None}
+                scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
                 return scores_dict
 
         out = f.getvalue()
@@ -62,7 +69,7 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
         try:
             rdkit_compound, compound_sanitisation = pdbe_sanitise_smiles(cognate_ligand_smiles, return_mol = True, return_sanitisation=True)
             if rdkit_compound in [None, np.nan]:
-                scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"RDKit compound not found for compound", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None}
+                scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"RDKit compound not found for compound", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
             else:
                 if ligand_sanitisation and compound_sanitisation:
                     #repeat canonicalisation to ensure best possible parity score
@@ -85,12 +92,11 @@ def parity_score_smiles(row, threshold, progress, task, image_path): #,
                     pdbl_subparity = matching_atoms/mol1_atom_count
                     bl_subparity = matching_atoms/mol2_atom_count
                     
-                    cancelled = None
-                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : score, "error" : None, "cancelled" : cancelled, "pdbl_subparity": pdbl_subparity, "bl_subparity": bl_subparity, "parity_match": parity_match, "parity_smarts": mcs_smarts}
+                    scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : score, "error" : None, "pdbl_subparity": pdbl_subparity, "bl_subparity": bl_subparity, "parity_match": parity_match, "parity_smarts": mcs_smarts, "threshold": threshold}
                 else:
-                    scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Sanitisation error", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None}
+                    scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles,  "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : 0, "error" : f"Sanitisation error", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
         except Exception as e:
-            scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "cognate_ligand": cognate_ligand_id, "score" : 0, "error" : f"Parity error: {str(e)}", "cancelled" : None, "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None}
+            scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : 0, "error" : f"Parity error: {str(e)}", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
     progress.update(task, advance=1)
     return scores_dict
 
@@ -121,6 +127,8 @@ parser.add_argument('--threshold', metavar = '', type = float, default = 0.1,
     help = "")
 parser.add_argument('--threads', metavar = '', type = int, default = 1,
     help = "")
+parser.add_argument('--cache', metavar = '', type = str,
+    help = "")
 
 start = time.time()
 args = parser.parse_args()
@@ -146,7 +154,7 @@ if not os.path.exists(pickle_filename):
         with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
             futures = []
             for index, row in all_pairs_df.iterrows():
-                futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task, image_path))
+                futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task, cache_scores = False))
             for future in concurrent.futures.as_completed(futures):
                 results.extend([future.result()])
                 futures.remove(future)
@@ -154,5 +162,11 @@ if not os.path.exists(pickle_filename):
         results_df = pd.DataFrame(results)
         # Save the smiles_ec_pairs for the chunk as a pickle file
         results_df.to_pickle(pickle_filename)
+
+        #save the cache scores
+        cache_filename = f"{args.outdir}/cache_parity_calcs.pkl"
+        cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates()
+        cache_results.to_pickle(cache_filename)
+
 end = time.time()
 print(f"Time taken: {end - start} seconds")
