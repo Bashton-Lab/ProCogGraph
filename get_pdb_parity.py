@@ -33,7 +33,7 @@ from contextlib import redirect_stderr
 from utils import pdbe_sanitise_smiles
 from rdkit.Chem.Draw import MolsMatrixToGridImage
 
-def parity_score_smiles(row, threshold, progress, task, cache_scores): #, 
+def parity_score_smiles(row, threshold, progress, task): #, 
     ec = row.entry
     pdb_ligand_id = row.pdb_ligand_id
     smiles = row.smiles
@@ -44,12 +44,6 @@ def parity_score_smiles(row, threshold, progress, task, cache_scores): #,
     f = io.StringIO()
     
     ec = ",".join(ec)
-    #first check if there is a valid cached score for this pair
-    if cache_scores:
-        matching_score = cache_results.loc[(cache_results.pdb_ligand_smiles == smiles) & (cache_results.cognate_ligand_smiles == cognate_ligand_smiles) & (cache_results.threshold <= threshold)]
-        if not matching_score.empty:
-            scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : matching_score.score.values[0], "error" : matching_score.error.values[0], "pdbl_subparity": matching_score.pdbl_subparity.values[0], "bl_subparity": matching_score.bl_subparity.values[0], "parity_match": matching_score.parity_match.values[0], "parity_smarts": matching_score.parity_smarts.values[0], "threshold": matching_score.threshold.values[0]}
-            return scores_dict
 
     if cognate_ligand_smiles == None:
         scores_dict = {"ec": ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"No biological compounds found for ligand", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
@@ -140,6 +134,7 @@ pickle_filename = f"{args.outdir}/all_parity_calcs.pkl"
 image_path = f"{args.outdir}/parity_images"
 Path(pickle_filename).parent.mkdir(parents=True, exist_ok=True)
 Path(image_path).mkdir(parents=True, exist_ok=True)
+
 if not os.path.exists(pickle_filename):
     all_pairs = []
     for index, row in all_chem_descriptors_ligands_unique_pairs.iterrows():
@@ -147,26 +142,49 @@ if not os.path.exists(pickle_filename):
         all_pairs.append(pairs)
 
     all_pairs_df = pd.concat(all_pairs, ignore_index = True)
-    results = []
-    with Progress() as progress:
-        task = progress.add_task("[red]Calculating parity scores...", total=len(all_pairs_df))
-        
-        with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
-            futures = []
-            for index, row in all_pairs_df.iterrows():
-                futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task, cache_scores = False))
-            for future in concurrent.futures.as_completed(futures):
-                results.extend([future.result()])
-                futures.remove(future)
+    if args.cache:
+        cache_df = pd.read_pickle(f"{args.cache}")
+        cache_df = cache_df.drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"]) #double in case not done in new cache results below (left over from first run)
+    else:
+        cache_df = None
 
+    all_pairs_df2 = all_pairs_df.merge(cache_df, left_on = ["smiles", "canonical_smiles"], right_on = ["pdb_ligand_smiles", "cognate_ligand_smiles"], how = "left", validate = "many_to_one", indicator = True)
+    all_pairs_df2["entry"] = all_pairs_df2.entry.str.join(",")
+    all_pairs_df2.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
+
+    pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['ec', 'pdb_ligand', 'pdb_ligand_name', 'pdb_ligand_description', 'cognate_ligand', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts']].reset_index(drop = True)
+    pre_calculated["cache"] = True
+
+    to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
+
+    results = []
+    if len(to_calculate) > 0:
+        with Progress() as progress:
+            task = progress.add_task("[red]Calculating parity scores...", total=len(all_pairs_df))
+            
+            with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
+                futures = []
+                for index, row in all_pairs_df.iterrows():
+                    futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task, cache_scores = False))
+                for future in concurrent.futures.as_completed(futures):
+                    results.extend([future.result()])
+                    futures.remove(future)
+
+            results_df = pd.DataFrame(results)
+            results_df = pd.concat([results_df, pre_calculated], ignore_index = True).reset_index(drop = True)
+            # Save the smiles_ec_pairs for the chunk as a pickle file
+            results_df.to_pickle(pickle_filename)
+
+            #save the cache scores
+            cache_filename = f"{args.outdir}/cache_parity_calcs.pkl"
+            cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"])
+            cache_results.to_pickle(cache_filename)
+    else:
+        results_df = pre_calculated
         results_df = pd.DataFrame(results)
         # Save the smiles_ec_pairs for the chunk as a pickle file
         results_df.to_pickle(pickle_filename)
 
-        #save the cache scores
-        cache_filename = f"{args.outdir}/cache_parity_calcs.pkl"
-        cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates()
-        cache_results.to_pickle(cache_filename)
 
 end = time.time()
 print(f"Time taken: {end - start} seconds")
