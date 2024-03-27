@@ -295,6 +295,9 @@ from rdkit.Chem import PandasTools
 def calculate_descriptors(id, mol, calculator):
     return (id,) + calculator.CalcDescriptors(mol)
 
+def upper_sorted(x):
+    return sorted(x, key=lambda y: y.lower() if y[0].islower() else '0' + y.lower())
+
 def main():    
     """
     This script is designed to take the enzyme.dat file from EXPASY, and extract the EC numbers, 
@@ -658,14 +661,17 @@ def main():
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
         biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
-        biological_ligands_df["compound_name_lower"] = biological_ligands_df.compound_name.str.lower()
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
-        biological_ligands_df = biological_ligands_df.groupby(["entry", "compound_name_lower"], dropna = False).agg({"ligand_db": set, "compound_name": "first", "canonical_smiles": "first"}).reset_index()
-        biological_ligands_df = biological_ligands_df.explode("ligand_db")
-        biological_ligands_df = biological_ligands_df.groupby(["entry", "canonical_smiles"], dropna = False).agg({"ligand_db": set, "compound_name": "first"}).reset_index()
-        biological_ligands_df = biological_ligands_df.drop_duplicates(subset = ["entry", "canonical_smiles"])
-        biological_ligands_df["uniqueID"] = biological_ligands_df.groupby('canonical_smiles').ngroup()
-        biological_ligands_df["ligand_db"] = biological_ligands_df["ligand_db"].str.join("|")
+        biological_ligands_df_unique_smiles = biological_ligands_df[["canonical_smiles", "compound_name", "ligand_db"]].copy()
+        biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set}).reset_index()
+        biological_ligands_df_unique_smiles["ligand_db"] = biological_ligands_df_unique_smiles.ligand_db.str.join("|")
+        biological_ligands_df_unique_smiles["compound_name"] = biological_ligands_df_unique_smiles.compound_name.str.join("|")
+        biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.reset_index(drop=True).reset_index()
+
+        biological_ligands_df_unique_smiles.rename(columns = {"index": "uniqueID"}, inplace = True)
+        biological_ligands_df = biological_ligands_df[["entry", "canonical_smiles"]].merge(biological_ligands_df_unique_smiles, on = "canonical_smiles", how = "left")
+        biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].str.split("|").apply(lambda x: upper_sorted(x)).str.join("|")
+        biological_ligands_df = biological_ligands_df.drop_duplicates()
         
         chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
 
