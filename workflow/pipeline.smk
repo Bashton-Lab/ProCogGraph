@@ -88,7 +88,7 @@ rule produce_neo4j_files:
 
 rule get_pdb_parity:
     input:
-        parity_cache = config["parity_cache"],
+        parity_cache = config["cache_files"] + config["parity_cache"],
         pdb_ligands_to_score = output_dir + "/pdbe_graph_data/bound_entities_to_score.pkl",
         cognate_ligands = output_dir + "/cognate_ligands/biological_ligands_df.pkl",
         script = config["scripts_dir"] + "get_pdb_parity",

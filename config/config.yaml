@@ -34,3 +34,5 @@ rhea_reactions_smiles: rhea-reaction-smiles.tsv
 rhea_rd_dir: rd
 
 rhea_reactions: rhea_reactions.pkl
+
+parity_cache: cache_parity_calcs.pkl
