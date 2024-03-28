@@ -8,8 +8,6 @@ cache_files_dir: /raid/MattC/repos/ProCogGraphData/cache_files/
 scripts_dir: /raid/MattC/repos/ProCogGraph/workflow/scripts/
 parity_threshold: 0.4
 
-threads: 75
-
 enzyme_dat_file: enzyme.dat
 enzyme_class_file: enzclass.txt
 pdbe_graph_yaml: pdbe_graph_queries.yaml
@@ -20,6 +18,8 @@ sifts_ec_mapping: pdb_chain_enzyme.tsv.gz
 scop_domains_info_file: dir.cla.scop.1_75.txt
 scop_descriptions_file: dir.des.scop.1_75.txt
 interpro_xml: interpro.xml.gz
+pfam_clans: clan.txt.gz
+pfam_clan_rels: clan_membership.txt.gz
 
 pubchem_mapping: pubchem_substance_id_mapping.txt
 chebi_kegg: ChEBI_Results.tsv 
@@ -37,7 +37,5 @@ rhea2ec: rhea2ec.tsv
 rhea_directions: rhea-directions.tsv
 rhea_reactions_smiles: rhea-reaction-smiles.tsv
 rhea_rd_dir: rd
-
 rhea_reactions: rhea_reactions.pkl
-
 parity_cache: cache_parity_calcs.pkl
