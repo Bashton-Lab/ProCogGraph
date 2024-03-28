@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" name="viewport" content="width=device-width, initial-scale=1">
+    <title>RDKit Viewer</title>
+    <!-- Load the RDKit JS file -->
+    <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
+    <script>
+      var dataArray;
+      function generateSVG(data_array, mol_smiles_key = "bl_smiles", mol_name_key = "" , mol_atoms_key = "parity_bl", mol_smarts_key, dest_id = "cognate_ligand_output") {
+        // Check if RDKitModule is defined
+        console.log(data_array)
+        if (window.RDKitModule) {
+          var dest = document.getElementById(dest_id);
+          // Convert the SMILES string to a molecule object
+          var mol_smiles = data_array[mol_smiles_key];
+          var mol = window.RDKitModule.get_mol(data_array[mol_smiles_key]);
+          var mdetails = {};
+          
+          if (data_array[mol_atoms_key] && data_array[mol_atoms_key].length > 0) {
+            mdetails['atoms']=data_array[mol_atoms_key];
+            } else if (data_array[mol_smarts_key]) {
+              var qmol = window.RDKitModule.get_qmol(data_array[mol_smarts_key]);
+              mdetails = JSON.parse(mol.get_substruct_match(qmol));
+            } else {
+            mdetails = {};
+            };
+          mdetails['legend'] = data_array[mol_name_key]; // Assuming 'name' is a key in your JSON dictionary
+          // Generate the SVG representation of the molecule
+          var svg = mol.get_svg_with_highlights(JSON.stringify(mdetails));
+          // Create a new <div> element to hold the SVG
+          var svgDiv = document.createElement('div');
+          svgDiv.id = 'drawing'; // You might want to assign unique IDs if multiple SVGs are generated
+
+          // Set the inner HTML of the <div> to the SVG
+          svgDiv.innerHTML = svg;
+          // Append the <div> to the container
+          dest.replaceChildren(svgDiv);
+        } else {
+          console.log("RDKitModule is not defined.");
+        };
+      };
+      function generateText(data_array, parity_key, dest_id = "parity_score") {
+        // Check if RDKitModule is defined
+        if (window.RDKitModule) {
+          console.log("in the gen func")
+          var dest = document.getElementById(dest_id);
+          // Convert the SMILES string to a molecule object
+          var parity_score = data_array[parity_key];
+          // Generate the SVG representation of the molecule
+          var txtDiv = document.createElement('div');
+          txtDiv.id = 'text_div'; // You might want to assign unique IDs if multiple SVGs are generated
+          txtDiv.innerHTML = "Parity Score: " + parity_score;
+          console.log(txtDiv.textContent);
+          dest.replaceChildren(txtDiv);
+        } else {
+          console.log("RDKitModule is not defined.");
+        };
+      };
+
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const jsonData = urlParams.get('data');
+      // Check if jsonData is not null or empty
+      if (jsonData) {
+          console.log("Data parameter found in the URL.");
+          console.log(jsonData);
+          // Decode the URL encoded json data
+          const decodedjsonData = decodeURIComponent(jsonData);
+          dataArray = JSON.parse(decodedjsonData);
+          console.log(dataArray);}
+      else {
+          console.log("No data parameter found in the URL.");
+      };
+      // Load the RDKit module asynchronously
+      window
+        .initRDKitModule()
+        .then(function (RDKit) {
+          console.log("RDKit version: " + RDKit.version());
+          window.RDKitModule = RDKit;
+              generateSVG(dataArray, "bl_smiles", "bl_name", "", "", "cognate_ligand_output");
+              generateSVG(dataArray, "be_smiles", "be_name", "", "", "pdb_ligand_output");
+              console.log("Generated text?");
+              generateText(dataArray, "parity", "parity_score");
+              console.log("Generated text?");
+          /**
+           * The RDKit module is now loaded.
+           * You can use it anywhere.
+           */
+          //generateSVG(dataArray, "bl_smiles", "parity_bl", "bl_atoms", "", "cognate_ligand_output")
+        })
+        .catch(() => {
+          // handle loading errors here...
+        });
+
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row">
+          <div id="pdb_ligand_output" class="col text-center"></div>
+          <div id="cognate_ligand_output" class="col text-center"></div>
+      </div>
+      <div class="row align-items-center">
+          <div id="parity_score" class="col text-center"></div>
+      </div>
+      <div class="row justify-content-center">
+        <div class="col align-items-center">
+          <button class="btn btn-primary btn-sm" onclick="generateSVG(dataArray, 'bl_smiles', 'bl_name', 'parity_bl', '', 'cognate_ligand_output'); generateSVG(dataArray, 'be_smiles', 'be_name', 'parity_pdb', '', 'pdb_ligand_output');" class="btn btn-primary">View Parity Atom Matches</button>
+        </div>
+        <div class="col align-items-center">
+          <button class="btn btn-primary btn-sm" onclick="generateSVG(dataArray, 'bl_smiles', 'bl_name', '', 'parity_smarts', 'cognate_ligand_output'); generateSVG(dataArray, 'be_smiles', 'be_name', '', 'parity_smarts', 'pdb_ligand_output');" class="btn btn-primary">View MCS</button>
+        </div>
+        <div class="col align-items-center">
+          <button class="btn btn-primary btn-sm" onclick="generateSVG(dataArray, 'bl_smiles', 'bl_name', '', '', 'cognate_ligand_output'); generateSVG(dataArray, 'be_smiles', 'be_name', '', '', 'pdb_ligand_output');" class="btn btn-primary">Reset View</button>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>
