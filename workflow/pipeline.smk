@@ -107,7 +107,7 @@ rule cognate_ligands:
         pubchem_mapping = config["data_files_dir"] + config["pubchem_mapping"],
         chebi_kegg = config["data_files_dir"] + config["chebi_kegg"],
         chebi_relations = config["data_files_dir"] + config["chebi_relations"],
-        rhea_reactions = config["output_dir"] + "/cognate_ligands/rhea_reactions.pkl",
+        rhea_reactions = output_dir + "/cognate_ligands/rhea_reactions.pkl",
         outdir = output_dir + "/cognate_ligands",
         kegg_enzyme_cache = config["cache_files_dir"] + config["kegg_enzyme_cache"],
         kegg_reaction_cache = config["cache_files_dir"] + config["kegg_reaction_cache"],
