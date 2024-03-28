@@ -7,6 +7,7 @@ parity_threshold: 0.4
 threads: 75
 
 enzyme_dat_file: enzyme.dat
+enzyme_class_file: enzclass.txt
 pdbe_graph_yaml: pdbe_graph_queries.yaml
 glycoct_cache: glycoct_cache.pkl
 smiles_cache: smiles_cache.pkl
