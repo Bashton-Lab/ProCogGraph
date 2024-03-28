@@ -151,7 +151,7 @@ if not os.path.exists(pickle_filename):
     all_pairs_df2 = all_pairs_df.merge(cache_df, left_on = ["smiles", "canonical_smiles"], right_on = ["pdb_ligand_smiles", "cognate_ligand_smiles"], how = "left", validate = "many_to_one", indicator = True)
     pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['entry', 'pdb_ligand_id', 'bl_name', 'ligand_description', 'uniqueID', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts']].reset_index(drop = True)
     pre_calculated.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
-    pre_calculated["ec"] = all_pairs_df2.ec.str.join(",")
+    pre_calculated["ec"] = pre_calculated.ec.str.join(",")
     pre_calculated["cache"] = True
     to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
     results = []
