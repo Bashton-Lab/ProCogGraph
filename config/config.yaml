@@ -1,0 +1,35 @@
+output_dir: /raid/MattC/repos/ProCogGraphData/procoggraph/
+data_files_dir: /raid/MattC/repos/ProCogGraphData/data_files/
+cache_files_dir: /raid/MattC/repos/ProCogGraphData/cache_files/
+scripts_dir: /raid/MattC/repos/ProCogGraph/workflow/scripts/
+parity_threshold: 0.4
+
+threads: 75
+
+enzyme_dat_file: enzyme.dat
+pdbe_graph_yaml: pdbe_graph_queries.yaml
+glycoct_cache: glycoct_cache.pkl
+smiles_cache: smiles_cache.pkl
+csdb_linear_cache: csdb_linear_cache.pkl
+sifts_ec_mapping: pdb_chain_enzyme.tsv.gz
+scop_domains_info_file: dir.cla.scop.1_75.txt
+scop_descriptions_file: dir.des.scop.1_75.txt
+interpro_xml: interpro.xml.gz
+
+pubchem_mapping: pubchem_substance_id_mapping.txt
+chebi_kegg: ChEBI_Results.tsv 
+chebi_relations: relation.tsv
+
+kegg_enzyme_cache: kegg_enzyme_strings.txt
+kegg_reaction_cache: kegg_reaction_strings.txt
+kegg_compound_cache_dir: kegg_compound_cache_dir
+glytoucan_cache: gtc_cache.pkl
+bkms_react_file: Reactions_BKMS.tsv
+brenda_ligands: brenda_ligands_2023_1.csv
+
+rhea2ec: rhea2ec.tsv
+rhea_directions: rhea-directions.tsv
+rhea_reactions_smiles: rhea-reaction-smiles.tsv
+rhea_rd_dir: rd
+
+rhea_reactions: rhea_reactions.pkl
