@@ -478,7 +478,7 @@ def main():
         bound_molecules_sugars_wurcs = pd.read_csv(f"{args.outdir}/bound_molecules_sugars_wurcs.csv.gz", compression = "gzip")
         console.print(f"Loaded bound sugar WURCS from file {args.outdir}/bound_molecules_sugars_wurcs.csv.gz")
     
-    if not os.path.exists(f"{args.outdir}/bound_sugars_to_score.pkl"):
+    if not os.path.exists(f"{args.outdir}/bound_sugars_to_score.pkl") or not os.path.exists(f"{args.outdir}/bound_molecules_sugars_smiles.pkl") or not os.path.exists(f"{args.outdir}/cath_pdb_residue_interactions_bs_index.pkl"):
         bound_sugars_to_score = bound_molecules_sugars_wurcs.loc[bound_molecules_sugars_wurcs.WURCS != "WURCS not available", ["description","WURCS", "ec_list"]].drop_duplicates()
         bound_sugars_to_score = bound_sugars_to_score.groupby(["description","WURCS"]).agg({"ec_list": set}).reset_index()
 
@@ -555,7 +555,7 @@ def main():
         pfam_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/pfam_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
         interpro_pdb_residue_interactions_bs_index = pd.read_csv(f"{args.outdir}/interpro_pdb_residue_interactions_bs_index.csv.gz", compression = "gzip", na_values = ["NaN", "None"], keep_default_na = False)
 
-        console.print(f"Loaded bound molecules sugars smiles from file {args.outdir}/bound_molecules_sugars_smiles.csv.gz and bound sugars to score from {args.outdir}/bound_sugars_to_score.pkl and bound sugar residue interaction ID files")
+        console.print(f"Loaded bound molecules sugars smiles from file {args.outdir}/bound_molecules_sugars_smiles.pkl and bound sugars to score from {args.outdir}/bound_sugars_to_score.pkl and bound sugar residue interaction ID files")
     
     
     if not os.path.exists(f"{args.outdir}/bound_ligands_to_score.pkl"):
