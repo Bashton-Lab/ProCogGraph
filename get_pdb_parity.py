@@ -131,9 +131,7 @@ all_chem_descriptors_ligands_unique_pairs = pd.read_pickle(f"{args.processed_lig
 cognate_ligands_df = pd.read_pickle(f"{args.cognate_ligands_file}")
 
 pickle_filename = f"{args.outdir}/all_parity_calcs.pkl"
-image_path = f"{args.outdir}/parity_images"
 Path(pickle_filename).parent.mkdir(parents=True, exist_ok=True)
-Path(image_path).mkdir(parents=True, exist_ok=True)
 
 if not os.path.exists(pickle_filename):
     all_pairs = []
