@@ -160,12 +160,12 @@ if not os.path.exists(pickle_filename):
     results = []
     if len(to_calculate) > 0:
         with Progress() as progress:
-            task = progress.add_task("[red]Calculating parity scores...", total=len(all_pairs_df))
+            task = progress.add_task("[red]Calculating parity scores...", total=len(to_calculate))
             
             with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
                 futures = []
-                for index, row in all_pairs_df.iterrows():
-                    futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task, cache_scores = False))
+                for index, row in to_calculate.iterrows():
+                    futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task))
                 for future in concurrent.futures.as_completed(futures):
                     results.extend([future.result()])
                     futures.remove(future)
