@@ -149,16 +149,11 @@ if not os.path.exists(pickle_filename):
         cache_df = None
 
     all_pairs_df2 = all_pairs_df.merge(cache_df, left_on = ["smiles", "canonical_smiles"], right_on = ["pdb_ligand_smiles", "cognate_ligand_smiles"], how = "left", validate = "many_to_one", indicator = True)
-    all_pairs_df2["entry"] = all_pairs_df2.entry.str.join(",")
-    all_pairs_df2.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
-
-    pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['ec', 'pdb_ligand', 'pdb_ligand_name', 'pdb_ligand_description', 'cognate_ligand', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts']].reset_index(drop = True)
-    if len(pre_calculated) == 1:
-        pre_calculated = pre_calculated.to_frame().T
+    pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['entry', 'pdb_ligand_id', 'bl_name', 'ligand_description', 'uniqueID', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts']].reset_index(drop = True)
+    pre_calculated.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
+    pre_calculated["ec"] = all_pairs_df2.ec.str.join(",")
     pre_calculated["cache"] = True
     to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
-    if len(to_calculate == 1):
-        to_calculate = to_calculate.to_frame().T
     results = []
     if len(to_calculate) > 0:
         with Progress() as progress:
