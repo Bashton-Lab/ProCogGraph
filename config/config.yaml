@@ -20,6 +20,7 @@ interpro_xml: interpro.xml.gz
 pubchem_mapping: pubchem_substance_id_mapping.txt
 chebi_kegg: ChEBI_Results.tsv 
 chebi_relations: relation.tsv
+chebi_names: chebi_names.tsv.gz
 
 kegg_enzyme_cache: kegg_enzyme_strings.txt
 kegg_reaction_cache: kegg_reaction_strings.txt
