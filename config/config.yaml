@@ -1,3 +1,7 @@
+neo4j_user: neo4j
+neo4j_password: password
+neo4j_bolt_uri: bolt://localhost:7687
+
 output_dir: /raid/MattC/repos/ProCogGraphData/procoggraph/
 data_files_dir: /raid/MattC/repos/ProCogGraphData/data_files/
 cache_files_dir: /raid/MattC/repos/ProCogGraphData/cache_files/

@@ -12,7 +12,7 @@ output_dir = config["output_dir"] + "_" + timestr
 
 rule all:
     input:
-        output_dir + "/neo4j_files/procoggraph_node.csv.gz"
+        procoggraph_node = output_dir + "/procoggraph_files/procoggraph_node.csv.gz"
 
 rule produce_neo4j_files:
     input:
@@ -142,7 +142,7 @@ rule get_pdbe_graph_info:
     input:
         neo4j_user = config["neo4j_user"],
         neo4j_password = config["neo4j_password"],
-        neo4j_uri = config["neo4j_uri"],
+        neo4j_bolt_uri = config["neo4j_bolt_uri"],
         pdbe_graph_yaml = config["data_files_dir"] + config["pdbe_graph_yaml"],
         outdir = output_dir + "/pdbe_graph_data",
         enzyme_dat_file = config["data_files_dir"] + config["enzyme_dat_file"],
@@ -164,4 +164,4 @@ rule get_pdbe_graph_info:
     threads: config["threads"]
 
     shell: 
-        "python3 {input.script} --neo4j_user {input.neo4j_user} --neo4j_password {input.neo4j_password} --outdir {input.outdir} --enzyme_dat_file {input.enzyme_dat_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {input.glycoct_cache} --smiles_cache {input.smiles_cache} --csdb_linear_cache {input.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads}"
+        "python3 {input.script} --neo4j_user {input.neo4j_user} --neo4j_password {input.neo4j_password} --neo4j_bolt_uri {input.neo4j_bolt_uri} --outdir {input.outdir} --enzyme_dat_file {input.enzyme_dat_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {input.glycoct_cache} --smiles_cache {input.smiles_cache} --csdb_linear_cache {input.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads}"
