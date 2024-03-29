@@ -267,8 +267,8 @@ def main():
     
     with Progress() as progress:
             
-        ec_records_df = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
-
+        ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
+        ec_records_df = ec_records_df_grouped.explode("ID")
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
         sifts_chains_ec = sifts_chains_ec.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set, "EC_NUMBER": set}).reset_index() #some chains have multiple uniprot accessions, we group these into a list along with their associated ec's
