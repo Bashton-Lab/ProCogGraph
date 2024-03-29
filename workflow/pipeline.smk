@@ -3,9 +3,6 @@
 ## @m-crown
 ##
 
-# --- Importing Configuration Files --- #
-
-#configfile: "config.yaml"
 import time
 timestr = time.strftime("%Y%m%d")
 output_dir = config["output_dir"] + "_" + timestr
@@ -84,7 +81,7 @@ rule produce_neo4j_files:
         procoggraph_node = output_dir + "/procoggraph_files/procoggraph_node.csv.gz"
     threads: 1
     shell: 
-        "python3 {input.script} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --outdir {params.outdir} --cognate_ligands {input.cognate_ligands} --cath_domain_ownership {input.cath_domain_ownership} --scop_domain_ownership {input.scop_domain_ownership} --interpro_domain_ownership {input.interpro_domain_ownership} --pfam_domain_ownership {input.pfam_domain_ownership} --bound_ligand_descriptors {input.bound_ligand_descriptors} --bound_molecules_sugars_smiles {input.bound_molecules_sugars_smiles} --parity_calcs {input.parity_calcs} --parity_threshold {params.parity_threshold} --rhea2ec {input.rhea2ec} --rhea_directions {input.rhea_directions} --rhea_reactions_smiles {input.rhea_reactions_smiles}"
+        "python3 {input.script} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --outdir {params.outdir} --cognate_ligands {input.cognate_ligands} --cath_domain_ownership {input.cath_domain_ownership} --scop_domain_ownership {input.scop_domain_ownership} --interpro_domain_ownership {input.interpro_domain_ownership} --pfam_domain_ownership {input.pfam_domain_ownership} --bound_ligand_descriptors {input.bound_ligand_descriptors} --bound_molecules_sugars_smiles {input.bound_molecules_sugars_smiles} --parity_calcs {input.parity_calcs} --parity_threshold {params.parity_threshold} --rhea2ec {input.rhea2ec} --rhea_dir {input.rhea_directions} --rhea_reaction_smiles {input.rhea_reactions_smiles}"
 
 
 rule get_pdb_parity:
