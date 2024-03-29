@@ -22,7 +22,7 @@ from Bio.ExPASy import Enzyme as EEnzyme
 import argparse
 from pathlib import Path
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
-from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb
+from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb, process_ec_records
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
@@ -311,6 +311,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Process EC information.')
     parser.add_argument('--ec_dat', type=str, help='Path to enzyme.dat file from EXPASY')
+    parser.add_argument('--enzyme_class_file', type=str, help='Path to enzyme_class file')
     parser.add_argument('--pubchem', type=str, help='Path to pubchem_substance_id_mapping file')
     parser.add_argument('--chebi', type=str, help='Path to chebi_kegg_file')
     parser.add_argument('--rhea_reactions', type=str, help='Path to preprocessed rhea-reaction dataframe')
@@ -334,16 +335,7 @@ def main():
         print("Biological ligands file already exists. Exiting.")
         exit(0)
 
-    with open(args.ec_dat) as handle:
-        ec_records = EEnzyme.parse(handle)
-        ec_records_list = []
-        for record in ec_records: 
-            ec_record_series = pd.Series(record)
-            ec_records_list.append(ec_record_series)
-            
-    ec_records_df = pd.DataFrame(ec_records_list)
-    ec_records_df["TRANSFER"] = ec_records_df.apply(lambda x: get_terminal_record(x["ID"], x, ec_records_df), axis = 1)
-    ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
+    ec_records_df = process_ec_records(args.ec_dat , args.enzyme_class_file)
 
     ec_list = ec_records_df.TRANSFER.unique()
     

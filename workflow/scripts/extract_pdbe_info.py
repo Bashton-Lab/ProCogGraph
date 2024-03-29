@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 import os
 import numpy as np
-from utils import get_terminal_record, get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb
+from utils import get_terminal_record, get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb, process_ec_records
 import json
 from urllib.parse import quote
 import pandas as pd
@@ -38,7 +38,7 @@ def return_partial_EC_list(ec, total_ec_list):
         return [ec]
 
 def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
-    ec_list = ec_records_df.ID.unique()
+    ec_list = ec_records_df.ID.unique() ##fill the partial ec records using the original ec ids from the expasy enzyme list
     
     residue_ec_records = df[[ec_col]].drop_duplicates()
     residue_ec_records["protein_entity_ec_copy"] = residue_ec_records[ec_col]
@@ -197,6 +197,8 @@ def main():
         help = ""),
     parser.add_argument('--enzyme_dat_file', type = str, default = "enzyme.dat",
         help = ""),
+    parser.add_argument('--enzyme_class_file', type = str, default = "enzclass.txt",
+        help = "")
     parser.add_argument('--pdbe_graph_yaml', type = str, default = "pdbe_graph.yaml",
         help = "")
     parser.add_argument('--glycoct_cache', type = str,
@@ -265,17 +267,7 @@ def main():
     
     with Progress() as progress:
             
-        with open(f"{args.enzyme_dat_file}") as handle:
-            ec_records = EEnzyme.parse(handle)
-            ec_records_list = []
-            for record in ec_records: 
-                ec_record_series = pd.Series(record)
-                ec_records_list.append(ec_record_series)
-
-
-        ec_records_df = pd.DataFrame(ec_records_list)
-        ec_records_df["TRANSFER"] = ec_records_df.apply(lambda x: get_terminal_record(x["ID"], x, ec_records_df), axis = 1)
-        ec_records_df["TRANSFER"] = ec_records_df["TRANSFER"].fillna(ec_records_df.ID)
+        ec_records_df = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
 
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
