@@ -102,6 +102,7 @@ rule get_pdb_parity:
 rule cognate_ligands:
     input:
         enzyme_dat_file = config["data_files_dir"] + config["enzyme_dat_file"],
+        enzyme_class_file = config["data_files_dir"] + config["enzyme_class_file"],
         pubchem_mapping = config["data_files_dir"] + config["pubchem_mapping"],
         chebi_kegg = config["data_files_dir"] + config["chebi_kegg"],
         chebi_relations = config["data_files_dir"] + config["chebi_relations"],
@@ -121,7 +122,7 @@ rule cognate_ligands:
         outdir = output_dir + "/cognate_ligands"
     threads: 1
     shell:
-        "python3 {input.script} --ec_dat {input.enzyme_dat_file} --pubchem {input.pubchem_mapping} --chebi {input.chebi_kegg} --chebi_relations {input.chebi_relations} --rhea_reactions {input.rhea_reactions} --outdir {params.outdir} --kegg_enzyme_string {params.kegg_enzyme_cache} --kegg_reaction_string {params.kegg_reaction_cache} --smiles_cache {params.smiles_cache} --csdb_cache {params.csdb_linear_cache} --compound_cache_dir {params.kegg_compound_cache_dir} --gtc_cache {params.glytoucan_cache} --bkms_react {input.bkms_react_file} --brenda_ligands {input.brenda_ligands}"
+        "python3 {input.script} --ec_dat {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pubchem {input.pubchem_mapping} --chebi {input.chebi_kegg} --chebi_relations {input.chebi_relations} --rhea_reactions {input.rhea_reactions} --outdir {params.outdir} --kegg_enzyme_string {params.kegg_enzyme_cache} --kegg_reaction_string {params.kegg_reaction_cache} --smiles_cache {params.smiles_cache} --csdb_cache {params.csdb_linear_cache} --compound_cache_dir {params.kegg_compound_cache_dir} --gtc_cache {params.glytoucan_cache} --bkms_react {input.bkms_react_file} --brenda_ligands {input.brenda_ligands}"
 
 rule preprocess_rhea:
     input:
@@ -142,6 +143,7 @@ rule get_pdbe_graph_info:
     input:
         pdbe_graph_yaml = config["scripts_dir"] + config["pdbe_graph_yaml"],
         enzyme_dat_file = config["data_files_dir"] + config["enzyme_dat_file"],
+        enzyme_class_file = config["data_files_dir"] + config["enzyme_class_file"],
         sifts_ec_mapping = config["data_files_dir"] + config["sifts_ec_mapping"],
         scop_domains_info_file = config["data_files_dir"] + config["scop_domains_info_file"],
         scop_descriptions_file = config["data_files_dir"] + config["scop_descriptions_file"],
@@ -168,4 +170,4 @@ rule get_pdbe_graph_info:
     threads: workflow.cores
 
     shell: 
-        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels}"
+        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels}"
