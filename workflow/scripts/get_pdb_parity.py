@@ -176,7 +176,6 @@ if not os.path.exists(pickle_filename):
             cache_results.to_pickle(cache_filename)
     else:
         results_df = pre_calculated
-        results_df = pd.DataFrame(results)
         # Save the smiles_ec_pairs for the chunk as a pickle file
         results_df.to_pickle(pickle_filename)
 
