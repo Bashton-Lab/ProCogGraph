@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 import os
 import numpy as np
-from utils import get_terminal_record, get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb, process_ec_records
+from utils import get_terminal_record, get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb, process_ec_records, Neo4jConnection
 import json
 from urllib.parse import quote
 import pandas as pd
@@ -70,37 +70,6 @@ def clean_and_merge_scop_col(df, column_id, description_df):
     assert len(df.loc[df._merge != "both"]) == 0
     df.drop(columns = ["_merge", "level_sunid", "level"], inplace = True)
     return df
-
-#class is adapted from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
-class Neo4jConnection:
-    
-    def __init__(self, uri, user, pwd):
-        self.__uri = uri
-        self.__user = user
-        self.__pwd = pwd
-        self.__driver = None
-        try:
-            self.__driver = GraphDatabase.driver(self.__uri, auth=(self.__user, self.__pwd))
-        except Exception as e:
-            print("Failed to create the driver:", e)
-        
-    def close(self):
-        if self.__driver is not None:
-            self.__driver.close()
-        
-    def query(self, query, db=None, **kwargs):
-        assert self.__driver is not None, "Driver not initialized!"
-        session = None
-        response = None
-        try: 
-            session = self.__driver.session(database=db) if db is not None else self.__driver.session() 
-            response = list(session.run(query, **kwargs))
-        except Exception as e:
-            print("Query failed:", e)
-        finally: 
-            if session is not None:
-                session.close()
-        return response
 
 def process_row(conn, progress, task, pdb, query):
     result = conn.query(query, db='neo4j', pdb_id=pdb)
