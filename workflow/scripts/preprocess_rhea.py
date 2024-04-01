@@ -99,13 +99,13 @@ def main():
     reactions_df_merged["NAME"] = reactions_df_merged["NAME"].fillna(reactions_df_merged["compound_id"])
     print(reactions_df_merged)
     reactions_df_merged_filtered = reactions_df_merged.loc[reactions_df_merged.smiles.isna() == False].copy()
-    PandasTools.AddMoleculeColumnToFrame(reactions_df_merged_filtered, smilesCol='smiles')
     reactions_df_merged_filtered["reaction_id"] = "RHEA:" + reactions_df_merged_filtered["reaction_id"].astype("str")
     reactions_df_merged_filtered.rename(columns = {"ID": "entry", "NAME": "compound_name"}, inplace = True)
     reactions_df_merged_filtered["ligand_db"] = reactions_df_merged_filtered["compound_id"].astype("str")
     reactions_df_merged_filtered.to_pickle(f"{args.outdir}/rhea_reactions_all.pkl")
-    reactions_df_merged_filtered_grouped = reactions_df_merged_filtered[['reaction_id', 'smiles', 'entry', 'compound_name', 'ligand_db']].groupby(["entry", "compound_name", "smiles", "ligand_db"]).agg({"reaction_id": set}).reset_index()
+    reactions_df_merged_filtered_grouped = reactions_df_merged_filtered[['reaction_id', 'smiles', 'entry', 'compound_name', 'ligand_db', 'compound_id']].groupby(["entry", "compound_name", "smiles", "ligand_db", "compound_id"]).agg({"reaction_id": set}).reset_index()
     reactions_df_merged_filtered_grouped["reaction_id"] = reactions_df_merged_filtered_grouped["reaction_id"].str.join("|")
+    PandasTools.AddMoleculeColumnToFrame(reactions_df_merged_filtered_grouped, smilesCol='smiles')
     reactions_df_merged_filtered_grouped.to_pickle(f"{args.outdir}/rhea_reactions.pkl")
 
 
