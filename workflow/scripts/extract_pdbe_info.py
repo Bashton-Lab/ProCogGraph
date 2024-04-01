@@ -18,7 +18,6 @@ import concurrent.futures
 from rich.progress import Progress
 from rich.console import Console
 import pickle
-from neo4j import __version__ as neo4j_version,  GraphDatabase
 import gzip 
 import re
 
@@ -102,10 +101,10 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
             np.where(
                 ligands_df["domain_contact_perc"] >= 0.7, "dominant",
                 np.where(
-                    (ligands_df["domain_contact_perc"] >= 0.3)
+                    (ligands_df["domain_contact_perc"] > 0.3)
                     & (ligands_df["domain_contact_perc"] < 0.7), "partner",
                     np.where(
-                        ligands_df["domain_contact_perc"] < 0.3, "minor", np.nan)
+                        ligands_df["domain_contact_perc"] <= 0.3, "minor", np.nan)
                 )
             )
         )
