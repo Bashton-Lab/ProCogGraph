@@ -298,6 +298,28 @@ def calculate_descriptors(id, mol, calculator):
 def upper_sorted(x):
     return sorted(x, key=lambda y: y.lower() if y[0].islower() else '0' + y.lower())
 
+def neutralize_atoms(mol):
+    """
+    Neutralizing Molecules
+    Author: Noel O’Boyle (Vincent Scalfani adapted code for RDKit)
+    Source: https://baoilleach.blogspot.com/2019/12/no-charge-simple-approach-to.html
+    Index ID#: RDKitCB_33
+    Summary: Neutralize charged molecules by atom.
+    See https://www.rdkit.org/docs/Cookbook.html for more details.
+    """
+    pattern = Chem.MolFromSmarts("[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
+    at_matches = mol.GetSubstructMatches(pattern)
+    at_matches_list = [y[0] for y in at_matches]
+    if len(at_matches_list) > 0:
+        for at_idx in at_matches_list:
+            atom = mol.GetAtomWithIdx(at_idx)
+            chg = atom.GetFormalCharge()
+            hcount = atom.GetTotalNumHs()
+            atom.SetFormalCharge(0)
+            atom.SetNumExplicitHs(hcount - chg)
+            atom.UpdatePropertyCache()
+    return mol
+
 def main():    
     """
     This script is designed to take the enzyme.dat file from EXPASY, and extract the EC numbers, 
@@ -653,6 +675,7 @@ def main():
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
         biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
+        biological_ligands_df["ROMol"] = biological_ligands_df["ROMol"].apply(lambda x: neutralize_atoms(x) if isinstance(x,Chem.rdchem.Mol) else np.nan) #attempt to neutralise charged structures for grouping as charges cannot be used to score mols
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
         biological_ligands_df_unique_smiles = biological_ligands_df[["canonical_smiles", "compound_name", "ligand_db"]].copy()
         biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set}).reset_index()
