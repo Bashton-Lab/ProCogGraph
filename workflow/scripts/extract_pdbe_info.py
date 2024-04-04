@@ -95,17 +95,14 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     ligands_df["domain_hbond_perc"] = ligands_df.domain_hbond_counts / ligands_df.total_contact_counts
     ligands_df["domain_contact_perc"] = ligands_df.domain_contact_counts / ligands_df.total_contact_counts
     ligands_df["domain_ownership"] = np.where(
-        ligands_df["domain_covalent_counts"] > 0, "covalent",
+        ligands_df["domain_contact_perc"] == 1, "unique",
         np.where(
-            ligands_df["domain_contact_perc"] == 1, "unique",
+            ligands_df["domain_contact_perc"] >= 0.7, "dominant",
             np.where(
-                ligands_df["domain_contact_perc"] >= 0.7, "dominant",
+                (ligands_df["domain_contact_perc"] > 0.3)
+                & (ligands_df["domain_contact_perc"] < 0.7), "partner",
                 np.where(
-                    (ligands_df["domain_contact_perc"] > 0.3)
-                    & (ligands_df["domain_contact_perc"] < 0.7), "partner",
-                    np.where(
-                        ligands_df["domain_contact_perc"] <= 0.3, "minor", np.nan)
-                )
+                    ligands_df["domain_contact_perc"] <= 0.3, "minor", np.nan)
             )
         )
     )
