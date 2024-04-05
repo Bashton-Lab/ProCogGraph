@@ -166,7 +166,7 @@ rule get_pdbe_graph_info:
         outdir = output_dir + "/pdbe_graph_data", 
         glycoct_cache = config["cache_files_dir"] + config["glycoct_cache"],
         smiles_cache = config["cache_files_dir"] + config["smiles_cache"],
-        csdb_linear_cache = config["cache_files_dir"] + config["csdb_linear_cache"]
+        csdb_linear_cache = config["cache_files_dir"] + config["csdb_linear_cache"],
         sugar_cifs = config["cache_files_dir"] + config["sugar_cifs"],
         domain_contact_cutoff = config["domain_contact_cutoff"]
     threads: workflow.cores
