@@ -104,12 +104,12 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
                 & (ligands_df["domain_contact_perc"] < 0.9) & (ligands_df["num_non_minor_domains"] == 1), "major",
                 np.where(
                 (ligands_df["domain_contact_perc"] >= 0.5)
-                & (ligands_df["domain_contact_perc"] < 0.9) & (ligands_df["num_non_minor_domains"] >1), "major_partner",
+                & (ligands_df["domain_contact_perc"] < 0.9) & (ligands_df["num_non_minor_domains"] > 1), "major_partner",
                     np.where(
-                    (ligands_df["domain_contact_perc"] >= 0.1)
-                    & (ligands_df["domain_contact_perc"] < 0.5) & (ligands_df["num_non_minor_domains"] >1), "partner",
+                    (ligands_df["domain_contact_perc"] > 0.1)
+                    & (ligands_df["domain_contact_perc"] < 0.5) & (ligands_df["num_non_minor_domains"] > 1), "partner",
                         np.where(
-                        ligands_df["domain_contact_perc"] < 0.1, "minor", np.nan)
+                        ligands_df["domain_contact_perc"] <= 0.1, "minor", np.nan)
                     )
                 )
             )
@@ -227,16 +227,16 @@ def main():
             print(exc)
 
     bl_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_domain"},
-        "SCOP" : {"query" : pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_id"},
-        "PFAM" : {"query" : pdbe_graph_queries["pfam_bl_query"], "domain_id": "pfam_accession"},
-        "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_accession"}}
+        "CATH" : {"query" : pdbe_graph_queries["cath_bl_query"], "domain_id": "cath_unique_id"},
+        "SCOP" : {"query" : pdbe_graph_queries["scop_bl_query"], "domain_id": "scop_unique_id"},
+        "PFAM" : {"query" : pdbe_graph_queries["pfam_bl_query"], "domain_id": "pfam_unique_id"},
+        "InterProHomologousSuperfamily" : {"query": pdbe_graph_queries["interpro_h_bl_query"], "domain_id": "interpro_unique_id"}}
 
     bs_queries = {
-        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_domain"},
-        "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_id"},
-        "PFAM" : {"query" : pdbe_graph_queries["pfam_sugar_query"], "domain_id": "pfam_accession"},
-        "InterProHomologousSuperfamily" : {"query" : pdbe_graph_queries["interpro_h_sugar_query"], "domain_id": "interpro_accession"}}
+        "CATH" : {"query" : pdbe_graph_queries["cath_sugar_query"], "domain_id": "cath_unique_id"},
+        "SCOP" : {"query" : pdbe_graph_queries["scop_sugar_query"], "domain_id": "scop_unique_id"},
+        "PFAM" : {"query" : pdbe_graph_queries["pfam_sugar_query"], "domain_id": "pfam_unique_id"},
+        "InterProHomologousSuperfamily" : {"query" : pdbe_graph_queries["interpro_h_sugar_query"], "domain_id": "interpro_unique_id"}}
 
     console.print("Connecting to neo4j")
     conn = Neo4jConnection(uri=args.neo4j_bolt_uri, user=args.neo4j_user, pwd=args.neo4j_password)
@@ -249,7 +249,7 @@ def main():
         ec_records_df = ec_records_df_grouped.explode("ID")
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
-        sifts_chains_ec = sifts_chains_ec.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set, "EC_NUMBER": set}).reset_index() #some chains have multiple uniprot accessions, we group these into a list along with their associated ec's
+        sifts_chains_ec = sifts_chains_ec.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set, "EC_NUMBER": set}).reset_index() #some chains have multiple uniprot accessions, we group these into a set along with their associated ec's
         sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function 
         sifts_chains_ec["ACCESSION"] = sifts_chains_ec["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
         sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
