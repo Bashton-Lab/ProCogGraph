@@ -94,15 +94,24 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     ligands_df[["domain_contact_counts", "domain_hbond_counts", "domain_covalent_counts"]]  = ligands_df.groupby([unique_id, domain_grouping_key])[["contact_type_count", "hbond_count", "covalent_count"]].transform("sum")
     ligands_df["domain_hbond_perc"] = ligands_df.domain_hbond_counts / ligands_df.total_contact_counts
     ligands_df["domain_contact_perc"] = ligands_df.domain_contact_counts / ligands_df.total_contact_counts
+    ligands_df["num_non_minor_domains"] = ligands_df.groupby([unique_id])["domain_contact_perc"].transform(lambda x: len(x[x > 0.1]))
     ligands_df["domain_ownership"] = np.where(
         ligands_df["domain_contact_perc"] == 1, "unique",
         np.where(
-            ligands_df["domain_contact_perc"] >= 0.7, "dominant",
+            ligands_df["domain_contact_perc"] >= 0.9, "dominant",
             np.where(
-                (ligands_df["domain_contact_perc"] > 0.3)
-                & (ligands_df["domain_contact_perc"] < 0.7), "partner",
+                (ligands_df["domain_contact_perc"] >= 0.5)
+                & (ligands_df["domain_contact_perc"] < 0.9) & (ligands_df["num_non_minor_domains"] == 1), "major",
                 np.where(
-                    ligands_df["domain_contact_perc"] <= 0.3, "minor", np.nan)
+                (ligands_df["domain_contact_perc"] >= 0.5)
+                & (ligands_df["domain_contact_perc"] < 0.9) & (ligands_df["num_non_minor_domains"] >1), "major_partner",
+                    np.where(
+                    (ligands_df["domain_contact_perc"] >= 0.1)
+                    & (ligands_df["domain_contact_perc"] < 0.5) & (ligands_df["num_non_minor_domains"] >1), "partner",
+                        np.where(
+                        ligands_df["domain_contact_perc"] < 0.1, "minor", np.nan)
+                    )
+                )
             )
         )
     )
