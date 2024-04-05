@@ -186,6 +186,10 @@ def main():
         help = "pfam clan relationships file clan_membership.txt.gz")
     parser.add_argument('--pfam_clans', type = str,
         help = "pfam clans file clan.txt.gz")
+    parser.add_argument('--pdbecif_dir', type = str, default = "pdbecif",
+        help = "path to directory containing cif files")
+    parser.add_argument('--domain_contact_cutoff', type = int, default = 3,
+        help = "minimum number of contacts for a domain to be considered in the analysis (default 3)")
     
     
     args = parser.parse_args()
@@ -288,7 +292,8 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
+                result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
+                result_df_ec = result_df_contact_filtered.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
                 
@@ -331,6 +336,7 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
+                result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
                 result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
@@ -385,10 +391,12 @@ def main():
                 ])
 
         cif_ids = bound_molecules_sugars.pdb_id.unique()
-        Path(f"{args.outdir}/sugar_cifs").mkdir(parents=True, exist_ok=True)
+        cif_dir = f"{args.pdbecif_dir}"
+        Path(f"{cif_dir}").mkdir(parents=True, exist_ok=True)
         task = progress.add_task(f"[cyan]Downloading bound sugars CIF files...", total=len(cif_ids))
+        
         for cif_id in cif_ids:
-            cif_path = f"{args.outdir}/sugar_cifs/{cif_id}_updated.cif"
+            cif_path = f"{cif_dir}/{cif_id}_updated.cif"
             if not os.path.exists(cif_path):
                 response = requests.get(f'http://www.ebi.ac.uk/pdbe/entry-files/download/{cif_id}_updated.cif')
 
@@ -401,7 +409,7 @@ def main():
         reader = CifFileReader()
         task = progress.add_task(f"[cyan]Extracting WURCS from bound sugars CIF files...", total=len(cif_ids))
         for cif_id in cif_ids:
-            cif_path = f'{args.outdir}/sugar_cifs/{cif_id}_updated.cif'
+            cif_path = f'{cif_dir}/{cif_id}_updated.cif'
             cif_dict = reader.read(cif_path, output='cif_dictionary')
             cif_df = pd.DataFrame(cif_dict)
             if "_pdbx_entity_branch_descriptor" in cif_df.index:

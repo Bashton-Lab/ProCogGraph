@@ -167,7 +167,9 @@ rule get_pdbe_graph_info:
         glycoct_cache = config["cache_files_dir"] + config["glycoct_cache"],
         smiles_cache = config["cache_files_dir"] + config["smiles_cache"],
         csdb_linear_cache = config["cache_files_dir"] + config["csdb_linear_cache"]
+        sugar_cifs = config["cache_files_dir"] + config["sugar_cifs"]
+        domain_contact_cutoff = config["domain_contact_cutoff"]
     threads: workflow.cores
 
     shell: 
-        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels}"
+        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels} --domain_contact_cutoff {params.domain_contact_cutoff} --pdbecif_dir {params.sugar_cifs}"
