@@ -142,32 +142,32 @@ def main():
     protein_ec_rels.rename(columns = {"pdbProteinChain:ID(pdbp-id)": ":START_ID(pdbp-id)", "ecList:string[]": ":END_ID(ec-id)"}, inplace = True)
     protein_ec_rels.to_csv(f"{args.outdir}/protein_ec_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domains_nodes = scop_domains[["scop_id", "dm_description", "scop_sccs", "domain_sunid"]].drop_duplicates()
+    scop_domains_nodes = scop_domains[["scop_unique_id", "scop_id", "dm_description", "scop_sccs", "domain_sunid"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
     scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
     scop_domains_nodes[":LABEL"] = scop_domains_nodes["type"] + "|domain"
-    scop_domains_nodes.rename(columns = {"scop_id": "domain:ID(scop-domain-id)", "dm_description": "name", "scop_sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
+    scop_domains_nodes.rename(columns = {"scop_unique_id": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "scop_sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
+    cath_domains_nodes = cath_domains[["cath_unique_id", "cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"]
     cath_domains_nodes[":LABEL"] = cath_domains_nodes["type"] + "|domain"
-    cath_domains_nodes.rename(columns = {"cath_domain": "domain:ID(cath-domain-id)", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
+    cath_domains_nodes.rename(columns = {"cath_unique_id": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    interpro_domain_nodes = interpro_domains[["interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
+    interpro_domain_nodes = interpro_domains[["interpro_unique_id", "interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
     interpro_domain_nodes["type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_accession"]
     interpro_domain_nodes[":LABEL"] = interpro_domain_nodes["type"] + "|domain"
-    interpro_domain_nodes.rename(columns = {"interpro_accession": "domain:ID(interpro-domain-id)", "interpro_name": "name", "dbxref": "dbxref:string[]"}, inplace = True)
+    interpro_domain_nodes.rename(columns = {"interpro_unique_id": "domain:ID(interpro-domain-id)" , "interpro_accession": "interproAccession", "interpro_name": "name", "dbxref": "dbxref:string[]"}, inplace = True)
     interpro_domain_nodes.to_csv(f"{args.outdir}/interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    pfam_domains_nodes = pfam_domains[['pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
+    pfam_domains_nodes = pfam_domains[["pfam_unique_id", 'pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
     pfam_domains_nodes["type"] = "Pfam"
     pfam_domains_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/pfam/" + pfam_domains_nodes["pfam_accession"]
     pfam_domains_nodes[":LABEL"] = pfam_domains_nodes["type"] + "|domain"
-    pfam_domains_nodes.rename(columns = {"pfam_accession": "domain:ID(pfam-domain-id)", "pfam_description": "description", "pfam_name": "name"}, inplace = True)
+    pfam_domains_nodes.rename(columns = {"pfam_unique_id": "domain:ID(pfam-domain-id)", "pfam_accession": "pfamAccession", "pfam_description": "description", "pfam_name": "name"}, inplace = True)
     pfam_domains_nodes.to_csv(f"{args.outdir}/pfam_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     #domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
@@ -195,8 +195,8 @@ def main():
     scop_fold_nodes.rename(columns = {"scop_sccs": "SCCS", "cf_id": "scopFold:ID(scop-fold-id)", "cf_description": "description"}, inplace = True)
     scop_fold_nodes.to_csv(f"{args.outdir}/scop_fold_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domain_family_rels = scop_domains[["scop_id", "scop_sunid"]].drop_duplicates()
-    scop_domain_family_rels.rename(columns = {"scop_id": ":START_ID(scop-domain-id)", "scop_sunid": ":END_ID(scop-family-id)"}, inplace = True)
+    scop_domain_family_rels = scop_domains[["scop_unique_id", "scop_sunid"]].drop_duplicates()
+    scop_domain_family_rels.rename(columns = {"scop_unique_id": ":START_ID(scop-domain-id)", "scop_sunid": ":END_ID(scop-family-id)"}, inplace = True)
     scop_domain_family_rels.to_csv(f"{args.outdir}/scop_domain_family_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_family_superfamily_rels = scop_domains[["scop_sunid", "sf_id"]].drop_duplicates()
@@ -224,7 +224,7 @@ def main():
     cath_class_architecture_rels = cath_domains[["cath_class", "cath_architecture"]].rename(columns = {"cath_class": ":END_ID(cath-class-ID)", "cath_architecture" : ":START_ID(cath-architecture-ID)"}).drop_duplicates()
     cath_architecture_topology_rels = cath_domains[["cath_architecture", "cath_topology"]].rename(columns = {"cath_architecture": ":END_ID(cath-architecture-ID)", "cath_topology" : ":START_ID(cath-topology-ID)"}).drop_duplicates()
     cath_topology_homology_rels = cath_domains[["cath_topology", "cath_homologous_superfamily"]].rename(columns = {"cath_topology": ":END_ID(cath-topology-ID)", "cath_homologous_superfamily" : ":START_ID(cath-homologous-superfamily-ID)"}).drop_duplicates()
-    cath_homologous_superfamily_domain_rels = cath_domains[["cath_homologous_superfamily", "cath_domain"]].rename(columns = {"cath_domain": ":START_ID(cath-domain-id)", "cath_homologous_superfamily" : ":END_ID(cath-homologous-superfamily-ID)"}).drop_duplicates()
+    cath_homologous_superfamily_domain_rels = cath_domains[["cath_homologous_superfamily", "cath_unique_id"]].rename(columns = {"cath_unique_id": ":START_ID(cath-domain-id)", "cath_homologous_superfamily" : ":END_ID(cath-homologous-superfamily-ID)"}).drop_duplicates()
 
     cath_class_architecture_rels.to_csv(f"{args.outdir}/cath_class_architecture_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     cath_architecture_topology_rels.to_csv(f"{args.outdir}/cath_architecture_topology_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
@@ -234,7 +234,7 @@ def main():
     pfam_clans = pfam_domains.loc[(pfam_domains.clan_acc.isna() == False) & (pfam_domains.clan_acc != ""), ["clan_acc", "clan_description", "clan_comment"]].drop_duplicates()
     pfam_clans.rename(columns = {"clan_acc": "clanID:ID(pfam-clan-id)", "clan_description": "name", "clan_comment": "description"}, inplace = True)
     pfam_clans.to_csv(f"{args.outdir}/pfam_clans.csv.gz", compression = "gzip", sep = "\t", index = False)
-    pfam_clan_rels = pfam_domains.loc[(pfam_domains.clan_acc.isna() == False) & (pfam_domains.clan_acc != ""), ["pfam_accession", "clan_acc"]].rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
+    pfam_clan_rels = pfam_domains.loc[(pfam_domains.clan_acc.isna() == False) & (pfam_domains.clan_acc != ""), ["pfam_unique_id", "clan_acc"]].rename(columns = {"pfam_unique_id": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
     pfam_clan_rels.to_csv(f"{args.outdir}/pfam_clan_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     bound_entities = pd.concat([cath_domains[['bm_ids', "bound_ligand_struct_asym_id", 'bound_ligand_auth_id', 'bound_molecule_display_id', 'name', 'description', 'uniqueID', 'ligand_uniqueID', 'bound_ligand_id',  'type' ,"ec_list"]],
@@ -305,7 +305,7 @@ def main():
     parity_rels.rename(columns = {"score": "parityScore:float", "pdbl_subparity": "subParityScore:float", "ec": "ecList:string[]"}, inplace = True)
     parity_rels.to_csv(f"{args.outdir}/bound_entity_parity_score_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domain_ligand_interactions = cath_domains[["chain_id", "cath_domain", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
+    cath_domain_ligand_interactions = cath_domains[["chain_id", "cath_unique_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
     cath_domain_ligand_interactions["bound_ligand_auth_id"] = cath_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
     cath_domain_ligand_interactions["bound_ligand_auth_id"] = cath_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     cath_domain_ligand_interactions["pdb_residue_auth_id"] = cath_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
@@ -316,10 +316,10 @@ def main():
     cath_interface_mapping = cath_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     cath_interface_mapping["allProteinInterface"] = cath_interface_mapping.allProteinInterface.str.join("|")
     cath_domain_ligand_interactions = cath_domain_ligand_interactions.merge(cath_interface_mapping, how = "left", on = "uniqueID")
-    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_domain": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    cath_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "cath_unique_id": ":START_ID(cath-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
     cath_domain_ligand_interactions.to_csv(f"{args.outdir}/cath_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domain_ligand_interactions = scop_domains[["chain_id", "scop_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID","bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
+    scop_domain_ligand_interactions = scop_domains[["chain_id", "scop_unique_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID","bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
     scop_domain_ligand_interactions["bound_ligand_auth_id"] = scop_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
     scop_domain_ligand_interactions["bound_ligand_auth_id"] = scop_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     scop_domain_ligand_interactions["pdb_residue_auth_id"] = scop_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
@@ -330,10 +330,10 @@ def main():
     scop_interface_mapping = scop_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     scop_interface_mapping["allProteinInterface"] = scop_interface_mapping.allProteinInterface.str.join("|")
     scop_domain_ligand_interactions = scop_domain_ligand_interactions.merge(scop_interface_mapping, how = "left", on = "uniqueID")
-    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    scop_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "scop_unique_id": ":START_ID(scop-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
     scop_domain_ligand_interactions.to_csv(f"{args.outdir}/scop_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    pfam_domain_ligand_interactions = pfam_domains[["chain_id", "pfam_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
+    pfam_domain_ligand_interactions = pfam_domains[["chain_id", "pfam_unique_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
     pfam_domain_ligand_interactions["bound_ligand_auth_id"] = pfam_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
     pfam_domain_ligand_interactions["bound_ligand_auth_id"] = pfam_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     pfam_domain_ligand_interactions["pdb_residue_auth_id"] = pfam_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
@@ -344,10 +344,10 @@ def main():
     pfam_interface_mapping = pfam_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     pfam_interface_mapping["allProteinInterface"] = pfam_interface_mapping.allProteinInterface.str.join("|")
     pfam_domain_ligand_interactions = pfam_domain_ligand_interactions.merge(pfam_interface_mapping, how = "left", on = "uniqueID")
-    pfam_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "pfam_accession": ":START_ID(pfam-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    pfam_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "pfam_unique_id": ":START_ID(pfam-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
     pfam_domain_ligand_interactions.to_csv(f"{args.outdir}/pfam_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    interpro_domain_ligand_interactions = interpro_domains[["chain_id", "interpro_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
+    interpro_domain_ligand_interactions = interpro_domains[["chain_id", "interpro_unique_id", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_auth_id","pdb_residue_auth_id"]].drop_duplicates()
     interpro_domain_ligand_interactions["bound_ligand_auth_id"] = interpro_domain_ligand_interactions["bound_ligand_auth_id"].astype("str").str.split("|")
     interpro_domain_ligand_interactions["bound_ligand_auth_id"] = interpro_domain_ligand_interactions["bound_ligand_auth_id"].apply(lambda x: sorted_set(x)).str.join("|")
     interpro_domain_ligand_interactions["pdb_residue_auth_id"] = interpro_domain_ligand_interactions["pdb_residue_auth_id"].astype("str").str.split("|")
@@ -358,7 +358,7 @@ def main():
     interpro_interface_mapping = interpro_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
     interpro_interface_mapping["allProteinInterface"] = interpro_interface_mapping.allProteinInterface.str.join("|")
     interpro_domain_ligand_interactions = interpro_domain_ligand_interactions.merge(interpro_interface_mapping, how = "left", on = "uniqueID")
-    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_accession": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    interpro_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "interpro_unique_id": ":START_ID(interpro-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_auth_id": "ligandInterface:int[]", "pdb_residue_auth_id": "proteinInterface:int[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
     interpro_domain_ligand_interactions.to_csv(f"{args.outdir}/interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
@@ -370,10 +370,10 @@ def main():
     pdb_protein_rels.rename(columns = {"chainUniqueID": ":START_ID(pdbp-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
     pdb_protein_rels.to_csv(f"{args.outdir}/pdb_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_protein_rels = cath_domains[["cath_domain", "chainUniqueID"]].drop_duplicates().rename(columns = {"cath_domain": ":START_ID(cath-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
-    scop_protein_rels = scop_domains[["scop_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"scop_id": ":START_ID(scop-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
-    pfam_protein_rels = pfam_domains[["pfam_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"pfam_accession": ":START_ID(pfam-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
-    interpro_protein_rels = interpro_domains[["interpro_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"interpro_accession": ":START_ID(interpro-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    cath_protein_rels = cath_domains[["cath_unique_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"cath_unique_id": ":START_ID(cath-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    scop_protein_rels = scop_domains[["scop_unique_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"scop_unique_id": ":START_ID(scop-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    pfam_protein_rels = pfam_domains[["pfam_unique_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"pfam_unique_id": ":START_ID(pfam-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    interpro_protein_rels = interpro_domains[["interpro_unique_id", "chainUniqueID"]].drop_duplicates().rename(columns = {"interpro_unique_id": ":START_ID(interpro-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
 
     cath_protein_rels.to_csv(f"{args.outdir}/cath_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     scop_protein_rels.to_csv(f"{args.outdir}/scop_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
