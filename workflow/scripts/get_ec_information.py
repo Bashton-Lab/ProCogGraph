@@ -285,7 +285,7 @@ def get_gtc_info(gtcids, cache_df_file):
 
 def canon_smiles(x):
         try:
-            return Chem.MolToSmiles(x)
+            return Chem.MolToSmiles(x, isomericSmiles = False) #ignore stereochemistry
         except:
             return np.nan
         
