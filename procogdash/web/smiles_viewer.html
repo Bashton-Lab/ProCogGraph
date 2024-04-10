@@ -108,7 +108,8 @@
             generateSVG(dataArray, "smiles", "name", "", "", "ligand_output");
         } else if (type === "reaction") {
             // loop through the reaction data 
-            dataArray.forEach((reaction) => {
+            dataArray.forEach((reaction, index) => {
+              index = index + 1;
               reactionArray = reaction.split("\:");
               reactionId = reactionArray[0];
               reactionSmiles = reactionArray[1];
@@ -124,7 +125,7 @@
               titleDiv = document.createElement('div');
               titleDiv.setAttribute( "class", "col d-flex justify-content-center" );
               titleDiv.id = reactionId + "_title";
-              titleDiv.innerHTML = "RHEA:"+reactionId;
+              titleDiv.innerHTML = index + ". RHEA:"+reactionId;
               reactionContainer.appendChild(titleDiv);
               let i = 1
               console.log(i);
