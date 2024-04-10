@@ -96,7 +96,7 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     ligands_df["domain_contact_perc"] = ligands_df.domain_contact_counts / ligands_df.total_contact_counts
     ligands_df["num_non_minor_domains"] = ligands_df.groupby([unique_id])["domain_contact_perc"].transform(lambda x: len(x[x > 0.1]))
     ligands_df["domain_ownership"] = np.where(
-        ligands_df["domain_contact_perc"] == 1, "unique",
+        ligands_df["domain_contact_perc"] == 1, "exclusive",
         np.where(
             ligands_df["domain_contact_perc"] >= 0.9, "dominant",
             np.where(
