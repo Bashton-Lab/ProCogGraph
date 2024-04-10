@@ -295,8 +295,9 @@ from rdkit.Chem import PandasTools
 def calculate_descriptors(id, mol, calculator):
     return (id,) + calculator.CalcDescriptors(mol)
 
-def upper_sorted(x):
-    return sorted(x, key=lambda y: y.lower() if y[0].islower() else '0' + y.lower())
+def length_upper_sorted(x):
+    #sort by length, then favour uppercase starting names
+    return sorted(x, key = (lambda y: (len(y) , y.lower() if y[0].islower() else '0' + y.lower())))
 
 def neutralize_atoms(mol):
     """
@@ -711,7 +712,7 @@ def main():
 
         biological_ligands_df_unique_smiles.rename(columns = {"index": "uniqueID"}, inplace = True)
         biological_ligands_df = biological_ligands_df[["entry", "canonical_smiles"]].merge(biological_ligands_df_unique_smiles, on = "canonical_smiles", how = "left")
-        biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].str.split("|").apply(lambda x: upper_sorted(x)).str.join("|")
+        biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].str.split("|").apply(lambda x: length_upper_sorted(x)).str.join("|")
         biological_ligands_df = biological_ligands_df.drop_duplicates()
         
         chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
@@ -723,9 +724,10 @@ def main():
         chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "siderophore"
         chebi_cofactors.drop(columns = ["INIT_ID"], inplace = True)
         chebi_cofactors.rename(columns = {"TYPE": "isCofactor"}, inplace = True)
-
+        
         biological_ligands_df["chebi_match"] = biological_ligands_df.ligand_db.str.extract("CHEBI:([0-9]+)").astype("float")
         biological_ligands_df = biological_ligands_df.merge(chebi_cofactors, how = "left", left_on = "chebi_match", right_on = "FINAL_ID")
+        biological_ligands_df["isCofactor"] = biological_ligands_df["isCofactor"].fillna("N")
         biological_ligands_df.drop(columns = ["chebi_match", "FINAL_ID"], inplace = True)
 
         #biological_ligands_mol_descriptors = biological_ligands_df['ROMol'].apply(calculate_descriptors)
