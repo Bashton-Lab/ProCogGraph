@@ -107,8 +107,9 @@ rule cognate_ligands:
         chebi_kegg = config["data_files_dir"] + config["chebi_kegg"],
         chebi_relations = config["data_files_dir"] + config["chebi_relations"],
         rhea_reactions = output_dir + "/cognate_ligands/rhea_reactions.pkl",
-        bkms_react_file = config["data_files_dir"] + config["bkms_react_file"],
+        brenda_json = config["data_files_dir"] + config["brenda_json"],
         brenda_ligands = config["data_files_dir"] + config["brenda_ligands"],
+        brenda_mol_dir = config["data_files_dir"] + config["brenda_mol_dir"],
         script = config["scripts_dir"] + "get_ec_information.py"
     output:
         cognate_ligands = output_dir + "/cognate_ligands/biological_ligands_df.pkl"
@@ -122,7 +123,7 @@ rule cognate_ligands:
         outdir = output_dir + "/cognate_ligands"
     threads: 1
     shell:
-        "python3 {input.script} --ec_dat {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pubchem {input.pubchem_mapping} --chebi {input.chebi_kegg} --chebi_relations {input.chebi_relations} --rhea_reactions {input.rhea_reactions} --outdir {params.outdir} --kegg_enzyme_string {params.kegg_enzyme_cache} --kegg_reaction_string {params.kegg_reaction_cache} --smiles_cache {params.smiles_cache} --csdb_cache {params.csdb_linear_cache} --compound_cache_dir {params.kegg_compound_cache_dir} --gtc_cache {params.glytoucan_cache} --bkms_react {input.bkms_react_file} --brenda_ligands {input.brenda_ligands}"
+        "python3 {input.script} --ec_dat {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pubchem {input.pubchem_mapping} --chebi {input.chebi_kegg} --chebi_relations {input.chebi_relations} --rhea_reactions {input.rhea_reactions} --outdir {params.outdir} --kegg_enzyme_string {params.kegg_enzyme_cache} --kegg_reaction_string {params.kegg_reaction_cache} --smiles_cache {params.smiles_cache} --csdb_cache {params.csdb_linear_cache} --compound_cache_dir {params.kegg_compound_cache_dir} --gtc_cache {params.glytoucan_cache} --brenda_mol_dir {input.brenda_mol_dir} --brenda_json {input.brenda_json} --brenda_ligands {input.brenda_ligands}"
 
 rule preprocess_rhea:
     input:
