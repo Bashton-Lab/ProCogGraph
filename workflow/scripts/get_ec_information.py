@@ -320,6 +320,15 @@ def neutralize_atoms(mol):
             atom.UpdatePropertyCache()
     return mol
 
+def parse_brenda_json_generic_reaction(reaction_list):
+    ligand_names = []
+    for item in reaction_list:
+        if item.get("educts"):
+            ligand_names.extend(item.get("educts"))
+        if item.get("products"):
+            ligand_names.extend(item.get("products"))
+    return set(ligand_names)
+
 def main():    
     """
     This script is designed to take the enzyme.dat file from EXPASY, and extract the EC numbers, 
@@ -345,8 +354,11 @@ def main():
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
     parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
-    parser.add_argument('--bkms_react', type=str, default = None, help='Path to bkms_react.tsv file for extracting brenda ec information')
+    parser.add_argument('--brenda_mol_dir', type=str, default = None, help='Path to brenda_mol directory for extracting brenda ligand information')
     parser.add_argument('--brenda_ligands', type=str, default = None, help='Path to brenda_ligands.csv file for extracting brenda ligand information')
+    parser.add_argument('--brenda_json', type=str, default = None, help='Path to brenda_json.json file for extracting brenda ligand information')
+    ## used with old brenda parsing method
+    ##parser.add_argument('--bkms_react', type=str, default = None, help='Path to bkms_react.tsv file for extracting brenda ec information')
     args = parser.parse_args()
 
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
@@ -617,30 +629,44 @@ def main():
     
     #eventually look at using mol files to load structures instead of inchis - may give more complete annotation (currenty ~7k have no ROMol val)
     if not os.path.exists(f"{args.outdir}/brenda_cognate_ligands.pkl"):
-        BKMS_react = pd.read_csv(f"{args.bkms_react}", sep = "\t")
-        brenda_ligands = pd.read_csv(f"{args.brenda_ligands}")
+        brenda_ligands = pd.read_csv(f"{args.brenda_ligands}") #file provided by BRENDA admins (not for redistribution)
+        brenda_ligands.rename(columns = {"name":"ligand_name"}, inplace = True)
 
-        BKMS_react["entities"] = BKMS_react.Reaction.str.split(" = | <=> | \+ ")
-        BKMS_react["entities"] = BKMS_react["entities"].apply(lambda x: set(x))
-        BKMS_react["complete_ec"] = np.nan
-        BKMS_react.loc[BKMS_react.EC_Number.str.contains("[A-z0-9]+\.[A-z0-9]+\.[A-z0-9]+\.[A-z0-9]+", regex = True) == True, "complete_ec"] = True
+        brenda_json_df = pd.read_json('/raid/MattC/repos/ProCogGraph/brenda_2023_1.json') #BRENDA json file from site - available for download by users after accepting license terms
+        brenda_ligand_df = pd.json_normalize(brenda_json_df.data) #normalise the json data in the data column
+        brenda_ligand_df = brenda_ligand_df[["id", "name", "systematic_name", "generic_reaction"]] ##remove unused columns
+        brenda_ligand_df = brenda_ligand_df.loc[(brenda_ligand_df.id != "spontaneous") & (brenda_ligand_df.id.isin(ec_list)) & (brenda_ligand_df.generic_reaction.isna() == False)].copy() #remove spontaneous reactions from the df and keep only those in the eclist, as well as only those with generic reaction
+        brenda_ligand_df["ligands"] = brenda_ligand_df.generic_reaction.apply(lambda x: parse_brenda_json_generic_reaction(x)) #get set of educts and products
+        brenda_ligand_df = brenda_ligand_df.explode("ligands") #explode on set of educts and products
+        brenda_ligand_df["ligands"] = brenda_ligand_df.ligands.str.strip().str.replace("^([0-9n]+\s+)", "", regex = True) #remove instances of ligands specifying xn molecules e.g. 2n NADH
 
-        BKMS_react_ec_filtered = BKMS_react.loc[BKMS_react.complete_ec == True]
-        BKMS_react_exploded = BKMS_react_ec_filtered.explode("entities")
-        BKMS_react_exploded["entities"] = BKMS_react_exploded.entities.str.strip()
-        BKMS_react_exploded["entities"] = BKMS_react_exploded["entities"].str.replace("^([0-9n]+\s+)", "", regex = True)
-        BKMS_react_exploded_merged = BKMS_react_exploded.merge(brenda_ligands, left_on = BKMS_react_exploded["entities"].str.lower(), right_on = brenda_ligands["name"].str.lower(), indicator = True, how = "left")
-        brenda_cognate_ligands = BKMS_react_exploded_merged.loc[BKMS_react_exploded_merged._merge == "both"].drop_duplicates()
-        brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"] = brenda_cognate_ligands.loc[brenda_cognate_ligands.entities.str.contains("\[side [12]\]"), "entities"].str.replace("\[side [12]\]", "", regex = True)
+        brenda_ligand_df_merged = brenda_ligand_df.merge(brenda_ligands[["brenda_ligandid", "ligand_name", "inchi"]], left_on = brenda_ligand_df["ligands"].str.lower(), right_on = brenda_ligands["ligand_name"].str.lower(), how = "inner", validate = "m:1") #merge the brenda ec mapping with the admin provided ligand list (plus inchis)
 
-        brenda_cognate_ligands_bl = brenda_cognate_ligands[["EC_Number", "brenda_ligandid", "entities", "inchi"]].copy()
-        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.loc[brenda_cognate_ligands_bl.EC_Number.isin(ec_list)]
-        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.drop_duplicates()
-        brenda_cognate_ligands_bl["ROMol"] = brenda_cognate_ligands_bl.inchi.apply(lambda x: Chem.inchi.MolFromInchi(x))
-        brenda_cognate_ligands_bl = brenda_cognate_ligands_bl.loc[brenda_cognate_ligands_bl.ROMol.isna() == False].copy()
-        brenda_cognate_ligands_bl["ligand_db"] = "BRENDA:" + brenda_cognate_ligands_bl.brenda_ligandid.astype("int").astype("str")
-        brenda_cognate_ligands_bl.rename(columns = {"EC_Number":"entry", "brenda_ligandid":"compound_id","entities":"compound_name"}, inplace = True)
-        brenda_cognate_ligands_bl.to_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
+        brenda_ligandids = brenda_ligand_df_merged.brenda_ligandid.unique() #get the list of ligand ids to check for molfile
+
+        brenda_mol_dir = args.brenda_mol_dir #molfiles provided by admin - not for redistribution
+
+        #load the mol files where possible into a df to merge with ec mapping
+        ligands_list = []
+        for ligid in brenda_ligandids:
+            molfile = f"{brenda_mol_dir}/{ligid}.mol"
+            if os.path.exists(molfile):
+                try:
+                    mol = Chem.MolFromMolFile(molfile)
+                except:
+                    mol = np.nan
+            ligand_info = {"ligand_id": ligid, "ROMol": mol}
+            ligands_list.append(ligand_info)
+            
+        ligands_list_df = pd.DataFrame(ligands_list)
+
+        brenda_ligand_df_merged_mol_merged = brenda_ligand_df_merged.merge(ligands_list_df, left_on = "brenda_ligandid", right_on = "ligand_id", validate = "m:1", how = "left") #merge the mols with the ec mapping df
+        brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna(), "ROMol"] = brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna()].inchi.apply(lambda x: Chem.MolFromInchi(x)) #where molfile not found or fails to be loaded, attempt to use the admin provided inchi to load mol
+        brenda_ligand_df_merged_mol_merged = brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna() == False].copy()
+        
+        brenda_ligand_df_merged_mol_merged["ligand_db"] = "BRENDA:" + brenda_ligand_df_merged_mol_merged.brenda_ligandid.astype("int").astype("str")
+        brenda_ligand_df_merged_mol_merged.rename(columns = {"id":"entry", "brenda_ligandid":"compound_id","ligand_name":"compound_name"}, inplace = True) #rename cols for combination with other database sources
+        brenda_ligand_df_merged_mol_merged.to_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
     else:
         brenda_cognate_ligands_bl = pd.read_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
         print("BRENDA cognate ligands loaded from file")

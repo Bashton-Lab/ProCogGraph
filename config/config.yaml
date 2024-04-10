@@ -31,8 +31,9 @@ kegg_enzyme_cache: kegg_enzyme_strings.txt
 kegg_reaction_cache: kegg_reaction_strings.txt
 kegg_compound_cache_dir: kegg_compound_cache_dir
 glytoucan_cache: gtc_cache.pkl
-bkms_react_file: Reactions_BKMS.tsv
 brenda_ligands: brenda_ligands_2023_1.csv
+brenda_mol_dir: molfiles_in_2023_1
+brenda_json: brenda_2023_1.json
 
 rhea2ec: rhea2ec.tsv
 rhea_directions: rhea-directions.tsv
