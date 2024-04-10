@@ -633,7 +633,7 @@ def main():
         brenda_ligands = pd.read_csv(f"{args.brenda_ligands}") #file provided by BRENDA admins (not for redistribution)
         brenda_ligands.rename(columns = {"name":"ligand_name"}, inplace = True)
 
-        brenda_json_df = pd.read_json('/raid/MattC/repos/ProCogGraph/brenda_2023_1.json') #BRENDA json file from site - available for download by users after accepting license terms
+        brenda_json_df = pd.read_json(args.brenda_json) #BRENDA json file from site - available for download by users after accepting license terms
         brenda_ligand_df = pd.json_normalize(brenda_json_df.data) #normalise the json data in the data column
         brenda_ligand_df = brenda_ligand_df[["id", "name", "systematic_name", "generic_reaction"]] ##remove unused columns
         brenda_ligand_df = brenda_ligand_df.loc[(brenda_ligand_df.id != "spontaneous") & (brenda_ligand_df.id.isin(ec_list)) & (brenda_ligand_df.generic_reaction.isna() == False)].copy() #remove spontaneous reactions from the df and keep only those in the eclist, as well as only those with generic reaction
@@ -669,7 +669,7 @@ def main():
         brenda_ligand_df_merged_mol_merged.rename(columns = {"id":"entry", "brenda_ligandid":"compound_id","ligand_name":"compound_name"}, inplace = True) #rename cols for combination with other database sources
         brenda_ligand_df_merged_mol_merged.to_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
     else:
-        brenda_cognate_ligands_bl = pd.read_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
+        brenda_ligand_df_merged_mol_merged = pd.read_pickle(f"{args.outdir}/brenda_cognate_ligands.pkl")
         print("BRENDA cognate ligands loaded from file")
 
     if not os.path.exists(f"{args.outdir}/biological_ligands_df.pkl"):
