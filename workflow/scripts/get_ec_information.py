@@ -697,7 +697,7 @@ def main():
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
                                            kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]],
-                                           brenda_cognate_ligands_bl[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
+                                           brenda_ligand_df_merged_mol_merged[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
         biological_ligands_df = biological_ligands_df.reset_index()
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
