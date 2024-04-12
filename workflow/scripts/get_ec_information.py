@@ -502,6 +502,7 @@ def main():
         kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded.merge(kegg_compounds_df, left_on = "entities", right_on = "compound_id", how = "inner")
         kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded_kegg.dropna(subset = ["canonical_smiles"])
         kegg_reaction_enzyme_df_exploded_kegg["ligand_db"] = "KEGG:" + kegg_reaction_enzyme_df_exploded_kegg["entities"].astype("str")
+        kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"] = kegg_reaction_enzyme_df_exploded_kegg.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x.compound_id in item], axis = 1)
         PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_kegg, smilesCol='canonical_smiles')
         kegg_reaction_enzyme_df_exploded_kegg.to_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_kegg.pkl")
         print("KEGG Compound records merged with Enzyme and Reaction records and saved")
@@ -515,6 +516,8 @@ def main():
         raise ValueError("RHEA reactions file not provided")
     else:
         rhea_reactions = pd.read_pickle(args.rhea_reactions)
+        rhea_reactions.rename(columns = {"reaction_id": "compound_reaction"}, inplace = True)
+        rhea_reactions["compound_reaction"] = rhea_reactions.compound_reaction.apply(lambda x: [x])
         print("RHEA records loaded from file")
     ### ChEBI KEGG Mapping
     if not os.path.exists(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_chebi.pkl"):
@@ -532,6 +535,8 @@ def main():
         kegg_reaction_enzyme_df_exploded_chebi = kegg_reaction_enzyme_df_exploded_chebi.loc[kegg_reaction_enzyme_df_exploded_chebi.ROMol.isna() == False].reset_index(drop = True)
 
         kegg_reaction_enzyme_df_exploded_chebi["ligand_db"] = kegg_reaction_enzyme_df_exploded_chebi["ChEBI_ID"].astype("str")
+        kegg_reaction_enzyme_df_exploded_chebi["compound_reaction"] = kegg_reaction_enzyme_df_exploded_chebi.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x["KEGG COMPOUND ACCESSION"] in item], axis = 1)
+
         kegg_reaction_enzyme_df_exploded_chebi = kegg_reaction_enzyme_df_exploded_chebi.loc[kegg_reaction_enzyme_df_exploded_chebi.ROMol.isna() == False].reset_index(drop = True)
         kegg_reaction_enzyme_df_exploded_chebi.to_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_chebi.pkl")
         print("ChEBI records saved")
@@ -578,6 +583,7 @@ def main():
 
         kegg_reaction_enzyme_df_exploded_pubchem = kegg_reaction_enzyme_df_exploded_pubchem.loc[kegg_reaction_enzyme_df_exploded_pubchem.ROMol.isna() == False].reset_index(drop = True)
         kegg_reaction_enzyme_df_exploded_pubchem["ligand_db"] = "Pubchem:" + kegg_reaction_enzyme_df_exploded_pubchem["CID"].astype("str")
+        kegg_reaction_enzyme_df_exploded_pubchem["compound_reaction"] = kegg_reaction_enzyme_df_exploded_pubchem.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x.compound_id in item], axis = 1)
         kegg_reaction_enzyme_df_exploded_pubchem.to_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_pubchem.pkl")
     else:
         print("PubChem records loaded from file")
@@ -622,6 +628,7 @@ def main():
 
         kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded_gtc.loc[kegg_reaction_enzyme_df_exploded_gtc.ROMol.isna() == False].reset_index(drop = True)
         kegg_reaction_enzyme_df_exploded_gtc["ligand_db"] = "GlyTouCan:" + kegg_reaction_enzyme_df_exploded_gtc["secondary_id"].astype("str")
+        kegg_reaction_enzyme_df_exploded_gtc["compound_reaction"] = kegg_reaction_enzyme_df_exploded_gtc.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x.compound_id in item], axis = 1)
         kegg_reaction_enzyme_df_exploded_gtc.to_pickle(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_gtc.pkl")
         print("GlyTouCan records saved")
     else:
@@ -692,11 +699,11 @@ def main():
                 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'qed']
         # create molecular descriptor calculator
         mol_descriptor_calculator = MolecularDescriptorCalculator(descriptors)
-        biological_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db"]],
-                                           kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db"]], 
-                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
-                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db"]],
+        biological_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db", "compound_reaction"]],
+                                           kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db", "compound_reaction"]], 
+                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
+                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG" : "compound_id"}),
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]],
                                            brenda_ligand_df_merged_mol_merged[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
         biological_ligands_df = biological_ligands_df.reset_index()
         
@@ -704,10 +711,11 @@ def main():
         biological_ligands_df["compound_name"] = biological_ligands_df["compound_name"].fillna(biological_ligands_df["ChEBI_NAME"]).fillna(biological_ligands_df["compound_id"])
         biological_ligands_df["ROMol"] = biological_ligands_df["ROMol"].apply(lambda x: neutralize_atoms(x) if isinstance(x,Chem.rdchem.Mol) else np.nan) #attempt to neutralise charged structures for grouping as charges cannot be used to score mols
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
-        biological_ligands_df_unique_smiles = biological_ligands_df[["canonical_smiles", "compound_name", "ligand_db"]].copy()
-        biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set}).reset_index()
+        biological_ligands_df_unique_smiles = biological_ligands_df[["canonical_smiles", "compound_name", "ligand_db", "compound_reaction"]].copy()
+        biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set, "compound_reaction": set}).reset_index()
         biological_ligands_df_unique_smiles["ligand_db"] = biological_ligands_df_unique_smiles.ligand_db.str.join("|")
         biological_ligands_df_unique_smiles["compound_name"] = biological_ligands_df_unique_smiles.compound_name.str.join("|")
+        biological_ligands_df_unique_smiles["compound_reaction"] = biological_ligands_df_unique_smiles.compound_reaction.str.join("|")
         biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.reset_index(drop=True).reset_index()
 
         biological_ligands_df_unique_smiles.rename(columns = {"index": "uniqueID"}, inplace = True)
