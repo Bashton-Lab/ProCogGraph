@@ -697,10 +697,11 @@ def main():
         biological_ligands_df["ROMol"] = biological_ligands_df["ROMol"].apply(lambda x: neutralize_atoms(x) if isinstance(x,Chem.rdchem.Mol) else np.nan) #attempt to neutralise charged structures for grouping as charges cannot be used to score mols
         biological_ligands_df["canonical_smiles"] = biological_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
         biological_ligands_df_unique_smiles = biological_ligands_df[["canonical_smiles", "compound_name", "ligand_db", "compound_reaction"]].copy()
+        biological_ligands_df_unique_smiles["compound_reaction"] = biological_ligands_df_unique_smiles["compound_reaction"].fillna("")
         biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set, "compound_reaction": set}).reset_index()
         biological_ligands_df_unique_smiles["ligand_db"] = biological_ligands_df_unique_smiles.ligand_db.str.join("|")
         biological_ligands_df_unique_smiles["compound_name"] = biological_ligands_df_unique_smiles.compound_name.str.join("|")
-        biological_ligands_df_unique_smiles["compound_reaction"] = biological_ligands_df_unique_smiles.compound_reaction.str.join("|")
+        biological_ligands_df_unique_smiles["compound_reaction"] = biological_ligands_df_unique_smiles.compound_reaction.str.join("|").str.strip("|")
         biological_ligands_df_unique_smiles = biological_ligands_df_unique_smiles.reset_index(drop=True).reset_index()
 
         biological_ligands_df_unique_smiles.rename(columns = {"index": "uniqueID"}, inplace = True)
