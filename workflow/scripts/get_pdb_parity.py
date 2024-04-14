@@ -171,9 +171,9 @@ if not os.path.exists(pickle_filename):
             results_df.to_pickle(pickle_filename)
 
             #save the cache scores
-            cache_filename = f"{args.outdir}/cache_parity_calcs.pkl"
             cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"])
-            cache_results.to_pickle(cache_filename)
+            cache_results = pd.concat([cache_df, cache_results], ignore_index = True).drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold"])
+            cache_results.to_pickle(f"{args.cache}")
     else:
         results_df = pre_calculated
         # Save the smiles_ec_pairs for the chunk as a pickle file
