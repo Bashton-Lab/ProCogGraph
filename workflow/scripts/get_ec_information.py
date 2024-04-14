@@ -519,6 +519,7 @@ def main():
         rhea_reactions = pd.read_pickle(args.rhea_reactions)
         rhea_reactions.rename(columns = {"reaction_id": "compound_reaction"}, inplace = True)
         rhea_reactions["compound_reaction"] = rhea_reactions.compound_reaction.apply(lambda x: [x])
+        rhea_reactions["compound_reaction"] = rhea_reactions["compound_reaction"].str.join("|")
         print("RHEA records loaded from file")
     ### ChEBI KEGG Mapping
     if not os.path.exists(f"{args.outdir}/kegg_reaction_enzyme_df_exploded_chebi.pkl"):
