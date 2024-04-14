@@ -96,8 +96,8 @@ def main():
 
     #It is questionable whether 204 properties is a good idea for a node. how can this be refactored out into nodes in the graph?
     cognate_ligands = pd.read_pickle(args.cognate_ligands)
-    cognate_ligands_nodes = cognate_ligands[["canonical_smiles", "uniqueID", "ligand_db", "compound_name", "isCofactor"]].copy().drop_duplicates(subset = ["canonical_smiles", "uniqueID"])
-    cognate_ligands_nodes.rename(columns = {"uniqueID": "uniqueID:ID(bio-id)", "compound_name": "name:string[]", "canonical_smiles": "canonicalSMILES", "ligand_db" : "ligandDB:string[]"}, inplace = True)
+    cognate_ligands_nodes = cognate_ligands[["canonical_smiles", "uniqueID", "ligand_db", "compound_name", "isCofactor", "compound_reaction"]].copy().drop_duplicates(subset = ["canonical_smiles", "uniqueID"])
+    cognate_ligands_nodes.rename(columns = {"uniqueID": "uniqueID:ID(bio-id)", "compound_name": "name:string[]", "canonical_smiles": "canonicalSMILES", "ligand_db" : "ligandDB:string[]", "compound_reaction": "compoundReactionIDs:string[]"}, inplace = True)
     cognate_ligands_nodes.to_csv(f"{args.outdir}/cognate_ligand_nodes.csv.gz", compression = "gzip",sep = "\t", index = False)
 
     cognate_ligands_ec = cognate_ligands[["uniqueID", "entry"]].drop_duplicates()
