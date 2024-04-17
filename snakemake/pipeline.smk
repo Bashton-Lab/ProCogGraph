@@ -151,6 +151,8 @@ rule get_pdbe_graph_info:
         interpro_xml = config["data_files_dir"] + config["interpro_xml"],
         pfam_clans = config["data_files_dir"] + config["pfam_clans"],
         pfam_clan_rels = config["data_files_dir"] + config["pfam_clan_rels"],
+        pfam_a_file = config["data_files_dir"] + config["pfam_a_file"],
+        cddf = config["data_files_dir"] + config["cddf"],
         script = config["scripts_dir"] + "extract_pdbe_info.py"
     output:
         bound_entities_to_score = output_dir + "/pdbe_graph_data/bound_entities_to_score.pkl",
@@ -173,4 +175,4 @@ rule get_pdbe_graph_info:
     threads: workflow.cores
 
     shell: 
-        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels} --domain_contact_cutoff {params.domain_contact_cutoff} --pdbecif_dir {params.sugar_cifs}"
+        "python3 {input.script} --neo4j_user '{params.neo4j_user}' --neo4j_password '{params.neo4j_password}' --neo4j_bolt_uri {params.neo4j_bolt_uri} --outdir {params.outdir} --enzyme_dat_file {input.enzyme_dat_file} --enzyme_class_file {input.enzyme_class_file} --pdbe_graph_yaml {input.pdbe_graph_yaml} --glycoct_cache {params.glycoct_cache} --smiles_cache {params.smiles_cache} --csdb_linear_cache {params.csdb_linear_cache} --sifts_ec_mapping {input.sifts_ec_mapping} --cddf {input.cddf} --scop_domains_info_file {input.scop_domains_info_file} --scop_descriptions_file {input.scop_descriptions_file} --interpro_xml {input.interpro_xml} --threads {threads} --pfam_clans {input.pfam_clans} --pfam_clan_rels {input.pfam_clan_rels} --pfam_a_file {input.pfam_a_file} --domain_contact_cutoff {params.domain_contact_cutoff} --pdbecif_dir {params.sugar_cifs}"

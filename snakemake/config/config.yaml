@@ -21,6 +21,8 @@ scop_descriptions_file: dir.des.scop.1_75.txt
 interpro_xml: interpro.xml.gz
 pfam_clans: clan.txt.gz
 pfam_clan_rels: clan_membership.txt.gz
+pfam_a_file: pfamA.txt.gz
+cddf: cath-domain-description-file.txt
 
 pubchem_mapping: pubchem_substance_id_mapping.txt
 chebi_kegg: ChEBI_Results.tsv 

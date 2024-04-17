@@ -147,6 +147,8 @@ def main():
         help = "pfam clans file clan.txt.gz")
     parser.add_argument('--pfam_a_file', type = str,
         help = "pfam a file pfamA.txt.gz")
+    parser.add_argument('--cddf', type = str,
+        help = "cath domain description file")
     parser.add_argument('--pdbecif_dir', type = str, default = "pdbecif",
         help = "path to directory containing cif files")
     parser.add_argument('--domain_contact_cutoff', type = int, default = 3,
@@ -246,7 +248,7 @@ def main():
                 result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
                 if db == "CATH":
                     #run the cath_domain_list on only the domains we need
-                    cath_domain_list = result_df_ec.cath_id.unique()
+                    cath_domain_list = result_df_ec.cath_domain.unique()
                     cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
                     cath_domains_info = build_cath_dataframe(cath_parsed_data)
                     result_df_ec = result_df_ec.merge(cath_domains_info, how = "left", on = "cath_domain", indicator = True)
@@ -300,7 +302,7 @@ def main():
                 result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
                 if db == "CATH":
                     #run the cath_domain_list on only the domains we need
-                    cath_domain_list = result_df_ec.cath_id.unique()
+                    cath_domain_list = result_df_ec.cath_domain.unique()
                     cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
                     cath_domains_info = build_cath_dataframe(cath_parsed_data)
                     result_df_ec = result_df_ec.merge(cath_domains_info, how = "left", on = "cath_domain", indicator = True)
