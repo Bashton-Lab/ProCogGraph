@@ -285,52 +285,59 @@ def get_pfam_annotations(pfam_a_file, clan_membership_file, clan_info_file):
     return pfam_a_clans_merged
 
 def parse_cddf(file_path, domain_list):
-    data = []
-    current_entry = {}
-    current_segment = {}
     with open(file_path, 'r') as file:
+        entries = {}
+        lines = []
         for line in file:
             line = line.strip()
-            if line.startswith('#') or not line:
+            if line.startswith('#'):
                 continue
-            if line.startswith('//'):
-                #when we reach the terminator string, add the dictionary to the list, but only if the domain is in the list
-                if 'DOMAIN' in current_entry and any(domain in current_entry['DOMAIN'] for domain in domain_list): 
-                    data.append(current_entry)
-                current_entry = {}
-                current_segment = {}
-            elif line.startswith('SEGMENT'):
-                if 'SEGMENTS' not in current_entry:
-                    current_entry['SEGMENTS'] = []
-                if current_segment:
-                    current_entry['SEGMENTS'].append(current_segment)
-                current_segment = {'SEGMENT': line.split()[1]}
-            elif line.startswith('ENDSEG'):
-                if current_segment:
-                    current_entry['SEGMENTS'].append(current_segment)
-                current_segment = {}
+            if line.startswith("//"):
+                entries[domain] = lines
+                lines = []
+            elif line.startswith("DOMAIN"):
+                domain = line[10:]
             else:
-                tag = line[0:9].strip()
-                value = line[10:]
-                
-                if tag == 'FORMAT':
-                    if 'FORMAT' not in current_entry:
-                        current_entry['FORMAT'] = []
-                    current_entry['FORMAT'].append(value)
-                elif tag in ['DOMAIN', 'PDBID', 'VERSION', 'VERDATE', 'NAME', 'SOURCE', 'CATHCODE', 'CLASS', 'ARCH', 'TOPOL', 'HOMOL', 'DLENGTH', 'DSEQH', 'DSEQS', 'NSEGMENTS']:
-                    if tag not in current_entry:
-                        current_entry[tag] = []
-                    current_entry[tag].append(value)
-                elif tag in ['SRANGE', 'SLENGTH', 'SSEQH', 'SSEQS']:
-                    current_segment[tag] = value
-                elif tag == 'COMMENTS':
-                    if 'COMMENTS' not in current_entry:
-                        current_entry['COMMENTS'] = []
-                    current_entry['COMMENTS'].append(value)
+                lines.append(line)
+    matching_entries = []
+    for domain in domain_list:
+        if domain in entries.keys():
+            current_entry = {}
+            current_segment = {}
+            for line in entries[domain]:
+                if line.startswith('SEGMENT'):
+                    if 'SEGMENTS' not in current_entry:
+                        current_entry['SEGMENTS'] = []
+                    if current_segment:
+                        current_entry['SEGMENTS'].append(current_segment)
+                    current_segment = {'SEGMENT': line.split()[1]}
+                elif line.startswith('ENDSEG'):
+                    if current_segment:
+                        current_entry['SEGMENTS'].append(current_segment)
+                    current_segment = {}
                 else:
-                    # Invalid tag
-                    continue
-    return data
+                    tag = line[0:9].strip()
+                    value = line[10:]
+
+                    if tag == 'FORMAT':
+                        if 'FORMAT' not in current_entry:
+                            current_entry['FORMAT'] = []
+                        current_entry['FORMAT'].append(value)
+                    elif tag in ['DOMAIN', 'PDBID', 'VERSION', 'VERDATE', 'NAME', 'SOURCE', 'CATHCODE', 'CLASS', 'ARCH', 'TOPOL', 'HOMOL', 'DLENGTH', 'DSEQH', 'DSEQS', 'NSEGMENTS']:
+                        if tag not in current_entry:
+                            current_entry[tag] = []
+                        current_entry[tag].append(value)
+                    elif tag in ['SRANGE', 'SLENGTH', 'SSEQH', 'SSEQS']:
+                        current_segment[tag] = value
+                    elif tag == 'COMMENTS':
+                        if 'COMMENTS' not in current_entry:
+                            current_entry['COMMENTS'] = []
+                        current_entry['COMMENTS'].append(value)
+                    else:
+                        # Invalid tag
+                        continue
+            matching_entries.append(current_entry)
+    return matching_entries
 
 def build_cath_dataframe(parsed_data):
     combine_keys = ["DOMAIN", "PDBID", "VERSION", "VERDATE", "NAME", "SOURCE", "CATHCODE", "CLASS", "ARCH", "TOPOL", "HOMOL", "DLENGTH", "DSEQH", "DSEQS", "NSEGMENTS"]
