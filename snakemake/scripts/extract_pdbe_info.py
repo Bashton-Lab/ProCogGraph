@@ -9,7 +9,6 @@ from utils import get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from
 import json
 from urllib.parse import quote
 import pandas as pd
-import xml.etree.ElementTree as ET
 import re
 import argparse
 from bs4 import BeautifulSoup
@@ -312,7 +311,7 @@ def main():
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
                     result_df_ec.drop(columns = "_merge", inplace = True)
                 elif db == "PFAM":
-                    result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
+                    result_df_ec = result_df_ec.merge(pfam_a_annotations, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                     result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
