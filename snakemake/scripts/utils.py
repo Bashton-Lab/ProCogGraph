@@ -214,6 +214,62 @@ def pdbe_sanitise_smiles(smiles, return_mol = False, return_sanitisation = False
             return sanitised_smiles, sanitisation
         else:
             return sanitised_smiles
+        
+def extract_interpro_domain_annotations(xml_file):
+    with gzip.open(xml_file, 'rb') as f:
+        tree = ET.parse(f)
+        root = tree.getroot()
+
+        # Find all interpro elements in the XML file
+        interpro_elements = root.findall('.//interpro')
+
+        superfamily_annotations = {}
+        gene3d_annotations = {}
+        # Iterate through each interpro element
+        for interpro in interpro_elements:
+            interpro_id = interpro.attrib['id']
+            # Find db_xref elements with db attribute as PFAM
+            superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
+            gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
+            superfamily_accessions = []
+            gene3d_accessions = []
+            # Extract PFAM accessions for the current interpro element
+            for superfamily_ref in superfamily_refs:
+                superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
+            for gene3d_ref in gene3d_refs:
+                gene3d_accessions.append(gene3d_ref.attrib.get('dbkey')) #no prefix for gene3d as it is prefixed in ref
+
+            # Store PFAM annotations for the interpro ID
+            superfamily_annotations[interpro_id] = superfamily_accessions
+            gene3d_annotations[interpro_id] = gene3d_accessions
+
+    interpro_annotations = pd.DataFrame([superfamily_annotations, gene3d_annotations], index = ["superfamily_annotations", "gene3d_annotations"]).T
+    interpro_annotations["dbxref"] = interpro_annotations["superfamily_annotations"].str.join("|") + "|" + interpro_annotations["gene3d_annotations"].str.join("|")
+    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].str.rstrip("|").str.lstrip("|")
+    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].replace("", np.nan)
+    return interpro_annotations[["dbxref"]]
+
+def get_scop_domains_info(domain_info_file, descriptions_file):
+    
+    def clean_and_merge_scop_col(df, column_id, description_df):
+        level = df[column_id].str.split("=").str.get(0).values[0]
+        df[column_id] = df[column_id].str.split("=").str.get(1).astype(int)
+        df = df.merge(description_df.loc[description_df.level == level, ["level_sunid", "level", "level_description"]],left_on = column_id, right_on = "level_sunid", indicator = True)
+        df.rename(columns = {"level_description": f"{level}_description"}, inplace = True)
+        assert len(df.loc[df._merge != "both"]) == 0
+        df.drop(columns = ["_merge", "level_sunid", "level"], inplace = True)
+        return df
+    
+    scop_domains_info = pd.read_csv(domain_info_file, sep = "\t", comment = "#", header = None, names = ["scop_id", "pdb_id", "scop_description", "sccs", "domain_sunid", "ancestor_sunid"])
+    scop_id_levels = ["cl_id", "cf_id", "sf_id", "fa_id", "dm_id", "sp_id", "px_id"]
+    scop_domains_info[scop_id_levels] = scop_domains_info.ancestor_sunid.str.split(",", expand = True)
+    scop_descriptions = pd.read_csv(descriptions_file, sep = "\t", comment = "#" , header = None, names = ["level_sunid", "level", "level_sccs", "level_sid", "level_description"])
+
+    for column in scop_id_levels:
+        scop_domains_info = clean_and_merge_scop_col(scop_domains_info, column, scop_descriptions)
+    
+    scop_domains_info.drop(columns = ["pdb_id", "scop_description"], inplace = True)
+    return scop_domains_info
 def parse_cddf(file_path, domain_list):
     data = []
     current_entry = {}

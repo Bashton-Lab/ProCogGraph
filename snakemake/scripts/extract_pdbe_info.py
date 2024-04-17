@@ -61,15 +61,6 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
     df_merged = df_merged.loc[df_merged.ec_list != ""] #remove any rows where the ec_list is empty - we cant process these anyway.
     return(df_merged)
 
-def clean_and_merge_scop_col(df, column_id, description_df):
-    level = df[column_id].str.split("=").str.get(0).values[0]
-    df[column_id] = df[column_id].str.split("=").str.get(1).astype(int)
-    df = df.merge(description_df.loc[description_df.level == level, ["level_sunid", "level", "level_description"]],left_on = column_id, right_on = "level_sunid", indicator = True)
-    df.rename(columns = {"level_description": f"{level}_description"}, inplace = True)
-    assert len(df.loc[df._merge != "both"]) == 0
-    df.drop(columns = ["_merge", "level_sunid", "level"], inplace = True)
-    return df
-
 def process_row(conn, progress, task, pdb, query):
     result = conn.query(query, db='neo4j', pdb_id=pdb)
     progress.update(task, advance=1)
@@ -117,46 +108,6 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     )
     
     return ligands_df
-
-def extract_domain_annotations(xml_file):
-    with gzip.open(xml_file, 'rb') as f:
-        tree = ET.parse(f)
-        root = tree.getroot()
-
-        # Find all interpro elements in the XML file
-        interpro_elements = root.findall('.//interpro')
-
-        pfam_annotations = {}
-        superfamily_annotations = {}
-        gene3d_annotations = {}
-        # Iterate through each interpro element
-        for interpro in interpro_elements:
-            interpro_id = interpro.attrib['id']
-            # Find db_xref elements with db attribute as PFAM
-            pfam_refs = interpro.findall('.//db_xref[@db="PFAM"]')
-            superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
-            gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
-            pfam_accessions = []
-            superfamily_accessions = []
-            gene3d_accessions = []
-            # Extract PFAM accessions for the current interpro element
-            for pfam_ref in pfam_refs:
-                pfam_accessions.append("PFAM:" + pfam_ref.attrib.get('dbkey'))
-            for superfamily_ref in superfamily_refs:
-                superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
-            for gene3d_ref in gene3d_refs:
-                gene3d_accessions.append(gene3d_ref.attrib.get('dbkey')) #no prefix for gene3d as it is prefixed in ref
-
-            # Store PFAM annotations for the interpro ID
-            pfam_annotations[interpro_id] = pfam_accessions
-            superfamily_annotations[interpro_id] = superfamily_accessions
-            gene3d_annotations[interpro_id] = gene3d_accessions
-
-    interpro_annotations = pd.DataFrame([pfam_annotations, superfamily_annotations, gene3d_annotations], index = ["pfam_annotations", "superfamily_annotations", "gene3d_annotations"]).T
-    interpro_annotations["dbxref"] = interpro_annotations["pfam_annotations"].str.join("|") + "|" + interpro_annotations["superfamily_annotations"].str.join("|") + "|" + interpro_annotations["gene3d_annotations"].str.join("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].str.rstrip("|").str.lstrip("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].replace("", np.nan)
-    return interpro_annotations[["dbxref"]]
 
 def main():
 
@@ -248,7 +199,6 @@ def main():
         ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
         ec_records_df = ec_records_df_grouped.explode("ID")
         
-        
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
         sifts_chains_uniprot = sifts_chains.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set}).reset_index()
@@ -268,27 +218,14 @@ def main():
         bs_results = {}
         bs_results_unmatched = {}
 
-        scop_domains_info = pd.read_csv(f"{args.scop_domains_info_file}", sep = "\t", comment = "#", header = None, names = ["scop_id", "pdb_id", "scop_description", "sccs", "domain_sunid", "ancestor_sunid"])
-        scop_id_levels = ["cl_id", "cf_id", "sf_id", "fa_id", "dm_id", "sp_id", "px_id"]
-        scop_domains_info[scop_id_levels] = scop_domains_info.ancestor_sunid.str.split(",", expand = True)
-        scop_descriptions = pd.read_csv(f"{args.scop_descriptions_file}", sep = "\t", comment = "#" , header = None, names = ["level_sunid", "level", "level_sccs", "level_sid", "level_description"])
-
-        for column in scop_id_levels:
-            scop_domains_info = clean_and_merge_scop_col(scop_domains_info, column, scop_descriptions)
-        
-        scop_domains_info.drop(columns = ["pdb_id", "scop_description"], inplace = True)
-
-        class_codes = scop_domains_info[["cl_id", "cl_description"]].drop_duplicates()
-        fold_codes = scop_domains_info[["cf_id", "cf_description"]].drop_duplicates()
-        superfamily_codes = scop_domains_info[["sf_id", "sf_description"]].drop_duplicates()
-
-        interpro_annotations = extract_domain_annotations(args.interpro_xml)
 
         pfam_clan_rels = pd.read_csv(f"{args.pfam_clan_rels}", sep = "\t", header = None, names = ["clan", "pfam"])
         pfam_clans = pd.read_csv(f"{args.pfam_clans}", sep = "\t", comment = "#", header = None, names = ["clan_acc", "clan_id", "previous_id", "clan_description", "clan_author", "deposited_by", "clan_comment", "updated", "created", "version", "number_structures", "number_archs", "number_species", "number_sequences", "competed", "uniprot_competed"])
         pfam_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
         assert(len(pfam_df.loc[pfam_df._merge != "both"]) == 0)
         pfam_df.drop(columns = "_merge", inplace = True)
+        scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
+        interpro_annotations = extract_interpro_domain_annotations(args.interpro_xml)
 
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
 
