@@ -293,8 +293,8 @@ def main():
 
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
-                result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
+                result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
                 result_df_ec = result_df_contact_filtered.merge(sifts_chains_ec, left_on = ["pdb_id"], right_on = ["PDB"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB"])
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
