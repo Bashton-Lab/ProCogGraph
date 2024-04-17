@@ -247,14 +247,18 @@ def main():
             
         ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
         ec_records_df = ec_records_df_grouped.explode("ID")
+        
+        
         sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
         sifts_chains_ec = sifts_chains.loc[sifts_chains.EC_NUMBER != "?"]
-        sifts_chains_ec = sifts_chains_ec.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set, "EC_NUMBER": set}).reset_index() #some chains have multiple uniprot accessions, we group these into a set along with their associated ec's
+        sifts_chains_uniprot = sifts_chains.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set}).reset_index()
+        sifts_chains_uniprot["ACCESSION"] = sifts_chains_uniprot["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
+        sifts_chains_uniprot.rename(columns = {"ACCESSION" : "uniprot_accession"}, inplace = True)
+
+        sifts_chains_ec = sifts_chains_ec.groupby(["PDB"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb associated ec's
         sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function 
-        sifts_chains_ec["ACCESSION"] = sifts_chains_ec["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
         sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_df, ec_col = "EC_NUMBER")
         sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec", "ACCESSION" : "uniprot_accession"}, inplace = True)
-        
 
         all_pdbs = sifts_chains_ec.PDB.unique()
         total_rows = len(all_pdbs)
@@ -302,10 +306,11 @@ def main():
                 # Convert results to DataFrame
                 result_df = pd.DataFrame([dict(_) for _ in results])
                 result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
-                result_df_ec = result_df_contact_filtered.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
+                result_df_ec = result_df_contact_filtered.merge(sifts_chains_ec, left_on = ["pdb_id"], right_on = ["PDB"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
-                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
-                
+                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
+                result_df_ec = result_df_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
+                result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
@@ -347,9 +352,11 @@ def main():
                 result_df = pd.DataFrame([dict(_) for _ in results])
                 result_df_contact_filtered = result_df.loc[result_df.contact_type_count >= args.domain_contact_cutoff].copy()
                 result_df["ligand_entity_id_numerical"] = result_df["ligand_entity_id_numerical"].astype(int)
-                result_df_ec = result_df.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
+                result_df_ec = result_df_contact_filtered.merge(sifts_chains_ec, left_on = ["pdb_id"], right_on = ["PDB"], how = "left", indicator = True) #keeping only pdbs with sifts ec annotations
                 result_df_ec_unmatched = result_df_ec.loc[result_df_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
-                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"]) 
+                result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
+                result_df_ec = result_df_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
+                result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
                 if db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
