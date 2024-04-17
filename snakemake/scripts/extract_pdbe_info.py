@@ -5,7 +5,7 @@ from pathlib import Path
 import requests
 import os
 import numpy as np
-from utils import get_terminal_record, get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb, process_ec_records, Neo4jConnection
+from utils import get_csdb_from_glycoct, get_glycoct_from_wurcs, get_smiles_from_csdb, process_ec_records, Neo4jConnection, extract_interpro_domain_annotations, get_scop_domains_info, get_pfam_annotations, parse_cddf, build_cath_dataframe
 import json
 from urllib.parse import quote
 import pandas as pd
@@ -146,6 +146,8 @@ def main():
         help = "pfam clan relationships file clan_membership.txt.gz")
     parser.add_argument('--pfam_clans', type = str,
         help = "pfam clans file clan.txt.gz")
+    parser.add_argument('--pfam_a_file', type = str,
+        help = "pfam a file pfamA.txt.gz")
     parser.add_argument('--pdbecif_dir', type = str, default = "pdbecif",
         help = "path to directory containing cif files")
     parser.add_argument('--domain_contact_cutoff', type = int, default = 3,
@@ -218,14 +220,9 @@ def main():
         bs_results = {}
         bs_results_unmatched = {}
 
-
-        pfam_clan_rels = pd.read_csv(f"{args.pfam_clan_rels}", sep = "\t", header = None, names = ["clan", "pfam"])
-        pfam_clans = pd.read_csv(f"{args.pfam_clans}", sep = "\t", comment = "#", header = None, names = ["clan_acc", "clan_id", "previous_id", "clan_description", "clan_author", "deposited_by", "clan_comment", "updated", "created", "version", "number_structures", "number_archs", "number_species", "number_sequences", "competed", "uniprot_competed"])
-        pfam_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
-        assert(len(pfam_df.loc[pfam_df._merge != "both"]) == 0)
-        pfam_df.drop(columns = "_merge", inplace = True)
         scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
         interpro_annotations = extract_interpro_domain_annotations(args.interpro_xml)
+        pfam_a_annotations = get_pfam_annotations(args.pfam_a_file, args.pfam_clan_rels, args.pfam_clans)
 
         if not os.path.exists(f"{args.outdir}/bl_results.pkl"):
 
@@ -261,7 +258,7 @@ def main():
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
                     result_df_ec.drop(columns = "_merge", inplace = True)
                 elif db == "PFAM":
-                    result_df_ec = result_df_ec.merge(pfam_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
+                    result_df_ec = result_df_ec.merge(pfam_a_annotations, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
                     result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 

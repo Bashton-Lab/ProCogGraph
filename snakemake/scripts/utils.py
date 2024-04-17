@@ -11,6 +11,8 @@ from Bio.ExPASy import Enzyme as EEnzyme
 from pdbeccdutils.helpers.mol_tools import fix_molecule
 from rdkit import Chem
 from neo4j import __version__ as neo4j_version,  GraphDatabase
+import gzip 
+import xml.etree.ElementTree as ET
 
 #class is adapted from https://towardsdatascience.com/neo4j-cypher-python-7a919a372be7
 class Neo4jConnection:
@@ -177,7 +179,7 @@ def get_smiles_from_csdb(csdb_linear, cache_df):
                     smiles = a.contents[0].strip()
                     break
         else:
-            smiles = np.nan 
+            smiles = np.nan
         return smiles
     
 def pdbe_sanitise_smiles(smiles, return_mol = False, return_sanitisation = False):
@@ -270,6 +272,18 @@ def get_scop_domains_info(domain_info_file, descriptions_file):
     
     scop_domains_info.drop(columns = ["pdb_id", "scop_description"], inplace = True)
     return scop_domains_info
+
+def get_pfam_annotations(pfam_a_file, clan_membership_file, clan_info_file):
+    pfam_a = pd.read_csv(pfam_a_file, sep = "\t", header = None, usecols = [0,1,3], names = ["pfam_accession", "pfam_name", "pfam_description"])
+    pfam_clan_rels = pd.read_csv(clan_membership_file, sep = "\t", header = None, names = ["clan", "pfam"])
+    pfam_clans = pd.read_csv(clan_info_file, sep = "\t", comment = "#", header = None, names = ["clan_acc", "clan_id", "previous_id", "clan_description", "clan_author", "deposited_by", "clan_comment", "updated", "created", "version", "number_structures", "number_archs", "number_species", "number_sequences", "competed", "uniprot_competed"])
+    pfam_clan_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
+    assert(len(pfam_clan_df.loc[pfam_clan_df._merge != "both"]) == 0)
+    pfam_clan_df.drop(columns = "_merge", inplace = True)
+    
+    pfam_a_clans_merged = pfam_a.merge(pfam_clan_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
+    return pfam_a_clans_merged
+
 def parse_cddf(file_path, domain_list):
     data = []
     current_entry = {}
