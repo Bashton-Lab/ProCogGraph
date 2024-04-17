@@ -297,6 +297,7 @@ def parse_cddf(file_path, domain_list):
                 lines = []
             elif line.startswith("DOMAIN"):
                 domain = line[10:]
+                lines.append(line)
             else:
                 lines.append(line)
     matching_entries = []
