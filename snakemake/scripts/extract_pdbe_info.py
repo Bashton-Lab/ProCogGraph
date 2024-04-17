@@ -311,7 +311,15 @@ def main():
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
                 result_df_ec = result_df_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
                 result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
-                if db == "SCOP":
+                if db == "CATH":
+                    #run the cath_domain_list on only the domains we need
+                    cath_domain_list = result_df_ec.cath_id.unique()
+                    cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
+                    cath_domains_info = build_cath_dataframe(cath_parsed_data)
+                    result_df_ec = result_df_ec.merge(cath_domains_info, how = "left", on = "cath_domain", indicator = True)
+                    assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
+                    result_df_ec.drop(columns = "_merge", inplace = True)
+                elif db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
                     result_df_ec.drop(columns = "_merge", inplace = True)
@@ -357,7 +365,15 @@ def main():
                 result_df_ec = result_df_ec.loc[result_df_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
                 result_df_ec = result_df_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
                 result_df_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
-                if db == "SCOP":
+                if db == "CATH":
+                    #run the cath_domain_list on only the domains we need
+                    cath_domain_list = result_df_ec.cath_id.unique()
+                    cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
+                    cath_domains_info = build_cath_dataframe(cath_parsed_data)
+                    result_df_ec = result_df_ec.merge(cath_domains_info, how = "left", on = "cath_domain", indicator = True)
+                    assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
+                    result_df_ec.drop(columns = "_merge", inplace = True)
+                elif db == "SCOP":
                     result_df_ec = result_df_ec.merge(scop_domains_info, how = "left", on = "scop_id", indicator = True)
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
                     result_df_ec.drop(columns = "_merge", inplace = True)
