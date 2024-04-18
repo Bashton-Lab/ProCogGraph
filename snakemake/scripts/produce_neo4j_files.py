@@ -142,11 +142,11 @@ def main():
     protein_ec_rels.rename(columns = {"pdbProteinChain:ID(pdbp-id)": ":START_ID(pdbp-id)", "ecList:string[]": ":END_ID(ec-id)"}, inplace = True)
     protein_ec_rels.to_csv(f"{args.outdir}/protein_ec_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domains_nodes = scop_domains[["scop_unique_id", "scop_id", "dm_description", "scop_sccs", "domain_sunid"]].drop_duplicates()
+    scop_domains_nodes = scop_domains[["scop_unique_id", "scop_id", "dm_description", "sccs", "domain_sunid"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
     scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
     scop_domains_nodes[":LABEL"] = scop_domains_nodes["type"] + "|domain"
-    scop_domains_nodes.rename(columns = {"scop_unique_id": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "scop_sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
+    scop_domains_nodes.rename(columns = {"scop_unique_id": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
     scop_domains_nodes.to_csv(f"{args.outdir}/scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     cath_domains_nodes = cath_domains[["cath_unique_id", "cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
@@ -173,26 +173,26 @@ def main():
     #domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
     #domain_nodes.to_csv(f"{args.outdir}/domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_family_nodes = scop_domains[["scop_sccs", "fa_id", "fa_description"]].drop_duplicates()
-    scop_family_nodes.rename(columns = {"scop_sccs": "SCCS", "fa_id": "scopFamily:ID(scop-family-id)", "fa_description": "description"}, inplace = True)
+    scop_family_nodes = scop_domains[["sccs", "fa_id", "fa_description"]].drop_duplicates()
+    scop_family_nodes.rename(columns = {"sccs": "SCCS", "fa_id": "scopFamily:ID(scop-family-id)", "fa_description": "description"}, inplace = True)
     scop_family_nodes.to_csv(f"{args.outdir}/scop_family_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_superfamily_nodes = scop_domains[["scop_sccs", "sf_id", "sf_description"]]
-    scop_superfamily_nodes["scop_sccs"] = scop_superfamily_nodes["scop_sccs"].str.extract(r"^(\w+\.\w+\.\w+)\.")
+    scop_superfamily_nodes = scop_domains[["sccs", "sf_id", "sf_description"]]
+    scop_superfamily_nodes["sccs"] = scop_superfamily_nodes["sccs"].str.extract(r"^(\w+\.\w+\.\w+)\.")
     scop_superfamily_nodes = scop_superfamily_nodes.drop_duplicates()
-    scop_superfamily_nodes.rename(columns = {"scop_sccs": "SCCS", "sf_id": "scopSuperfamily:ID(scop-superfam-id)", "sf_description": "description"}, inplace = True)
+    scop_superfamily_nodes.rename(columns = {"sccs": "SCCS", "sf_id": "scopSuperfamily:ID(scop-superfam-id)", "sf_description": "description"}, inplace = True)
     scop_superfamily_nodes.to_csv(f"{args.outdir}/scop_superfamily_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_class_nodes = scop_domains[["scop_sccs", "cl_id", "cl_description"]]
-    scop_class_nodes["scop_sccs"] = scop_class_nodes["scop_sccs"].str.extract(r"(\w+)\.")
+    scop_class_nodes = scop_domains[["sccs", "cl_id", "cl_description"]]
+    scop_class_nodes["sccs"] = scop_class_nodes["sccs"].str.extract(r"(\w+)\.")
     scop_class_nodes = scop_class_nodes.drop_duplicates()
-    scop_class_nodes.rename(columns = {"scop_sccs": "SCCS", "cl_id": "scopClass:ID(scop-class-id)", "cl_description": "description"}, inplace = True)
+    scop_class_nodes.rename(columns = {"sccs": "SCCS", "cl_id": "scopClass:ID(scop-class-id)", "cl_description": "description"}, inplace = True)
     scop_class_nodes.to_csv(f"{args.outdir}/scop_class_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_fold_nodes = scop_domains[["scop_sccs", "cf_id", "cf_description"]]
-    scop_fold_nodes["scop_sccs"] = scop_fold_nodes["scop_sccs"].str.extract(r"^(\w+\.\w+)\.")
+    scop_fold_nodes = scop_domains[["sccs", "cf_id", "cf_description"]]
+    scop_fold_nodes["sccs"] = scop_fold_nodes["sccs"].str.extract(r"^(\w+\.\w+)\.")
     scop_fold_nodes = scop_fold_nodes.drop_duplicates()
-    scop_fold_nodes.rename(columns = {"scop_sccs": "SCCS", "cf_id": "scopFold:ID(scop-fold-id)", "cf_description": "description"}, inplace = True)
+    scop_fold_nodes.rename(columns = {"sccs": "SCCS", "cf_id": "scopFold:ID(scop-fold-id)", "cf_description": "description"}, inplace = True)
     scop_fold_nodes.to_csv(f"{args.outdir}/scop_fold_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_domain_family_rels = scop_domains[["scop_unique_id", "scop_sunid"]].drop_duplicates()
