@@ -156,7 +156,7 @@ def main():
     cath_domains_nodes.rename(columns = {"cath_unique_id": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"{args.outdir}/cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    interpro_domain_nodes = interpro_domains[["interpro_unique_id", "interpro_accession", "interpro_name", "interpro_type", "dbxref"]].drop_duplicates()
+    interpro_domain_nodes = interpro_domains[["interpro_unique_id", "interpro_accession", "interpro_name", "dbxref"]].drop_duplicates()
     interpro_domain_nodes["type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_accession"]
     interpro_domain_nodes[":LABEL"] = interpro_domain_nodes["type"] + "|domain"
