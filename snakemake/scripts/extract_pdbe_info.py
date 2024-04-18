@@ -259,7 +259,7 @@ def main():
                     assert(len(result_df_ec.loc[result_df_ec._merge != "both"]) == 0)
                     result_df_ec.drop(columns = "_merge", inplace = True)
                 elif db == "PFAM":
-                    result_df_ec = result_df_ec.merge(pfam_a_annotations, on = "pfam_accession", right_on = "pfam", how = "left")
+                    result_df_ec = result_df_ec.merge(pfam_a_annotations, on = "pfam_accession", how = "left")
                 elif db == "InterProHomologousSuperfamily":
                     result_df_ec = result_df_ec.merge(interpro_annotations, on = "interpro_accession", how = "left")
                     result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
