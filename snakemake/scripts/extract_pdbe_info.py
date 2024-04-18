@@ -315,7 +315,7 @@ def main():
                 elif db == "PFAM":
                     result_df_ec = result_df_ec.merge(pfam_a_annotations, left_on = "pfam_accession", right_on = "pfam", how = "left")
                 elif db == "InterProHomologousSuperfamily":
-                    result_df_ec = result_df_ec.merge(interpro_annotations, left_on = "interpro_accession", right_index = True, how = "left")
+                    result_df_ec = result_df_ec.merge(interpro_annotations, on = "interpro_accession", how = "left")
                     result_df_ec = result_df_ec.loc[(result_df_ec.dbxref.isna() == False) & ((result_df_ec.dbxref.str.contains("SUPERFAMILY")) | (result_df_ec.dbxref.str.contains("G3DSA")))] 
 
                 console.print("Assigning ownership categories")
