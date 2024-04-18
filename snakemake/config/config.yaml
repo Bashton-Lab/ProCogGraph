@@ -5,7 +5,7 @@ neo4j_bolt_uri: bolt://localhost:7687
 output_dir: /raid/MattC/repos/ProCogGraphData/procoggraph
 data_files_dir: /raid/MattC/repos/ProCogGraphData/data_files/
 cache_files_dir: /raid/MattC/repos/ProCogGraphData/cache_files/
-scripts_dir: /raid/MattC/repos/ProCogGraph/workflow/scripts/
+scripts_dir: /raid/MattC/repos/ProCogGraph/snakemake/scripts/
 parity_threshold: 0.4
 domain_contact_cutoff: 3
 
