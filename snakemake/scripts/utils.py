@@ -248,10 +248,10 @@ def extract_interpro_domain_annotations(xml_file):
             interpro_info.append({"interpro_accession": interpro_id,
                                         "interpro_name": interpro_short_name,
                                           "dbxref": accessions})
-    interpro_info_df = pd.DataFrame(interpro_annotations)       
+    interpro_info_df = pd.DataFrame(interpro_info)       
 
     return interpro_info_df
-    
+
 def get_scop_domains_info(domain_info_file, descriptions_file):
     
     def clean_and_merge_scop_col(df, column_id, description_df):
