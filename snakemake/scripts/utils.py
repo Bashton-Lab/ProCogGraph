@@ -225,11 +225,13 @@ def extract_interpro_domain_annotations(xml_file):
         # Find all interpro elements in the XML file
         interpro_elements = root.findall('.//interpro')
 
-        superfamily_annotations = {}
-        gene3d_annotations = {}
+        interpro_info = []
         # Iterate through each interpro element
         for interpro in interpro_elements:
+            superfamily_annotations = {}
+            gene3d_annotations = {}
             interpro_id = interpro.attrib['id']
+            interpro_short_name = interpro.attrib['short_name']
             # Find db_xref elements with db attribute as PFAM
             superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
             gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
@@ -240,17 +242,16 @@ def extract_interpro_domain_annotations(xml_file):
                 superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
             for gene3d_ref in gene3d_refs:
                 gene3d_accessions.append(gene3d_ref.attrib.get('dbkey')) #no prefix for gene3d as it is prefixed in ref
-
+            accessions = gene3d_accessions + superfamily_accessions
+            accessions = "|".join(accessions)
             # Store PFAM annotations for the interpro ID
-            superfamily_annotations[interpro_id] = superfamily_accessions
-            gene3d_annotations[interpro_id] = gene3d_accessions
+            interpro_info.append({"interpro_accession": interpro_id,
+                                        "interpro_name": interpro_short_name,
+                                          "dbxref": accessions})
+    interpro_info_df = pd.DataFrame(interpro_annotations)       
 
-    interpro_annotations = pd.DataFrame([superfamily_annotations, gene3d_annotations], index = ["superfamily_annotations", "gene3d_annotations"]).T
-    interpro_annotations["dbxref"] = interpro_annotations["superfamily_annotations"].str.join("|") + "|" + interpro_annotations["gene3d_annotations"].str.join("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].str.rstrip("|").str.lstrip("|")
-    interpro_annotations["dbxref"] = interpro_annotations["dbxref"].replace("", np.nan)
-    return interpro_annotations[["dbxref"]]
-
+    return interpro_info_df
+    
 def get_scop_domains_info(domain_info_file, descriptions_file):
     
     def clean_and_merge_scop_col(df, column_id, description_df):
