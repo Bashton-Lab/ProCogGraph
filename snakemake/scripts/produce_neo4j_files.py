@@ -195,12 +195,12 @@ def main():
     scop_fold_nodes.rename(columns = {"sccs": "SCCS", "cf_id": "scopFold:ID(scop-fold-id)", "cf_description": "description"}, inplace = True)
     scop_fold_nodes.to_csv(f"{args.outdir}/scop_fold_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domain_family_rels = scop_domains[["scop_unique_id", "scop_sunid"]].drop_duplicates()
-    scop_domain_family_rels.rename(columns = {"scop_unique_id": ":START_ID(scop-domain-id)", "scop_sunid": ":END_ID(scop-family-id)"}, inplace = True)
+    scop_domain_family_rels = scop_domains[["scop_unique_id", "domain_sunid"]].drop_duplicates()
+    scop_domain_family_rels.rename(columns = {"scop_unique_id": ":START_ID(scop-domain-id)", "domain_sunid": ":END_ID(scop-family-id)"}, inplace = True)
     scop_domain_family_rels.to_csv(f"{args.outdir}/scop_domain_family_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_family_superfamily_rels = scop_domains[["scop_sunid", "sf_id"]].drop_duplicates()
-    scop_family_superfamily_rels.rename(columns = {"scop_sunid": ":START_ID(scop-family-id)", "sf_id": ":END_ID(scop-superfam-id)"}, inplace = True)
+    scop_family_superfamily_rels = scop_domains[["domain_sunid", "sf_id"]].drop_duplicates()
+    scop_family_superfamily_rels.rename(columns = {"domain_sunid": ":START_ID(scop-family-id)", "sf_id": ":END_ID(scop-superfam-id)"}, inplace = True)
     scop_family_superfamily_rels.to_csv(f"{args.outdir}/scop_family_superfam_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_superfamily_fold_rels = scop_domains[["sf_id", "cf_id"]].drop_duplicates()
