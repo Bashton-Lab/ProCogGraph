@@ -46,7 +46,7 @@
             var viewerInstance = new PDBeMolstarPlugin();
             //Set options (Checkout available options list in the documentation)
             var options = {
-                moleculeId: dataArray.pdb_id,
+                customData: { url: 'https://www.ebi.ac.uk/pdbe/model-server/v1/' + dataArray.pdb_id + '/full?encoding=bcif&data_source=pdb-h', format: 'cif', binary:true },
                 hideControls: true,
                 expanded: false,
                 spin: false,
@@ -57,9 +57,9 @@
             var selectSections = [];
             // Iterate over the 'interface' list
             dataArray.interface.forEach(function(residue_number) {
-                // Create an object with 'struct_asym_id' and 'residue_number'
+                // Create an object with 'auth_asym_id' and 'residue_number'
                 var residuePosition = {
-                    struct_asym_id: dataArray.interface_chain,
+                    auth_asym_id: dataArray.interface_chain,
                     auth_residue_number: residue_number,
                     //end_residue_number: residue_number,
                     color: {r:0, g:191, b:255}, // Default color
@@ -74,9 +74,9 @@
                 var parts = chain_residue_number.split(":");
                 var chain = parts[0];
                 var residue_number = parseInt(parts[1]);
-                // Create an object with 'struct_asym_id' and 'residue_number'
+                // Create an object with 'auth_asym_id' and 'residue_number'
                 var residuePosition = {
-                    struct_asym_id: chain,
+                    auth_asym_id: chain,
                     auth_residue_number: residue_number,
                     //end_residue_number: residue_number,
                     color: {r:123, g:101, b:155}, // Default color
@@ -84,7 +84,7 @@
                 };
                 // Check if the chain and residue number combo already exists in selectSections
                 var exists = selectSections.some(function(position) {
-                    return position.struct_asym_id === residuePosition.struct_asym_id &&
+                    return position.auth_asym_id === residuePosition.auth_asym_id &&
                         position.auth_residue_number === residuePosition.auth_residue_number;
                 });
                 console.log(exists)
@@ -97,7 +97,7 @@
             
             //Get element from HTML/Template to place the viewer 
             var viewerContainer = document.getElementById('myViewer');
-            var ligand = {struct_asym_id: dataArray.bl_chain, auth_residue_number: parseInt(dataArray.bl_residues)}
+            var ligand = {auth_asym_id: dataArray.bl_chain, auth_residue_number: parseInt(dataArray.bl_residues)}
             console.log(ligand);
             var ligand_highlight = Object.assign({}, ligand, {color : {r:255, g:0, b:0}});
             selectSections.push(ligand_highlight);
