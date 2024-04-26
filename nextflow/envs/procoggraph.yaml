@@ -1,0 +1,17 @@
+name: procoggraph
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - pip
+  - gemmi
+  - pip:
+    - pdbeccdutils
+    - rich
+    - rdkit
+    - biopython
+    - beautifulsoup4

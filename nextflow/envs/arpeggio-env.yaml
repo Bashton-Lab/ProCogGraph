@@ -1,0 +1,13 @@
+name: arpeggio-env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.9
+  - gemmi
+  - openbabel
+  - biopython
+  - pip
+  - pip:
+    - pdbe-arpeggio
