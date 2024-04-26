@@ -45,9 +45,13 @@ bin/neo4j-admin database import full \
 --relationships=INTERACTS_WITH_LIGAND=import/pfam_domain_ligand_interactions.csv.gz \
 --nodes=entry=import/pdb_entry_nodes.csv.gz \
 --relationships=IS_IN_PDB=import/be_pdb_rels.csv.gz \
---relationships=IS_IN_PDB=import/domain_pdb_rels.csv.gz \
+--relationships=IS_IN_PDB=import/cath_pdb_rels.csv.gz \
+--relationships=IS_IN_PDB=import/scop_pdb_rels.csv.gz \
+--relationships=IS_IN_PDB=import/pfam_pdb_rels.csv.gz \
+--relationships=IS_IN_PDB=import/interpro_pdb_rels.csv.gz \
 --relationships=IS_IN_EC=import/pdb_ec_rels.csv.gz \
 --nodes=procoggraph=import/procoggraph_node.csv.gz \
 --overwrite-destination graph.db ; \
 bin/neo4j stop; \
 bin/neo4j start
+
