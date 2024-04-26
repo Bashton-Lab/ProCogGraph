@@ -3,141 +3,32 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, parse_cddf, build_cath_dataframe
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, parse_cddf, build_cath_dataframe, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
-
-#copied from extract_pdbe_info for now - combine these into a file that they can be used from for snakemake and nextflow pipelines
-def return_partial_EC_list(ec, total_ec_list):
-    if not isinstance(ec, str) and np.isnan(ec):
-        return np.nan
-    elif "-" in ec:
-        replacement_character = r'.'
-        modified_ec = re.sub(r'\.', r"_", ec)
-        modified_ec = modified_ec.replace("-", ".")
-        total_ec_list = [re.sub(r'\.', r"_", item) for item in total_ec_list]
-        # Use re.match() to check if the modified string matches any item in the match_list
-        matching_ec = [ec for ec in total_ec_list if re.match(modified_ec, ec)]
-        matching_ec = [re.sub(r'_', r".", item) for item in matching_ec]
-        return(matching_ec)
-    else:
-        return [ec]
-
-def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
-    ec_list = ec_records_df.ID.unique() ##fill the partial ec records using the original ec ids from the expasy enzyme list
-    
-    residue_ec_records = df[[ec_col]].drop_duplicates()
-    residue_ec_records["protein_entity_ec_copy"] = residue_ec_records[ec_col]
-    residue_ec_records["protein_entity_ec_copy"] = residue_ec_records.protein_entity_ec_copy.str.split(",")
-    residue_ec_records = residue_ec_records.explode("protein_entity_ec_copy")
-    residue_ec_records["protein_entity_ec_copy"] = residue_ec_records.protein_entity_ec_copy.str.strip()
-    residue_ec_records["ec_list"] = residue_ec_records.protein_entity_ec_copy.apply(lambda x: return_partial_EC_list(x, ec_list))
-    residue_ec_records = residue_ec_records.explode("ec_list")
-    residue_ec_records = residue_ec_records.merge(ec_records_df[["ID", "TRANSFER"]], left_on = "ec_list", right_on = "ID", how = "left")
-    residue_ec_records["TRANSFER"] = residue_ec_records["TRANSFER"].fillna("")
-
-    # anythin with NAN now in ID/transfer doesnt actually exist in the expasy enzyme list - so is incorrect.
-
-    residue_ec_records_grouped = residue_ec_records.groupby(ec_col).agg({"TRANSFER": set}).reset_index()
-    residue_ec_records_grouped["TRANSFER"] = residue_ec_records_grouped["TRANSFER"].apply(lambda x: ",".join(x) if x != "" else "")
-    residue_ec_records_grouped.rename(columns = {"TRANSFER" : "ec_list"}, inplace = True)
-    
-    df_merged = df.merge(residue_ec_records_grouped, on = ec_col, how = "left", indicator = True)
-    assert(len(df_merged.loc[df_merged["_merge"] != "both"]) == 0)
-    df_merged.drop(columns = "_merge", inplace = True)
-    df_merged = df_merged.loc[df_merged.ec_list != ""] #remove any rows where the ec_list is empty - we cant process these anyway.
-    return(df_merged)
-
-def get_terminal_record(entry, row, df):
-    entry = row.ID
-    pattern = r"[\d-]+\.[\d-]+\.[\d-]+\.[\d-]+"
-    while row.DE.startswith("Transferred entry: "):
-        transfers = re.findall(pattern, row.DE)
-        #when updating, if multiple possible transfers, selecting only first.
-        row = df.loc[df.ID == transfers[0]].iloc[0]
-    return row.ID
-
-def get_csdb_from_glycoct(glycoct, cache_df):
-    if glycoct is np.nan or glycoct == None:
-        return np.nan
-    elif glycoct in cache_df.glycoct.values:
-        csdb_linear = cache_df.loc[cache_df.glycoct == glycoct, "csdb"].values[0]
-    else:
-        url = "http://csdb.glycoscience.ru/database/core/convert_api.php"
-        data = {"glycoct":glycoct}
-        headers = {'Content-Type': 'application/json'}
-        response = requests.get(f"{url}?glycoct={quote(glycoct)}")
-        if response.status_code == 200:
-            response_data = response.text.replace("<pre>", "")  # Remove the <pre> tag
-            lines = response_data.split("\n")  # Split into lines
-            csdb_linear = np.nan
-            for line in lines:
-                if line.startswith("CSDB Linear:"):
-                    csdb_linear = line.replace("CSDB Linear:", "").strip()  # Extract the CSDB Linear string
-                    break
-        else:
-            csdb_linear = np.nan
-
-    return csdb_linear
-    
-def get_glycoct_from_wurcs(wurcs, cache_df):
-    if wurcs is np.nan or wurcs == None:
-        return np.nan
-    elif wurcs in cache_df.WURCS.values:
-        glycoct = cache_df.loc[cache_df.WURCS == wurcs, "glycoct"].values[0]
-        return glycoct
-    else:
-        url = "https://api.glycosmos.org/glycanformatconverter/2.8.2/wurcs2glycoct"
-        data = {"input":wurcs}
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-
-        if response.status_code == 200:
-            response_data = response.json()
-            if 'message' in response_data and response_data['message'] == 'Returned null.':
-                glycoct = np.nan
-            else:
-                glycoct = response_data['GlycoCT']
-        else:
-            glycoct = np.nan
-        return glycoct
-import requests
-import json
-def get_smiles_from_csdb(csdb_linear, cache_df):
-    if csdb_linear is np.nan or csdb_linear == None:
-        return np.nan
-    elif csdb_linear in cache_df.csdb.values:
-        smiles = cache_df.loc[cache_df.csdb == csdb_linear, "descriptor"].values[0]
-        return smiles
-    else:
-        response = requests.get(f"http://csdb.glycoscience.ru/database/core/convert_api.php?csdb={quote(csdb_linear)}&format=smiles")
-        mol = np.nan
-        smiles = np.nan
-        if response.status_code == 200:
-            html = response.text
-            soup = BeautifulSoup(html, 'html.parser')
-            for a in soup.find_all("a"):
-                title = a.get('title')
-                if title == "Find this structure in ChemSpider":
-                    smiles = a.contents[0].strip()
-                    break
-        else:
-            smiles = np.nan
-        return smiles
+from urllib.parse import quote
 
 def get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, glycoct_cache):
-    #work out how to update the caches here - needs to return some updated caches from the func to save in main
     sugar_smiles = {}
+    updated_glycoct_cache = []
+    updated_csdb_cache = []
+    updated_smiles_cache = []
     for wurcs in wurcs_list:
         smiles = None
         glycoct = get_glycoct_from_wurcs(wurcs, glycoct_cache)
-        if glycoct is not None:
+        updated_glycoct_cache.append({"WURCS": wurcs, "glycoct": glycoct})
+        if not pd.isna(glycoct):
             csdb = get_csdb_from_glycoct(glycoct, csdb_linear_cache)
-            if csdb is not None:
+            updated_csdb_cache.append({"glycoct": glycoct, "wurcs": wurcs})
+            if not pd.isna(csdb):
                 smiles = get_smiles_from_csdb(csdb, smiles_cache)
+                updated_smiles_cache.append({"csdb": csdb, "descriptor" : smiles})
         sugar_smiles[wurcs] = smiles
-    return sugar_smiles
+    updated_glycoct_cache_df = pd.concat([pd.DataFrame(updated_glycoct_cache, columns = ["WURCS", "glycoct"]), glycoct_cache]).drop_duplicates()
+    updated_csdb_cache_df = pd.concat([pd.DataFrame(updated_csdb_cache, columns = ["glycoct", "csdb"]), csdb_linear_cache]).drop_duplicates()
+    updated_smiles_cache_df = pd.concat([pd.DataFrame(updated_smiles_cache, columns = ["csdb", "descriptor"]), smiles_cache]).drop_duplicates()
+    return sugar_smiles, updated_glycoct_cache_df, updated_csdb_cache_df, updated_smiles_cache_df
 
 def get_chem_comp_descriptors(ccd_doc, comp_id_list):
     ligand_descriptors = {}
@@ -156,10 +47,10 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
     sifts_chains_uniprot["ACCESSION"] = sifts_chains_uniprot["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
     sifts_chains_uniprot.rename(columns = {"ACCESSION" : "uniprot_accession"}, inplace = True)
 
-    sifts_chains_ec = sifts_chains_ec.groupby(["PDB"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb associated ec's
+    sifts_chains_ec = sifts_chains_ec[["PDB", "EC_NUMBER"]].groupby(["PDB"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb associated ec's
     sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function 
     sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_file, ec_col = "EC_NUMBER")
-    sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec", "ACCESSION" : "uniprot_accession"}, inplace = True)
+    sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec"}, inplace = True)
 
     return sifts_chains_ec, sifts_chains_uniprot
 
@@ -210,10 +101,16 @@ def main():
     csdb_linear_cache = pd.read_pickle(f"{args.csdb_linear_cache}")
 
     wurcs_list = contacts.loc[contacts.type == "sugar", "descriptor"].unique()
-    sugar_smiles = get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, glycoct_cache)
+    sugar_smiles, updated_glycoct_cache, updated_csdb_cache, updated_smiles_cache = get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, glycoct_cache)
+
+    updated_glycoct_cache.to_pickle(f"glycoct_cache.pkl")
+    updated_csdb_cache.to_pickle(f"csdb_cache.pkl")
+    updated_smiles_cache.to_pickle(f"smiles_cache.pkl")
 
     contacts.loc[contacts.type == "sugar", "descriptor"] = contacts.loc[contacts.type == "sugar"]["descriptor"].apply(lambda x: sugar_smiles[x])
     #after merging the contacts with descriptors we probably want to flag or remove the ones with failed descriptors
+    print(f"{len(contacts.loc[contacts.descriptor.isna() == True, 'uniqueID'].unique())} bound entities have failed to get a descriptor, removing")
+    contacts = contacts.loc[contacts.descriptor.isna() == False].copy()
     ##then we need to assign a ligand uniqueID to all unique ligands in the contacts file - check implementation of this
     
     #assign ec and uniprot information to contacts
@@ -228,19 +125,14 @@ def main():
     contacts_ec_unmatched = contacts_ec.loc[contacts_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB"])
     contacts_ec = contacts_ec.loc[contacts_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
     contacts_ec_unmatched.to_csv(f"contacts_ec_unmatched.csv", index = False)
-    
-    contacts_ec = contacts_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
-    contacts_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
-    #contacts_ec.to_csv(f"combined_contacts_processed.tsv", sep = "\t" , index = False)
+
     #now add uniprot info to the contacts file
     contacts_ec_uniprot = contacts_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
     #what are we validating here to need the indicator col
     contacts_ec_uniprot.drop(columns = ["PDB", "CHAIN", "_merge"], inplace = True)
     
     #get the unique ligands from the dataset, and assign uniqueIDs - extract unique ligands to file for scoring.
-
     bound_entities_to_score = contacts_ec_uniprot[["descriptor", "description", "hetCode", "type", "ec_list"]].groupby(["hetCode", "description", "descriptor"]).agg({"ec_list": set}).reset_index().reset_index()
-    print(bound_entities_to_score)
     #add ligand entity id to the contacts file
     contacts_ec_uniprot = contacts_ec_uniprot.merge(bound_entities_to_score[["descriptor", "description", "hetCode", "index"]], on = ["descriptor", "description", "hetCode"], how = "left", indicator = True)
     assert(len(contacts_ec_uniprot.loc[contacts_ec_uniprot._merge != "both"]) == 0)
