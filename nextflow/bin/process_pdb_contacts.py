@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import gzip
 import numpy as np
 from itertools import chain
+import sys
 def extract_data(elem):
     data = []
     if elem.get("type") == "protein":
@@ -72,11 +73,10 @@ def main():
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--cif', type=str, help='cif file containing PDBe updated structure, may be gzipped')
-    parser.add_argument('--pdb_info_pickle', type=str, help='pickle file of pdb info from cif file')
     parser.add_argument('--bound_entity_pickle', type=str, help='pickle file of bound entity info from cif file')
     parser.add_argument('--contacts', type=str, help='json file of contacts from pdbe-arpeggio')
-    parser.add_argument('--sifts_xml', type=str, help='sifts xml file for pdb structure')
     parser.add_argument('--pdb_id', type=str, help='pdb id of the structure')
+    parser.add_argument('--assembly_id', type=str, help='assembly id of the structure')
     parser.add_argument('--domain_contact_cutoff' , type = int, default = 3, help = 'minimum number of contacts for a domain to be considered')
     args = parser.parse_args()
 
@@ -93,10 +93,16 @@ def main():
     
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
-    assembly_info.loc[assembly_info.assembly_id == 1]
+    assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
-    assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.split(",") #asym id here is the struct
+    #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
+    assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
+    #formatting the oper expressions to match pdb-h format - see pdb 4cr7 for good example
+    assembly_info_exploded_sorted = assembly_info_exploded.sort_values("oper_expression", ascending = True)
+    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("int")
+    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"] - assembly_info_exploded_sorted["oper_expression"].min()
+    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("str").str.replace("0", "")
 
     struct_auth_asym_mapping = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.auth_asym_id']), columns = ["protein_entity_id","chain_id", "auth_asym_id"]).drop_duplicates()
 
@@ -107,28 +113,32 @@ def main():
     protein_entity_df = poly_entity_df.loc[poly_entity_df.type.str.startswith("polypeptide"), ["protein_entity_id"]].copy()
     protein_entity_df["pdb_id"] = pdb_info_series.loc["pdb_id"]
     protein_entity_df_auth_merge = protein_entity_df.merge(struct_auth_asym_mapping, on = "protein_entity_id", how = "left", indicator = True)
-    assert(len(protein_entity_df_auth_merge.loc[protein_entity_df_auth_merge._merge == "left_only"]) == 0)
-    protein_entity_df_auth_merge.drop(columns = ["_merge"], inplace = True)
+    ##assert(len(protein_entity_df_auth_merge.loc[protein_entity_df_auth_merge._merge == "left_only"]) == 0)
+    ##protein_entity_df_auth_merge.drop(columns = ["_merge"], inplace = True)
     protein_entity_df_auth_merge.rename(columns = {"auth_asym_id": "auth_chain_id", "chain_id":"proteinStructAsymID"}, inplace = True)
 
-    protein_entity_df_assembly = protein_entity_df_auth_merge.merge(assembly_info_exploded[["oper_expression", "struct_asym_id"]], left_on = "proteinStructAsymID", right_on = "struct_asym_id", how = "left", indicator = True)
-    assert(len(protein_entity_df_assembly.loc[protein_entity_df_assembly._merge != "both"]) == 0)
+    protein_entity_df_assembly = protein_entity_df_auth_merge.merge(assembly_info_exploded_sorted[["oper_expression", "struct_asym_id"]], left_on = "proteinStructAsymID", right_on = "struct_asym_id", how = "inner") #inner to keep only entities in the assembly
+    #assert(len(protein_entity_df_assembly.loc[protein_entity_df_assembly._merge != "both"]) == 0)
     protein_entity_df_assembly.drop(columns = ["struct_asym_id"], inplace = True)
-    protein_entity_df_assembly.loc[protein_entity_df_assembly["oper_expression"].astype("int") > 1, "assembly_chain_id_protein"] = protein_entity_df_assembly.loc[protein_entity_df_assembly["oper_expression"].astype("int") > 1, "auth_chain_id"] + "_" + protein_entity_df_assembly.loc[protein_entity_df_assembly["oper_expression"].astype("int") > 1, "oper_expression"].astype("str") 
-    protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["assembly_chain_id_protein"].fillna(protein_entity_df_assembly["auth_chain_id"])
+    protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["auth_chain_id"] + "_" + protein_entity_df_assembly["oper_expression"] 
+    protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["assembly_chain_id_protein"].str.strip("_")
     protein_entity_df_assembly.drop(columns = ["_merge", "oper_expression"], inplace = True)
 
     domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
             columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
 
     ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this
+    ##we check in process_pdb_structure that domains are present for the structure, so no need to fail here.
+    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
+        columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
     domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
 
     #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
     domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"] 
     domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
     domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
-    assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
+    #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
+    #assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
     domain_info_dataframe_filtered_grouped["seq_range_chain"] = domain_info_dataframe_filtered_grouped["seq_range"].apply(lambda x: list(chain(*x)))
     domain_info_dataframe_filtered_grouped.drop(columns = ["domain_name","seq_range", "instance_id"], inplace = True) #drop instance id now that assertion has passed - if this fails need to investigate struct
 
@@ -136,14 +146,25 @@ def main():
     protein_entity_df_assembly_domain = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
     protein_entity_df_assembly_domain.drop(columns = ["entity_id", "asym_id"],inplace = True)
 
+    #need to map auth id's for protein entities to seq ids for domain ranges
+
+    seq_sites = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.label_seq_id', '_atom_site.auth_asym_id', '_atom_site.auth_seq_id', '_atom_site.pdbx_PDB_ins_code']), columns = ["protein_entity_id","chain_id", "seq_id", "auth_asym_id", "auth_seq_id", "pdb_ins_code"]).drop_duplicates()
+    protein_seq_sites = seq_sites.loc[seq_sites.protein_entity_id.isin(protein_entity_df_assembly.protein_entity_id.unique())].copy()
+    assert(len(protein_seq_sites.loc[protein_seq_sites.seq_id == "."]) == 0) #need to have a seq id to map to
+    protein_seq_sites["seq_id"] = protein_seq_sites["seq_id"].astype("int")
+    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id"].astype("str") + protein_seq_sites["pdb_ins_code"]
+    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id_combined"].str.strip().str.rstrip("?.") 
+    protein_entity_df_assembly_domain["auth_seq_range"] = protein_entity_df_assembly_domain.apply(lambda x: protein_seq_sites.loc[(protein_seq_sites.protein_entity_id == x.protein_entity_id) & (protein_seq_sites.seq_id.isin(x.seq_range_chain)), 'auth_seq_id_combined'].values.tolist(), axis = 1)
 
 
     #load the contacts data
     contacts = pd.read_json(f"{args.contacts}")
     contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER" )].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
 
-    contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), x['bgn'].get('auth_seq_id')], axis = 1, result_type = "expand")
-    contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), x['end'].get('auth_seq_id')], axis = 1, result_type = "expand")
+    contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), f"{x['bgn'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
+    contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), f"{x['end'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
+    contacts_filtered["bgn_auth_seq_id"] = contacts_filtered["bgn_auth_seq_id"].str.strip().str.rstrip("?.")
+    contacts_filtered["end_auth_seq_id"] = contacts_filtered["end_auth_seq_id"].str.strip().str.rstrip("?.")
 
     contacts_filtered.loc[~contacts_filtered['bgn_contact'].isin(bound_entity_info_grouped_residue_list), ["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id", 'bgn', "end_contact", "end_auth_asym_id", "end_auth_seq_id", 'end']] = contacts_filtered.loc[
         ~contacts_filtered['bgn_contact'].isin(bound_entity_info_grouped_residue_list), ["end_contact", "end_auth_asym_id", "end_auth_seq_id", 'end', "bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id", 'bgn']].values
@@ -154,10 +175,15 @@ def main():
     contacts_filtered["covalent_counts"] = contacts_filtered["contact"].apply(lambda x: len([contact for contact in x if contact == "covalent"]))
     contacts_filtered_filtered = contacts_filtered.drop(columns = ["bgn", "end", "contact", "distance", "interacting_entities", "type"])
     contacts_poly_merged = contacts_filtered_filtered.merge(protein_entity_df_assembly_domain, left_on = "end_auth_asym_id", right_on = "assembly_chain_id_protein", how = "inner")
+    if len(contacts_poly_merged) == 0:
+        #for example, ligand interacts with DNA only in structure - see 2fjx
+        print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
+        sys.exit()
+    
     contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
-
-    contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.seq_range_chain, axis = 1)].copy()
+    contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
     contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
+    contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
     contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]]).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index()
     contacts_poly_merged_filtered_grouped.rename(columns = {"contact_counts": "domain_contact_counts", "hbond_counts": "domain_hbond_counts", "covalent_counts": "domain_covalent_counts"}, inplace = True)
     #at this point we may be able to integrate some grouping on identical symmetries?
