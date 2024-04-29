@@ -26,7 +26,7 @@ process PROCESS_MMCIF {
         tuple( val(pdb_id), val(assembly_id), path(updated_cif) )
         
     output:
-        tuple val(pdb_id), val(assembly_id), path("${pdb_id}_bound_entity_info.pkl"), path("${pdb_id}_arpeggio.csv")
+        tuple val(pdb_id), path("${pdb_id}_bound_entity_info.pkl"), path("${pdb_id}_arpeggio.csv")
     script:
     """
     python3 ${workflow.projectDir}/bin/process_pdb_structure.py --cif ${updated_cif} --pdb_id ${pdb_id} --assembly_id ${assembly_id}
@@ -250,19 +250,20 @@ process PROCESS_SIFTS {
     """
 }
 
+// download_mmcif = DOWNLOAD_MMCIF( pdb_ids
+//             .map { all_out -> [all_out[0], all_out[1]] })
+
 workflow {
     cognate_ligands = GET_COGNATE_LIGANDS(Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.pubchem_mapping}"), Channel.fromPath("${params.chebi_kegg}"), Channel.fromPath("${params.chebi_relations}"), Channel.fromPath("${params.rhea_reactions}"), Channel.fromPath("${params.kegg_enzyme_cache}"), Channel.fromPath("${params.kegg_reaction_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.kegg_compound_cache_dir}", type: "dir"), Channel.fromPath("${params.glytoucan_cache}"), Channel.fromPath("${params.brenda_mol_dir}", type: "dir"), Channel.fromPath("${params.brenda_json}"), Channel.fromPath("${params.brenda_ligands}"))
     enzyme_structures = PROCESS_SIFTS(Channel.fromPath("${params.sifts_file}"), Channel.fromPath("${params.assemblies_file}"))
-    pdb_ids = enzyme_structures | splitCsv(header:true) | map { row -> [row.PDB, row.ASSEMBLY_ID] } | randomSample( 10, 42 )
-    download_mmcif = DOWNLOAD_MMCIF( pdb_ids
-            .map { all_out -> [all_out[0], all_out[1]] })
-    process_mmcif = PROCESS_MMCIF( download_mmcif
+    pdb_ids = enzyme_structures | splitCsv(header:true) | map { row -> [row.PDB, row.ASSEMBLY_ID, Channel.fromPath(row.updated_mmcif), Channel.fromPath(row.protonated_assembly)] } | randomSample( 10, 42 )
+    process_mmcif = PROCESS_MMCIF( pdb_ids
         .map { all_out -> [all_out[0], all_out[1], all_out[2]] } )
     arpeggio = RUN_ARPEGGIO(
         process_mmcif
             .map { all_out -> [all_out[0], all_out[3]] }
         .join( 
-        download_mmcif
+        pdb_ids
             .map { all_out -> [all_out[0], all_out[3]] } ))
     contacts = PROCESS_CONTACTS(
         download_mmcif.map { all_out -> [all_out[0], all_out[1], all_out[2]] } 
