@@ -2,36 +2,22 @@
 # coding: utf-8
 
 import pandas as pd
-import requests
-from Bio.KEGG import Enzyme
-import matplotlib
 import io
 import time
 import pickle
 import re
 from rich.progress import Progress
-from rdkit import Chem
-from collections import Counter
-
-from rdkit.Chem import BRICS,Recap, rdFMCS
-from rdkit.Chem import Draw
-
-import pickle
+from rdkit.Chem import rdFMCS
 import os
-import math
 import numpy as np
-from math import isnan
 import concurrent.futures
 from pathlib import Path
 #need to track whether a molecules MCS was timeouted or not, and then we can collect and repeat these structures 
-
 from pdbeccdutils.computations.parity_method import compare_molecules
-    
-import io
 from contextlib import redirect_stderr
-
 from utils import pdbe_sanitise_smiles
-from rdkit.Chem.Draw import MolsMatrixToGridImage
+import argparse
+from rdkit import RDLogger
 
 def parity_score_smiles(row, threshold, progress, task): #, 
     ec = row.entry
@@ -105,10 +91,6 @@ def get_compound_pairs(row, cognate_ligands_df):
     cognate_ligands_df_subset = cognate_ligands_df_subset.groupby("canonical_smiles").agg({"entry" : list, "uniqueID": "first"}).reset_index()
     cognate_ligands_df_subset[["pdb_ligand_id", "smiles", "bl_name", "ligand_description"]] = [pdb_ligand_id, smiles, bl_name, ligand_description]
     return cognate_ligands_df_subset
-
-import argparse
-from rdkit import RDLogger
-import time
 
 parser = argparse.ArgumentParser(description = 'TO DO')
 parser.add_argument('--processed_ligands_file', metavar = '', type = str, 
