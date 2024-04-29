@@ -216,10 +216,10 @@ def main():
     pfam_clan_rels = pfam_domains.loc[(pfam_domains.clan_acc.isna() == False) & (pfam_domains.clan_acc != ""), ["domain_accession", "clan_acc"]].rename(columns = {"domain_accession": ":START_ID(pfam-domain-id)", "clan_acc" : ":END_ID(pfam-clan-id)"}).drop_duplicates()
     pfam_clan_rels.to_csv(f"pfam_clan_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    bound_entities = pd.concat([cath_domains[['represents', "bound_ligand_struct_asym_id", "assembly_chain_id_ligand", 'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type' ,"ec_list"]],
-                            scop_domains[['represents', "bound_ligand_struct_asym_id", "assembly_chain_id_ligand",'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID' , 'type' , "ec_list"]], 
-                            pfam_domains[['represents', "bound_ligand_struct_asym_id", "assembly_chain_id_ligand",'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type' , "ec_list"]], 
-                                interpro_domains[['represents', "bound_ligand_struct_asym_id", "assembly_chain_id_ligand", 'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type', "ec_list"]]]).drop_duplicates()
+    bound_entities = pd.concat([cath_domains[["bound_ligand_struct_asym_id", "assembly_chain_id_ligand", 'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type' ,"ec_list"]],
+                            scop_domains[["bound_ligand_struct_asym_id", "assembly_chain_id_ligand",'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID' , 'type' , "ec_list"]], 
+                            pfam_domains[["bound_ligand_struct_asym_id", "assembly_chain_id_ligand",'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type' , "ec_list"]], 
+                                interpro_domains[["bound_ligand_struct_asym_id", "assembly_chain_id_ligand", 'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type', "ec_list"]]]).drop_duplicates() #'represents', 
 
     #joining multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
     bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list"]]).agg({"ec_list": set}).reset_index() 
