@@ -6,7 +6,7 @@ process DOWNLOAD_MMCIF {
 
     storeDir "${params.cache_out}/mmcif"
     publishDir "${params.publish_dir}/mmcif"
-    
+
     input:
         tuple ( val(pdb_id), val(assembly_id) )
 
@@ -151,7 +151,6 @@ process GET_COGNATE_LIGANDS {
 process SCORE_LIGANDS {
     label 'largecpu_largmem'
     cache 'lenient'
-    cpus "${params.threads}"
     publishDir "${params.publish_dir}/scores"
     input:
         path bound_entities_to_score
@@ -241,37 +240,21 @@ process PRODUCE_NEO4J_FILES {
     """
 }
 
-process PROCESS_SIFTS {
-    input:
-        path sifts_file
-        path assemblies_file
-    output:
-        path "sifts_assemblies.csv"
-    script:
-    """
-    python3 ${workflow.projectDir}/bin/process_sifts.py --sifts_file ${sifts_file} --assemblies_file ${assemblies_file}
-    """
-}
-
-// download_mmcif = DOWNLOAD_MMCIF( pdb_ids
-//             .map { all_out -> [all_out[0], all_out[1]] })
-
 workflow {
     cognate_ligands = GET_COGNATE_LIGANDS(Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.pubchem_mapping}"), Channel.fromPath("${params.chebi_kegg}"), Channel.fromPath("${params.chebi_relations}"), Channel.fromPath("${params.rhea_reactions}"), Channel.fromPath("${params.kegg_enzyme_cache}"), Channel.fromPath("${params.kegg_reaction_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.kegg_compound_cache_dir}", type: "dir"), Channel.fromPath("${params.glytoucan_cache}"), Channel.fromPath("${params.brenda_mol_dir}", type: "dir"), Channel.fromPath("${params.brenda_json}"), Channel.fromPath("${params.brenda_ligands}"))
-    enzyme_structures = PROCESS_SIFTS(Channel.fromPath("${params.sifts_file}"), Channel.fromPath("${params.assemblies_file}"))
-    pdb_ids = enzyme_structures | splitCsv(header:true) | map { row -> [row.PDB, row.ASSEMBLY_ID, Channel.fromPath(row.updated_mmcif), Channel.fromPath(row.protonated_assembly)] } | randomSample( 10, 42 )
+    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly) ] } | randomSample( 10, 42 )
     process_mmcif = PROCESS_MMCIF( pdb_ids
-        .map { all_out -> [all_out[0], all_out[1], all_out[2]] } )
+        .map { all_out -> [all_out[0], all_out[1], file(all_out[2])] } )
     arpeggio = RUN_ARPEGGIO(
         process_mmcif
-            .map { all_out -> [all_out[0], all_out[3]] }
+            .map { all_out -> [all_out[0], file(all_out[2])] }
         .join( 
         pdb_ids
-            .map { all_out -> [all_out[0], all_out[3]] } ))
+            .map { all_out -> [all_out[0], file(all_out[3])] } ))
     contacts = PROCESS_CONTACTS(
-        download_mmcif.map { all_out -> [all_out[0], all_out[1], all_out[2]] } 
-        .join(
-        process_mmcif.map { all_out -> [all_out[0], all_out[2]] })
+       pdb_ids.map { all_out -> [all_out[0], all_out[1], all_out[2]] } 
+       .join(
+        process_mmcif.map { all_out -> [all_out[0], all_out[1]] })
         .join(
         arpeggio.map { all_out -> [all_out[0], all_out[1]] } )
         .combine( Channel.from(params.domain_contact_cutoff) ) )
@@ -280,4 +263,3 @@ workflow {
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, cognate_ligands, Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
     produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, cognate_ligands , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }
-
