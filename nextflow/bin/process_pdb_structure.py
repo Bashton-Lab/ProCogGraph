@@ -55,7 +55,7 @@ def main():
         branched_seq_info_merged["type"] = "sugar"
 
     nonpoly_info = pd.DataFrame(block.find(['_pdbx_entity_nonpoly.entity_id', '_pdbx_entity_nonpoly.comp_id']), columns = ["entity_id", "hetCode"])
-    nonpoly_info = nonpoly_info.loc[nonpoly_info.hetCode.isin(["HOH", "UNL"]) == False]
+    nonpoly_info = nonpoly_info.loc[nonpoly_info.hetCode.isin(["HOH", "UNL", "UNX"]) == False]
     nonpoly_seq_info_filtered = pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'hetCode'])
     if len(nonpoly_info) > 0:
         nonpoly_seq_info = pd.DataFrame(block.find(['_pdbx_nonpoly_scheme.asym_id', '_pdbx_nonpoly_scheme.entity_id', '_pdbx_nonpoly_scheme.pdb_seq_num', '_pdbx_nonpoly_scheme.pdb_strand_id', '_pdbx_nonpoly_scheme.auth_seq_num', '_pdbx_nonpoly_scheme.pdb_ins_code']), columns = ["bound_ligand_struct_asym_id","entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num", "pdb_ins_code"])
