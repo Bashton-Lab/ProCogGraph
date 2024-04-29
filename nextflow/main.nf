@@ -4,8 +4,9 @@
 process DOWNLOAD_MMCIF {
     errorStrategy 'ignore' //ignore errors - modelserver may return 404 if assembly not available.
 
-    storeDir "${params.cache_dir}/mmcif"
+    storeDir "${params.cache_out}/mmcif"
     publishDir "${params.publish_dir}/mmcif"
+    
     input:
         tuple ( val(pdb_id), val(assembly_id) )
 
@@ -35,6 +36,7 @@ process PROCESS_MMCIF {
 }
 
 process RUN_ARPEGGIO {
+    label 'medmem' //medmem gives 4 cores and 16gb in slurm submission (max observed usage is 4gb - offering overhead for complex structures)
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
     publishDir "${params.publish_dir}/arpeggio"
@@ -102,7 +104,7 @@ process PROCESS_ALL_CONTACTS {
 }
 
 process GET_COGNATE_LIGANDS {
-   storeDir "${params.cache_dir}/cognate_ligands"
+   storeDir "${params.cache_out}/cognate_ligands"
    publishDir "${params.publish_dir}/cognate"
    input:
        path enzyme_dat_file
@@ -147,6 +149,7 @@ process GET_COGNATE_LIGANDS {
 
 
 process SCORE_LIGANDS {
+    label 'largecpu_largmem'
     cache 'lenient'
     cpus "${params.threads}"
     publishDir "${params.publish_dir}/scores"
