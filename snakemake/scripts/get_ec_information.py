@@ -3,28 +3,19 @@ import pandas as pd
 import json
 import requests
 import os
-import ast
 import argparse
 from Bio.KEGG import Enzyme
-import matplotlib
 import io
 import time
 import pickle
 import re
 from rich.progress import Progress
 from rdkit import Chem
-from collections import Counter
+from rdkit.Chem import PandasTools
 import numpy as np
-from rdkit import Chem
-from rdkit.Chem import rdFMCS
-import pubchempy as pcp
-from Bio.ExPASy import Enzyme as EEnzyme
 import argparse
 from pathlib import Path
-from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
 from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb, process_ec_records
-from bs4 import BeautifulSoup
-from urllib.parse import quote
 
 def get_kegg_enzymes(ec_list, enzyme_string_file = None):
     def extract_reaction(ec):
@@ -288,8 +279,6 @@ def canon_smiles(x):
             return Chem.MolToSmiles(x, isomericSmiles = False) #ignore stereochemistry
         except:
             return np.nan
-        
-from rdkit.Chem import PandasTools
 
 # Function to calculate descriptors
 def calculate_descriptors(id, mol, calculator):
@@ -337,8 +326,6 @@ def main():
     The script then searches databases: KEGG, RHEA, ChEBI, PubChem and GlyTouCan for the compound codes, and
     extracts the SMILES strings for each compound. Where possible, duplicate structures are aggregated
     based on their canonical SMILES into a single biological ligand record (with a list of ligand_db identifiers).
-    The script then uses the RDKit to calculate molecular descriptors for each ligand, and saves the results
-    in a pkl format.
     """
 
     parser = argparse.ArgumentParser(description='Process EC information.')
