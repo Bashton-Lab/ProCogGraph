@@ -9,9 +9,11 @@ dependencies:
   - numpy
   - pip
   - gemmi
+  - openjdk=21
   - pip:
     - pdbeccdutils
     - rich
     - rdkit
     - biopython
     - beautifulsoup4
+    - pubchempy
