@@ -6,7 +6,6 @@ import os
 import ast
 import argparse
 from Bio.KEGG import Enzyme
-import matplotlib
 import io
 import time
 import pickle
