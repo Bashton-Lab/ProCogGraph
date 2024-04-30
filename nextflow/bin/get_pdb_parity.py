@@ -145,6 +145,8 @@ if not os.path.exists(pickle_filename):
     pre_calculated["ec"] = pre_calculated.ec.str.join(",")
     pre_calculated["cache"] = True
     to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
+    print(f"Pre-calculated: {len(pre_calculated)}")
+    print(f"To calculate: {len(to_calculate)}")
     results = []
     if len(to_calculate) > 0:
         with Progress() as progress:
