@@ -6,7 +6,15 @@ import argparse
 from pathlib import Path
 
 def main():
-    ##pre arpeggio run this part:
+    """
+    This script processes the cif file of a structure and extracts the information needed to generate the arpeggio query file.
+    The script will output a csv file containing the arpeggio query and a pickled dataframe containing information on the bound
+    ligands in the structure.
+    Script may be expected to fail if:
+        1. No domains are found in the cif file (exitcode 101)
+        2. No bound entities are found in the cif file (exitcode 102)
+
+    """
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--cif', type=str, help='cif file containing PDBe updated structure, may be gzipped')
@@ -40,7 +48,7 @@ def main():
     domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
     if len(domain_info_dataframe_filtered) == 0:
         print("No domains found in cif file [CATH, SCOP, SCOP2B, Pfam, InterPro]")
-        sys.exit()
+        sys.exit(101)
 
     branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.pdb_asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.auth_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
     branched_seq_info_merged =  pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'hetCode', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'descriptor'])
@@ -89,7 +97,7 @@ def main():
         bound_entity_info_grouped.to_pickle(f"{args.pdb_id}_bound_entity_info.pkl")
     else:
         print("No bound entities found in cif file")
-        sys.exit()
+        sys.exit(102)
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 
 process PROCESS_MMCIF {
     publishDir "${params.publish_dir}/process_struct"
-    errorStrategy 'ignore'
+    errorStrategy { task.exitStatus in 101..102 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
         tuple( val(pdb_id), val(assembly_id), path(updated_cif) )
@@ -38,7 +38,7 @@ process RUN_ARPEGGIO {
 process PROCESS_CONTACTS {
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts"
-    errorStrategy 'ignore'
+    errorStrategy { task.exitStatus in 103..104 ? 'ignore' : 'terminate' }
     input:
         tuple val(pdb_id), val(assembly_id), path(updated_cif), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
     output:
