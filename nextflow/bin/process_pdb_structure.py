@@ -62,7 +62,8 @@ def main():
         assert(len(branched_seq_info_merged.loc[branched_seq_info_merged._merge != "both"]) == 0)
         branched_seq_info_merged.drop(columns = ["_merge", "type"], inplace = True)
         branched_seq_info_merged["type"] = "sugar"
-
+        branched_seq_info_merged["pdb_ins_code"] = "" #add blank ins code for branch structures for downstream agg
+        
     nonpoly_info = pd.DataFrame(block.find(['_pdbx_entity_nonpoly.entity_id', '_pdbx_entity_nonpoly.comp_id']), columns = ["entity_id", "hetCode"])
     nonpoly_info = nonpoly_info.loc[nonpoly_info.hetCode.isin(["HOH", "UNL", "UNX"]) == False]
     nonpoly_seq_info_filtered = pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'hetCode'])
