@@ -71,13 +71,13 @@ def main():
         nonpoly_seq_info_merged = nonpoly_seq_info.merge(nonpoly_info, on = "entity_id", indicator = True)
         assert(len(nonpoly_seq_info_merged.loc[nonpoly_seq_info_merged._merge != "both"])  == 0)
         nonpoly_seq_info_merged.drop(columns = "_merge", inplace = True)
+        nonpoly_seq_info_merged["pdb_ins_code"] = nonpoly_seq_info_merged["pdb_ins_code"].fillna("").str.replace("\?|\.", "",regex = True)
         nonpoly_seq_info_filtered = nonpoly_seq_info_merged.loc[nonpoly_seq_info_merged.hetCode.isin(["HOH", "UNL"]) == False]
         nonpoly_seq_info_filtered["type"] = "ligand"
 
     if len(branched_seq_info) > 0 or len(nonpoly_info) > 0:
         bound_entity_info = pd.concat([branched_seq_info_merged, nonpoly_seq_info_filtered])
         bound_entity_info = bound_entity_info.merge(entity_info, on = "entity_id", how = "left")
-        bound_entity_info["pdb_ins_code"] = bound_entity_info["pdb_ins_code"].fillna("").str.replace("\?|\.", "",regex = True)
         bound_entity_info_assembly = bound_entity_info.merge(assembly_info_exploded_sorted, left_on = "bound_ligand_struct_asym_id", right_on = "struct_asym_id", how = "inner") #inner join only keep entities in the assembly
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
