@@ -1,24 +1,5 @@
 #! /usr/bin/env nextflow
 
-//maybe we can split the bio-h and sifts download to post process mmcif so that we dont unnecessarily donwload them? might help with the out of sync problem too
-process DOWNLOAD_MMCIF {
-    errorStrategy 'ignore' //ignore errors - modelserver may return 404 if assembly not available.
-
-    storeDir "${params.cache_out}/mmcif"
-    publishDir "${params.publish_dir}/mmcif"
-
-    input:
-        tuple ( val(pdb_id), val(assembly_id) )
-
-    output:
-    tuple val(pdb_id), val(assembly_id), path("${pdb_id}_updated.cif.gz"), path("${pdb_id}_bio-h.cif")
-    script:
-    """
-    wget -O "${pdb_id}_updated.cif" "https://www.ebi.ac.uk/pdbe/entry-files/${pdb_id}_updated.cif"; gzip "${pdb_id}_updated.cif" ;
-    wget -O "${pdb_id}_bio-h.cif" "https://www.ebi.ac.uk/pdbe/model-server/v1/${pdb_id}/full?encoding=cif&data_source=pdb-h"
-    """
-}
-
 process PROCESS_MMCIF {
     publishDir "${params.publish_dir}/process_struct"
     errorStrategy 'ignore'
@@ -48,7 +29,8 @@ process RUN_ARPEGGIO {
 
     script:
     """
-    gzip -d -c ${bio_h_cif} > ${pdb_id}_bio-h.cif ; pdbe-arpeggio -sf ${arpeggio_selections} ${bio_h_cif}
+    gzip -dkc ${bio_h_cif} > ${pdb_id}_bio-h.cif
+    pdbe-arpeggio -sf ${arpeggio_selections} ${pdb_id}_bio-h.cif
     """
 
 }
@@ -102,51 +84,6 @@ process PROCESS_ALL_CONTACTS {
     """
 
 }
-
-process GET_COGNATE_LIGANDS {
-   storeDir "${params.cache_out}/cognate_ligands"
-   publishDir "${params.publish_dir}/cognate"
-   input:
-       path enzyme_dat_file
-       path enzyme_class_file
-       path pubchem_mapping
-       path chebi_kegg_mapping
-       path chebi_relations
-       path rhea_reactions
-       path kegg_enzyme_string
-       path kegg_reaction_string
-       path smiles_cache
-       path csdb_linear_cache
-       path compound_cache_dir
-       path gtc_cache
-       path brenda_mol_dir
-       path brenda_json
-       path brenda_ligands
-
-   output:
-   path "biological_ligands_df.pkl"
-   script:
-   """
-   python3 ${workflow.projectDir}/bin/get_ec_information.py --ec_dat ${enzyme_dat_file} --enzyme_class_file ${enzyme_class_file} --pubchem ${pubchem_mapping} --chebi ${chebi_kegg_mapping} --chebi_relations ${chebi_relations} --rhea_reactions ${rhea_reactions} --kegg_enzyme_string ${kegg_enzyme_string} --kegg_reaction_string ${kegg_reaction_string} --smiles_cache ${smiles_cache} --csdb_cache ${csdb_linear_cache} --compound_cache_dir ${compound_cache_dir} --gtc_cache ${gtc_cache} --brenda_mol_dir ${brenda_mol_dir} --brenda_json ${brenda_json} --brenda_ligands ${brenda_ligands}
-   """
-}
-
-// rule preprocess_rhea:
-//     input:
-//         rhea2ec = config["data_files_dir"] + config["rhea2ec"],
-//         rhea_directions = config["data_files_dir"] + config["rhea_directions"],
-//         rd_dir = config["data_files_dir"] + config["rhea_rd_dir"],
-//         chebi_names = config["data_files_dir"] + config["chebi_names"],
-//         script = config["scripts_dir"] + "preprocess_rhea.py"
-//     output:
-//         rhea_reactions = output_dir + "/cognate_ligands/rhea_reactions.pkl"
-//     params:
-//         outdir = output_dir + "/cognate_ligands"
-//     threads: 1
-//     shell:
-//         "python3 {input.script} --rhea_ec_mapping {input.rhea2ec} --rhea_reaction_directions {input.rhea_directions} --rd_dir {input.rd_dir} --chebi_names {input.chebi_names} --outdir {params.outdir}"
-
-
 
 process SCORE_LIGANDS {
     label 'largecpu_largmem'
@@ -241,8 +178,7 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    cognate_ligands = GET_COGNATE_LIGANDS(Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.pubchem_mapping}"), Channel.fromPath("${params.chebi_kegg}"), Channel.fromPath("${params.chebi_relations}"), Channel.fromPath("${params.rhea_reactions}"), Channel.fromPath("${params.kegg_enzyme_cache}"), Channel.fromPath("${params.kegg_reaction_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.kegg_compound_cache_dir}", type: "dir"), Channel.fromPath("${params.glytoucan_cache}"), Channel.fromPath("${params.brenda_mol_dir}", type: "dir"), Channel.fromPath("${params.brenda_json}"), Channel.fromPath("${params.brenda_ligands}"))
-    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly) ] } | randomSample( 10, 42 )
+    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly) ] } | randomSample( 10, 42 ) | view
     process_mmcif = PROCESS_MMCIF( pdb_ids
         .map { all_out -> [all_out[0], all_out[1], file(all_out[2])] } )
     arpeggio = RUN_ARPEGGIO(
@@ -260,6 +196,6 @@ workflow {
         .combine( Channel.from(params.domain_contact_cutoff) ) )
     collected = contacts.collectFile(name: 'combined_files.tsv', keepHeader: true, skip: 1)
     all_contacts = PROCESS_ALL_CONTACTS( collected, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
-    score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, cognate_ligands, Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
-    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, cognate_ligands , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
+    score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
+    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }
