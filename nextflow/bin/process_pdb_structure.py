@@ -4,6 +4,7 @@ from gemmi import cif
 import pandas as pd
 import argparse
 from pathlib import Path
+import sys
 
 def main():
     """
