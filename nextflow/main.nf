@@ -48,7 +48,7 @@ process RUN_ARPEGGIO {
 
     script:
     """
-    pdbe-arpeggio -sf ${arpeggio_selections} ${bio_h_cif}
+    gzip -d -c ${bio_h_cif} > ${pdb_id}_bio-h.cif ; pdbe-arpeggio -sf ${arpeggio_selections} ${bio_h_cif}
     """
 
 }
