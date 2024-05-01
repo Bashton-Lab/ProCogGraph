@@ -5,6 +5,7 @@ import pandas as pd
 import argparse
 from pathlib import Path
 import sys
+import re
 
 def pattern_to_range(pattern):
     start, end = map(int, re.search(r'\((\d+)-(\d+)\)', pattern).groups())
