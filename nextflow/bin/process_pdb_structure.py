@@ -44,21 +44,17 @@ def main():
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
-    #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example
+    #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example or 4cr7
+    #this is necessary for matching the pdb-h format
     oper_list = pd.DataFrame(block.find(['_pdbx_struct_oper_list.id', '_pdbx_struct_oper_list.type']), columns = ["oper_expression_id", "type"])
 
     assembly_info_exploded_oper = assembly_info_exploded.merge(oper_list, left_on = "oper_expression", right_on = "oper_expression_id", how = "left", indicator = True)
     assert(len(assembly_info_exploded_oper.loc[assembly_info_exploded_oper._merge != "both"]) == 0)
     assembly_info_exploded_oper.loc[assembly_info_exploded_oper.type == "'identity operation'", "oper_expression"] = ""
     assembly_info_exploded_oper.drop(columns = ["oper_expression_id", "type" , "_merge"], inplace = True)
-    
-    #formatting the oper expressions to match pdb-h format - see pdb 4cr7 for good example
-    assembly_info_exploded_sorted = assembly_info_exploded.sort_values("oper_expression", ascending = True)
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("int")
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"] - assembly_info_exploded_sorted["oper_expression"].min()
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("str").str.replace("0", "")
 
-    ##check if the structure has any domains before continuing (if not the structure should not be processed)
+
+    ##check if the structure has any domains before continuing (if not the structure should not be processed) - e.g. 1lg1
     domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
         columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
     ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this
@@ -66,8 +62,8 @@ def main():
     if len(domain_info_dataframe_filtered) == 0:
         print("No domains found in cif file [CATH, SCOP, SCOP2B, Pfam, InterPro]")
         sys.exit(101)
-
-    branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.auth_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
+    #switched auth_asym_id to pdb_asym_id (which is a pointer to atom_site auth asym id and seems to hold up better for branch structures in the mapping to pdb-h structure)
+    branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.pdb_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
     branched_seq_info_merged =  pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'hetCode', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'descriptor'])
     if len(branched_seq_info) > 0:
         branched_seq_info["hetCode"] = "SUGAR"
@@ -97,7 +93,7 @@ def main():
     if len(branched_seq_info_merged) > 0 or len(nonpoly_seq_info_filtered) > 0:
         bound_entity_info = pd.concat([branched_seq_info_merged, nonpoly_seq_info_filtered])
         bound_entity_info = bound_entity_info.merge(entity_info, on = "entity_id", how = "left")
-        bound_entity_info_assembly = bound_entity_info.merge(assembly_info_exploded_sorted, left_on = "bound_ligand_struct_asym_id", right_on = "struct_asym_id", how = "inner") #inner join only keep entities in the assembly
+        bound_entity_info_assembly = bound_entity_info.merge(assembly_info_exploded_oper, left_on = "bound_ligand_struct_asym_id", right_on = "struct_asym_id", how = "inner") #inner join only keep entities in the assembly
         #assembly may not include all bound entities. e.g. 3m43 GOL not in assembly
         if len(bound_entity_info_assembly) == 0:
             print("No bound entities mapped to the assembly operations for preferred assembly")
