@@ -40,9 +40,11 @@ def main():
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
     #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
     assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
-    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
+    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
+    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
+    assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
     #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example or 4cr7
     #this is necessary for matching the pdb-h format
@@ -54,7 +56,7 @@ def main():
     assembly_info_exploded_oper.drop(columns = ["oper_expression_id", "type" , "_merge"], inplace = True)
 
 
-    ##check if the structure has any domains before continuing (if not the structure should not be processed) - e.g. 1lg1
+    ##check if the structure has any domains before continuing (if not the structure should not be processed) - e.g. 1lg1 (1i8q shows why auth doesn't work)
     domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
         columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
     ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this

@@ -110,6 +110,8 @@ def main():
     assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
+    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
+    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
     #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example or 4cr7
