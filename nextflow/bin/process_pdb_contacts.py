@@ -112,11 +112,14 @@ def main():
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
-    #formatting the oper expressions to match pdb-h format - see pdb 4cr7 for good example
-    assembly_info_exploded_sorted = assembly_info_exploded.sort_values("oper_expression", ascending = True)
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("int")
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"] - assembly_info_exploded_sorted["oper_expression"].min()
-    assembly_info_exploded_sorted["oper_expression"] = assembly_info_exploded_sorted["oper_expression"].astype("str").str.replace("0", "")
+    #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example or 4cr7
+    #this is necessary for matching the pdb-h format
+    oper_list = pd.DataFrame(block.find(['_pdbx_struct_oper_list.id', '_pdbx_struct_oper_list.type']), columns = ["oper_expression_id", "type"])
+
+    assembly_info_exploded_oper = assembly_info_exploded.merge(oper_list, left_on = "oper_expression", right_on = "oper_expression_id", how = "left", indicator = True)
+    assert(len(assembly_info_exploded_oper.loc[assembly_info_exploded_oper._merge != "both"]) == 0)
+    assembly_info_exploded_oper.loc[assembly_info_exploded_oper.type == "'identity operation'", "oper_expression"] = ""
+    assembly_info_exploded_oper.drop(columns = ["oper_expression_id", "type" , "_merge"], inplace = True)
 
     struct_auth_asym_mapping = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.auth_asym_id']), columns = ["protein_entity_id","chain_id", "auth_asym_id"]).drop_duplicates()
 
@@ -131,7 +134,7 @@ def main():
     ##protein_entity_df_auth_merge.drop(columns = ["_merge"], inplace = True)
     protein_entity_df_auth_merge.rename(columns = {"auth_asym_id": "auth_chain_id", "chain_id":"proteinStructAsymID"}, inplace = True)
 
-    protein_entity_df_assembly = protein_entity_df_auth_merge.merge(assembly_info_exploded_sorted[["oper_expression", "struct_asym_id"]], left_on = "proteinStructAsymID", right_on = "struct_asym_id", how = "inner") #inner to keep only entities in the assembly
+    protein_entity_df_assembly = protein_entity_df_auth_merge.merge(assembly_info_exploded_oper[["oper_expression", "struct_asym_id"]], left_on = "proteinStructAsymID", right_on = "struct_asym_id", how = "inner") #inner to keep only entities in the assembly
     #assert(len(protein_entity_df_assembly.loc[protein_entity_df_assembly._merge != "both"]) == 0)
     protein_entity_df_assembly.drop(columns = ["struct_asym_id"], inplace = True)
     protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["auth_chain_id"] + "_" + protein_entity_df_assembly["oper_expression"] 
