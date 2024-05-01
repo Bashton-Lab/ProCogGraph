@@ -6,6 +6,11 @@ import argparse
 from pathlib import Path
 import sys
 
+def pattern_to_range(pattern):
+    start, end = map(int, re.search(r'\((\d+)-(\d+)\)', pattern).groups())
+    return ",".join([str(x) for x in range(start, end + 1)])
+
+
 def main():
     """
     This script processes the cif file of a structure and extracts the information needed to generate the arpeggio query file.
@@ -32,6 +37,8 @@ def main():
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
+    #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
+    assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
@@ -63,7 +70,7 @@ def main():
         branched_seq_info_merged.drop(columns = ["_merge", "type"], inplace = True)
         branched_seq_info_merged["type"] = "sugar"
         branched_seq_info_merged["pdb_ins_code"] = "" #add blank ins code for branch structures for downstream agg
-        
+
     nonpoly_info = pd.DataFrame(block.find(['_pdbx_entity_nonpoly.entity_id', '_pdbx_entity_nonpoly.comp_id']), columns = ["entity_id", "hetCode"])
     nonpoly_info = nonpoly_info.loc[nonpoly_info.hetCode.isin(["HOH", "UNL", "UNX"]) == False]
     nonpoly_seq_info_filtered = pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'hetCode'])
