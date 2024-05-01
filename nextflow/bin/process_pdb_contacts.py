@@ -9,7 +9,7 @@ import gzip
 import numpy as np
 from itertools import chain
 import sys
-
+import re 
 def extract_data(elem):
     data = []
     if elem.get("type") == "protein":
@@ -70,6 +70,10 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
     
     return ligands_df
 
+def pattern_to_range(pattern):
+    start, end = map(int, re.search(r'\((\d+)-(\d+)\)', pattern).groups())
+    return ",".join([str(x) for x in range(start, end + 1)])
+
 def main():
     """
     Extracts domain information from the updated MMCIF file and assigns ownership categories to ligands based on domain contact percentages
@@ -102,6 +106,8 @@ def main():
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
+    #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
+    assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
@@ -168,7 +174,10 @@ def main():
     #load the contacts data
     contacts = pd.read_json(f"{args.contacts}")
     contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER" )].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
-
+    if len(contacts_filtered) == 0:
+        #for example, only proximal contacts - see 1a1q
+        print(f"No valid contacts found for {args.pdb_id} between ligand and protein entity")
+        sys.exit(103)
     contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), f"{x['bgn'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
     contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), f"{x['end'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
     contacts_filtered["bgn_auth_seq_id"] = contacts_filtered["bgn_auth_seq_id"].str.strip().str.rstrip("?.")
@@ -186,14 +195,14 @@ def main():
     if len(contacts_poly_merged) == 0:
         #for example, ligand interacts with DNA only in structure - see 2fjx
         print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
-        sys.exit(103)
+        sys.exit(104)
     
     contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
     contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
     if len(contacts_poly_merged_filtered) == 0:
         #for example - see 1y82
         print(f"No contacts found for {args.pdb_id} between ligand and any domains in annotation")
-        sys.exit(104)
+        sys.exit(105)
     contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
     contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
     contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]]).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index()
