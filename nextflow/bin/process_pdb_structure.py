@@ -65,6 +65,8 @@ def main():
         branched_seq_info["hetCode"] = "SUGAR"
         branched_sugar_info = pd.DataFrame(block.find(['_pdbx_entity_branch_descriptor.entity_id', '_pdbx_entity_branch_descriptor.descriptor', '_pdbx_entity_branch_descriptor.type']), columns = ["entity_id", "descriptor", "type"])
         branched_sugar_info_wurcs = branched_sugar_info.loc[branched_sugar_info.type == "WURCS"].groupby("entity_id").first()
+        if len(branched_sugar_info_wurcs) == 0:
+            print("No sugars with WURCS representation found")
         branched_sugar_info_wurcs["descriptor"] = branched_sugar_info_wurcs["descriptor"].str.strip("\"|'")
         branched_seq_info_merged = branched_seq_info.merge(branched_sugar_info_wurcs, on = "entity_id", indicator = True)
         assert(len(branched_seq_info_merged.loc[branched_seq_info_merged._merge != "both"]) == 0)
@@ -84,7 +86,7 @@ def main():
         nonpoly_seq_info_filtered = nonpoly_seq_info_merged.loc[nonpoly_seq_info_merged.hetCode.isin(["HOH", "UNL"]) == False]
         nonpoly_seq_info_filtered["type"] = "ligand"
 
-    if len(branched_seq_info) > 0 or len(nonpoly_info) > 0:
+    if len(branched_seq_info_merged) > 0 or len(nonpoly_seq_info_filtered) > 0:
         bound_entity_info = pd.concat([branched_seq_info_merged, nonpoly_seq_info_filtered])
         bound_entity_info = bound_entity_info.merge(entity_info, on = "entity_id", how = "left")
         bound_entity_info_assembly = bound_entity_info.merge(assembly_info_exploded_sorted, left_on = "bound_ligand_struct_asym_id", right_on = "struct_asym_id", how = "inner") #inner join only keep entities in the assembly
