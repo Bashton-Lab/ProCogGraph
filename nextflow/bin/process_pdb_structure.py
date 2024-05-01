@@ -19,7 +19,7 @@ def main():
     ligands in the structure.
     Script may be expected to fail if:
         1. No domains are found in the cif file (exitcode 101)
-        2. No bound entities are found in the cif file (exitcode 102)
+        2. No bound entities are found in the cif file/assembly mapping (exitcode 102)
 
     """
 
@@ -90,6 +90,10 @@ def main():
         bound_entity_info = pd.concat([branched_seq_info_merged, nonpoly_seq_info_filtered])
         bound_entity_info = bound_entity_info.merge(entity_info, on = "entity_id", how = "left")
         bound_entity_info_assembly = bound_entity_info.merge(assembly_info_exploded_sorted, left_on = "bound_ligand_struct_asym_id", right_on = "struct_asym_id", how = "inner") #inner join only keep entities in the assembly
+        #assembly may not include all bound entities. e.g. 3m43 GOL not in assembly
+        if len(bound_entity_info_assembly) == 0:
+            print("No bound entities mapped to the assembly operations for preferred assembly")
+            sys.exit(102)
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "bound_ligand_struct_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "oper_expression"]
