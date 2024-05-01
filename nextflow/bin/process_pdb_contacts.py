@@ -108,7 +108,6 @@ def main():
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
     #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
     assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
-    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
