@@ -173,6 +173,10 @@ def main():
 
     #load the contacts data
     contacts = pd.read_json(f"{args.contacts}")
+    if len(contacts) == 0:
+        #for example, only proximal contacts - see 1a1q
+        print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
+        sys.exit(103)
     contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER" )].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
     if len(contacts_filtered) == 0:
         #for example, only proximal contacts - see 1a1q
