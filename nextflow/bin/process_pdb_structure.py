@@ -95,8 +95,9 @@ def main():
             print("No bound entities mapped to the assembly operations for preferred assembly")
             sys.exit(102)
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
+        #originally beleived the protonated structure for branch used struct asym id, but it seems to use auth asym id so following two lines are identical and could be deduplicated once we are sure this is true
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
-        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "bound_ligand_struct_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "oper_expression"]
+        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "oper_expression"]
         bound_entity_info_assembly["assembly_chain_id_ligand"] = bound_entity_info_assembly["assembly_chain_id_ligand"].str.strip("_")
         bound_entity_info_assembly.drop(columns = ["struct_asym_id", "oper_expression"], inplace = True) #"_merge", 
 
