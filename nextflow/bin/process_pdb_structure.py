@@ -40,7 +40,7 @@ def main():
     bioh_doc = cif.read(args.bio_h)
     bioh_block = bioh_doc.sole_block()
 
-    bioh_struct_asym = pd.DataFrame(block.find(['_struct_asym.id']), columns = ["id"])
+    bioh_struct_asym = pd.DataFrame(bioh_block.find(['_struct_asym.id']), columns = ["id"])
     bioh_struct_asym["sep"] = bioh_struct_asym.id.str.extract("^.+([-|_]).+$")
     separators = bioh_struct_asym["sep"].dropna().unique()
     if len(separators) == 0:
@@ -57,11 +57,11 @@ def main():
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
-    #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
-    #some structures have a range in the format 1-60, see 6rjf for example
+    #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example, some structures have a range in the format 1-60, see 6rjf for example
     #so, first strip all brackets from the oper expression and then expand the range
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("()'")
-    assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"].apply(pattern_to_range)#observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
+    assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"].apply(pattern_to_range)
+    #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
