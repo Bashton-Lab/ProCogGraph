@@ -8,7 +8,7 @@ import sys
 import re
 
 def pattern_to_range(pattern):
-    start, end = map(int, re.search(r'\((\d+)-(\d+)\)', pattern).groups())
+    start, end = map(int, re.search(r'(\d+)-(\d+)', pattern).groups())
     return ",".join([str(x) for x in range(start, end + 1)])
 
 
@@ -58,8 +58,10 @@ def main():
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
     #some structures have a range in the format '(1-60)' - expand this before splitting, see 1al0 for example
-    assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\'\(\d+-\d+\)\'"), "oper_expression"].apply(pattern_to_range)
-    #observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
+    #some structures have a range in the format 1-60, see 6rjf for example
+    #so, first strip all brackets from the oper expression and then expand the range
+    assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("()'")
+    assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"] = assembly_info.loc[assembly_info["oper_expression"].str.match("\d+-\d+"), "oper_expression"].apply(pattern_to_range)#observe some ; and \n in asym_id_list (see 3hye for example) -  so strip ; and \n; from start and end of string before splitting - will expand this if necessary on more errors
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
