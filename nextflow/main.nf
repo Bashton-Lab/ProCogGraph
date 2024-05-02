@@ -5,13 +5,13 @@ process PROCESS_MMCIF {
     errorStrategy { task.exitStatus in 101..102 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
-        tuple( val(pdb_id), val(assembly_id), path(updated_cif) )
+        tuple( val(pdb_id), val(assembly_id), path(updated_cif), path(protonated_cif) )
         
     output:
         tuple val(pdb_id), path("${pdb_id}_bound_entity_info.pkl"), path("${pdb_id}_arpeggio.csv")
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --cif ${updated_cif} --pdb_id ${pdb_id} --assembly_id ${assembly_id}
+    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --cif ${updated_cif} --pdb_id ${pdb_id} --assembly_id ${assembly_id} --bio_h ${protonated_cif}
     """
 
 }
@@ -181,7 +181,7 @@ process PRODUCE_NEO4J_FILES {
 workflow {
     pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly) ] }
     process_mmcif = PROCESS_MMCIF( pdb_ids
-        .map { all_out -> [all_out[0], all_out[1], file(all_out[2])] } )
+        .map { all_out -> [all_out[0], all_out[1], file(all_out[2]), file(all_out[3])] } )
     arpeggio = RUN_ARPEGGIO(
         process_mmcif
             .map { all_out -> [all_out[0], file(all_out[2])] }
