@@ -25,6 +25,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--cif', type=str, help='cif file containing PDBe updated structure, may be gzipped')
+    parser.add_argument('--bio_h', type=str, help='cif file containing PDBe protonated structure, may be gzipped')
     parser.add_argument('--pdb_id', type=str, help='pdb id of the structure')
     parser.add_argument('--assembly_id', type=str, help='assembly id of the structure')
     args = parser.parse_args()
@@ -32,6 +33,24 @@ def main():
 
     doc = cif.read(args.cif)
     block = doc.sole_block()
+
+    #we read in the protonated structure to verify the mapping between updated and protonated structure
+    #e.g. _ or - separator in oper id (see 2c16 for example)
+
+    bioh_doc = cif.read(args.bio_h)
+    bioh_block = bioh_doc.sole_block()
+
+    bioh_struct_asym = pd.DataFrame(block.find(['_struct_asym.id']), columns = ["id"])
+    bioh_struct_asym["sep"] = bioh_struct_asym.id.str.extract("^.+([-|_]).+$")
+    separators = bioh_struct_asym["sep"].dropna().unique()
+    if len(separators) == 0:
+        print("No separators detected in assembly struct_asym")
+        separator = ""
+    elif len(separators) == 1:
+        separator = separators[0]
+    else:
+        print("Mixed separators detected, exiting")
+        sys.exit(1)
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description']), columns = ["entity_id", "description"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
@@ -44,7 +63,6 @@ def main():
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.strip("\n;")
     assembly_info["oper_expression"] = assembly_info["oper_expression"].str.split(",")
     assembly_info["asym_id_list"] = assembly_info["asym_id_list"].str.strip("\n;").str.split(",") #asym id here is the struct
-    assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
     assembly_info_exploded = assembly_info.explode("oper_expression").explode("asym_id_list").rename(columns = {"asym_id_list": "struct_asym_id"})
     #the oper_expression for the identity operation does not receive an _[digit] suffix, so we need to remove the oper_expression from it - see 2r9p for example or 4cr7
     #this is necessary for matching the pdb-h format
@@ -102,9 +120,9 @@ def main():
             sys.exit(102)
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
         #originally beleived the protonated structure for branch used struct asym id, but it seems to use auth asym id so following two lines are identical and could be deduplicated once we are sure this is true
-        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
-        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "auth_asym_id"] + "_" + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "oper_expression"]
-        bound_entity_info_assembly["assembly_chain_id_ligand"] = bound_entity_info_assembly["assembly_chain_id_ligand"].str.strip("_")
+        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + separator + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
+        bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "auth_asym_id"] + separator + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "sugar"), "oper_expression"]
+        bound_entity_info_assembly["assembly_chain_id_ligand"] = bound_entity_info_assembly["assembly_chain_id_ligand"].str.strip(separator)
         bound_entity_info_assembly.drop(columns = ["struct_asym_id", "oper_expression"], inplace = True) #"_merge", 
 
         bound_entity_info_grouped = bound_entity_info_assembly.groupby(["bound_ligand_struct_asym_id", "assembly_chain_id_ligand", "entity_id"]).agg({"pdb_ins_code": "first", "hetCode": "first", "descriptor": "first", "description": "first", "type": "first", "auth_seq_num": list, "pdb_seq_num": list}).reset_index()

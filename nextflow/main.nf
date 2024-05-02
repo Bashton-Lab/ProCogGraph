@@ -20,6 +20,7 @@ process RUN_ARPEGGIO {
     label 'medmem' //medmem gives 4 cores and 16gb in slurm submission (max observed usage is 4gb - offering overhead for complex structures)
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
+    errorStrategy 'ignore' //temporary - arpeggio has errors when chem_comp.name is empty (bool false e.g. 2c16 - working on a fix)
     publishDir "${params.publish_dir}/arpeggio"
     input:
         tuple val(pdb_id), path(arpeggio_selections), path(bio_h_cif)
