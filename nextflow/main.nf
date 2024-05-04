@@ -2,7 +2,7 @@
 
 process PROCESS_MMCIF {
     publishDir "${params.publish_dir}/process_struct"
-    errorStrategy { task.exitStatus in 101..102 ? 'ignore' : 'terminate' }
+    errorStrategy { task.exitStatus in 100..102 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
         tuple( val(pdb_id), val(assembly_id), path(updated_cif), path(protonated_cif) )
