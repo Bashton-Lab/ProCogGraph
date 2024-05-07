@@ -18,9 +18,10 @@ def main():
     The script will output a csv file containing the arpeggio query and a pickled dataframe containing information on the bound
     ligands in the structure.
     Script may be expected to fail if:
-        1. The cif file does not have the right number of values in loop _atom_site (exitcode 100)
-        1. No domains are found in the cif file (exitcode 101)
-        2. No bound entities are found in the cif file/assembly mapping (exitcode 102)
+        1. The cif file does not have the right number of values in loop _atom_site (exitcode 99)
+        2. The assembly contains more than 30 struct_asym ids (exitcode 100) - run these structures individually and combine manually.
+        3. No domains are found in the cif file (exitcode 101)
+        4. No bound entities are found in the cif file/assembly mapping (exitcode 102)
 
     """
 
@@ -39,7 +40,7 @@ def main():
             sys.exit(100)
         else:
             sys.exit(1)
-            
+
     block = doc.sole_block()
 
     #we read in the protonated structure to verify the mapping between updated and protonated structure
@@ -59,6 +60,10 @@ def main():
     else:
         print("Mixed separators detected, exiting")
         sys.exit(1)
+    
+    if len(bioh_struct_asym) >= 30:
+        print("Large structure detected, run individually instead of in pipeline. exiting")
+        sys.exit(100)
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description']), columns = ["entity_id", "description"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
