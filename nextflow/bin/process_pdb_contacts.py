@@ -34,6 +34,11 @@ def extract_data(elem):
     data_df = pd.DataFrame(data)
     return data_df
 
+def sort_numeric_with_inscode(string):
+    numeric_split = [re.findall(r'(\d+)_*(\D*)', item) for item in string] # Find all numeric parts in the string (we define format as numeric_inscode) - keep the underscore outside of the split to remove this 
+    sorted_parts = sorted(numeric_split, key=lambda x: int(x[0][0]))  # Sort numeric parts (each item in the original list is broken into a one item list where the first item is the numeric item to be sorted by)
+    return ''.join(num + non_num for num, non_num in sorted_parts[0])  # Concat numeric and non-numeric parts
+
 def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", domain_grouping_key = "cath_domain", database_type = None, preassigned = False):
     if database_type:
         total_group_key = [unique_id, database_type]
@@ -172,8 +177,8 @@ def main():
     protein_seq_sites = seq_sites.loc[seq_sites.protein_entity_id.isin(protein_entity_df_assembly.protein_entity_id.unique())].copy()
     assert(len(protein_seq_sites.loc[protein_seq_sites.seq_id == "."]) == 0) #need to have a seq id to map to
     protein_seq_sites["seq_id"] = protein_seq_sites["seq_id"].astype("int")
-    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id"].astype("str") + protein_seq_sites["pdb_ins_code"]
-    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id_combined"].str.strip().str.rstrip("?.") 
+    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id"].astype("str") + "_" + protein_seq_sites["pdb_ins_code"]
+    protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id_combined"].str.strip().str.rstrip("?._") 
     protein_entity_df_assembly_domain["auth_seq_range"] = protein_entity_df_assembly_domain.apply(lambda x: protein_seq_sites.loc[(protein_seq_sites.protein_entity_id == x.protein_entity_id) & (protein_seq_sites.seq_id.isin(x.seq_range_chain)), 'auth_seq_id_combined'].values.tolist(), axis = 1)
 
 
@@ -188,10 +193,9 @@ def main():
         #for example, only proximal contacts - see 1a1q
         print(f"No valid contacts found for {args.pdb_id} between ligand and protein entity")
         sys.exit(103)
-    contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), f"{x['bgn'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
-    contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), f"{x['end'].get('auth_seq_id')}{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
-    contacts_filtered["bgn_auth_seq_id"] = contacts_filtered["bgn_auth_seq_id"].str.strip().str.rstrip("?.")
-    contacts_filtered["end_auth_seq_id"] = contacts_filtered["end_auth_seq_id"].str.strip().str.rstrip("?.")
+    contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), f"{x['bgn'].get('auth_seq_id')}_{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
+    contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['end'].get('pdbx_PDB_ins_code')) if str(x['end'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), f"{x['end'].get('auth_seq_id')}_{x['end'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
+    contacts_filtered["end_auth_seq_id"] = contacts_filtered["end_auth_seq_id"].str.strip().str.rstrip("?._")
 
     contacts_filtered.loc[~contacts_filtered['bgn_contact'].isin(bound_entity_info_grouped_residue_list), ["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id", 'bgn', "end_contact", "end_auth_asym_id", "end_auth_seq_id", 'end']] = contacts_filtered.loc[
         ~contacts_filtered['bgn_contact'].isin(bound_entity_info_grouped_residue_list), ["end_contact", "end_auth_asym_id", "end_auth_seq_id", 'end', "bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id", 'bgn']].values
@@ -238,9 +242,11 @@ def main():
     bound_entity_info_arp_exploded_merged_aggregated["num_non_minor_domains"] = bound_entity_info_arp_exploded_merged_aggregated.groupby(["uniqueID", "xref_db"])["domain_contact_perc"].transform(lambda x: len(x[x > 0.1]))
     bound_entity_info_arp_exploded_merged_aggregated = assign_ownership_percentile_categories(bound_entity_info_arp_exploded_merged_aggregated, unique_id = "uniqueID", domain_grouping_key = "domain_accession", database_type = "xref_db", preassigned = True)
 
-    bound_entity_info_arp_exploded_merged_aggregated["domain_residue_interactions"] = bound_entity_info_arp_exploded_merged_aggregated["domain_residue_interactions"].str.join("|").apply(lambda x: "|".join([str(res) for res in sorted(set(int(y) for y in x.split("|")))]))
-    bound_entity_info_arp_exploded_merged_aggregated["bound_ligand_residue_interactions"] = bound_entity_info_arp_exploded_merged_aggregated["bound_ligand_residue_interactions"].str.join("|").apply(lambda x: "|".join([str(res) for res in sorted(set(int(y) for y in x.split("|")))]))
-    
+    bound_entity_info_arp_exploded_merged_aggregated["domain_residue_interactions"] = \
+        bound_entity_info_arp_exploded_merged_aggregated["domain_residue_interactions"].apply(sort_numeric_with_inscode)
+
+    bound_entity_info_arp_exploded_merged_aggregated["bound_ligand_residue_interactions"] = \
+        bound_entity_info_arp_exploded_merged_aggregated["bound_ligand_residue_interactions"].apply(sort_numeric_with_inscode)
     #need to work out a logical agg pattern or new unique id system - to deal with domains having different agg patterns
     #for now our agg will just be a copy of the previous
     #bound_entity_info_arp_exploded_merged_aggregated_sym_agg = bound_entity_info_arp_exploded_merged_aggregated.groupby([col for col in bound_entity_info_arp_exploded_merged_aggregated.columns if col not in ["domain_accession", "assembly_chain_id_ligand", "assembly_chain_id_protein", "bound_molecule_display_id", "uniqueID"]], dropna = False).agg({"domain_accession": "first","assembly_chain_id_ligand": "first", "assembly_chain_id_protein": "first", "bound_molecule_display_id": "first", "uniqueID": list}).reset_index()
