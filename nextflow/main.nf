@@ -39,7 +39,7 @@ process RUN_ARPEGGIO {
 process PROCESS_CONTACTS {
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts"
-    errorStrategy { task.exitStatus in 103..105 ? 'ignore' : 'terminate' }
+    errorStrategy { task.exitStatus in 103..106 ? 'ignore' : 'terminate' }
     input:
         tuple val(pdb_id), val(assembly_id), path(updated_cif), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
     output:
