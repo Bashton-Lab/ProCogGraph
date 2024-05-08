@@ -84,8 +84,10 @@ def main():
     Extracts domain information from the updated MMCIF file and assigns ownership categories to ligands based on domain contact percentages
     derived from pdbe-arpeggio.
     Is expected to fail if:
-        1. No contacts are found between the ligand and any protein entity (e.g. only to DNA) (exitcode 101)
-        2. No contacts are present within an annotated domain (exitcode 102)
+        1. No contacts are found between the ligand and any protein entity (e.g. only to DNA) (exitcode 103)
+        2. No contacts are present within an annotated domain (exitcode 104)
+        3. No contacts are found between the ligand and any domains in the annotation (exitcode 105)
+        4. No domains are present for any protein entities in the assembly (exitcode 106)
     """
 
     parser = argparse.ArgumentParser(description='')
@@ -169,6 +171,10 @@ def main():
 
 
     protein_entity_df_assembly_domain = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
+    if len(protein_entity_df_assembly_domain) == 0:
+        #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
+        print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
+        sys.exit(106)
     protein_entity_df_assembly_domain.drop(columns = ["entity_id", "asym_id"],inplace = True)
 
     #need to map auth id's for protein entities to seq ids for domain ranges
