@@ -31,7 +31,7 @@ process RUN_ARPEGGIO {
     script:
     """
     gzip -dkc ${bio_h_cif} > ${pdb_id}_bio-h.cif
-    pdbe-arpeggio -sf ${arpeggio_selections} ${pdb_id}_bio-h.cif
+    pdbe-arpeggio -sf ${arpeggio_selections} ${pdb_id}_bio-h.cif -i 6
     """
 
 }
