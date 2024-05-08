@@ -35,10 +35,14 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
     for ligand in comp_id_list:
         lig_descriptor = None
         lig_block = ccd_doc.find_block(ligand)
-        lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
-        lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|'")
-        lig_descriptor = lig_descriptors.loc[lig_descriptors.type == "SMILES"].descriptor.values[0]
-        ligand_descriptors[ligand] = lig_descriptor
+        if lig_block is not None:
+            lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
+            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|'")
+            lig_descriptor = lig_descriptors.loc[lig_descriptors.type == "SMILES"].descriptor.values[0]
+            ligand_descriptors[ligand] = lig_descriptor
+        else:
+            print(f"Error, ligand {ligand} is not found in the CCD MMCIF file")
+            ligand_descriptors[ligand] = None
     return ligand_descriptors
 
 def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
@@ -95,10 +99,6 @@ def main():
     ligand_ids = contacts.loc[contacts.type == "ligand"].hetCode.unique()
     ligand_descriptors = get_chem_comp_descriptors(ccd_doc, ligand_ids)
     contacts.loc[contacts.type == "ligand", "descriptor"] = contacts.loc[contacts.type == "ligand"]["hetCode"].apply(lambda x: ligand_descriptors[x])
-
-    glycoct_cache = pd.read_pickle(f"{args.glycoct_cache}")
-    smiles_cache = pd.read_pickle(f"{args.smiles_cache}")   
-    csdb_linear_cache = pd.read_pickle(f"{args.csdb_linear_cache}")
 
     wurcs_list = contacts.loc[contacts.type == "sugar", "descriptor"].unique()
     sugar_smiles, updated_glycoct_cache, updated_csdb_cache, updated_smiles_cache = get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, glycoct_cache)
