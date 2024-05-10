@@ -168,7 +168,6 @@ def main():
         cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
         cath_domains_info = build_cath_dataframe(cath_parsed_data)
         cath_contacts = cath_contacts.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
-        print(cath_contacts.loc[cath_contacts._merge != "both", ["xref_db_acc", "cath_domain"]])
         assert(len(cath_contacts.loc[cath_contacts._merge != "both"]) == 0)
         cath_contacts.drop(columns = "_merge", inplace = True)
         cath_contacts.to_csv(f"cath_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
@@ -199,7 +198,7 @@ def main():
         interpro_contacts = interpro_contacts.merge(interpro_annotations, left_on = "xref_db_acc", right_on = "interpro_accession", how = "left")
         interpro_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & ((interpro_contacts.xref_db_acc.str.contains("SSF")) | (interpro_contacts.xref_db_acc.str.contains("G3DSA")))]
         superfamily_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("SSF"))]
-        g3dsa_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("G3DSA"))]
+        gene3d_sa_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("G3DSA"))]
         interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
         gene3d_sa_contacts.to_csv(f"g3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
