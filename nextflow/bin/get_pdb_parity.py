@@ -169,7 +169,7 @@ if not os.path.exists(pickle_filename):
             cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"])
             #when dropping duplicates here consider that it needs to drop the max theshold duplicate - better to do this in a groupby?
             cache_results = pd.concat([cache_df, cache_results], ignore_index = True).drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold"])
-            cache_results.to_pickle(f"cache_parity_calcs.pkl")
+            cache_results.to_pickle(f"cache_parity_calcs_new.pkl")
     else:
         results_df = pre_calculated
         # Save the smiles_ec_pairs for the chunk as a pickle file

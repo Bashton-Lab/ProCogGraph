@@ -98,7 +98,7 @@ process SCORE_LIGANDS {
     
     output:
         path "all_parity_calcs.pkl", emit: all_parity_calcs
-        path "cache_parity_calcs.pkl", emit: parity_cache
+        path "cache_parity_calcs_new.pkl", emit: parity_cache
     
     script:
     """
