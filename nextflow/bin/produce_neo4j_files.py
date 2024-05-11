@@ -275,10 +275,6 @@ def main():
 
     if len(cath_domains) > 0:
         cath_domain_ligand_interactions = cath_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
-        cath_domain_ligand_interactions["bound_ligand_residue_interactions"] = cath_domain_ligand_interactions["bound_ligand_residue_interactions"].astype("str").str.split("|")
-        cath_domain_ligand_interactions["bound_ligand_residue_interactions"] = cath_domain_ligand_interactions["bound_ligand_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
-        cath_domain_ligand_interactions["domain_residue_interactions"] = cath_domain_ligand_interactions["domain_residue_interactions"].astype("str").str.split("|")
-        cath_domain_ligand_interactions["domain_residue_interactions"] = cath_domain_ligand_interactions["domain_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
         cath_interface_mapping = cath_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
         cath_interface_mapping["allProteinInterface"] = cath_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
         cath_interface_mapping["allProteinInterface"] = cath_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
@@ -292,10 +288,6 @@ def main():
     
     if len(scop_domains) > 0:
         scop_domain_ligand_interactions = scop_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID","bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
-        scop_domain_ligand_interactions["bound_ligand_residue_interactions"] = scop_domain_ligand_interactions["bound_ligand_residue_interactions"].astype("str").str.split("|")
-        scop_domain_ligand_interactions["bound_ligand_residue_interactions"] = scop_domain_ligand_interactions["bound_ligand_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
-        scop_domain_ligand_interactions["domain_residue_interactions"] = scop_domain_ligand_interactions["domain_residue_interactions"].astype("str").str.split("|")
-        scop_domain_ligand_interactions["domain_residue_interactions"] = scop_domain_ligand_interactions["domain_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
         scop_interface_mapping = scop_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
         scop_interface_mapping["allProteinInterface"] = scop_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
         scop_interface_mapping["allProteinInterface"] = scop_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
@@ -309,10 +301,6 @@ def main():
     
     if len(pfam_domains) > 0:
         pfam_domain_ligand_interactions = pfam_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
-        pfam_domain_ligand_interactions["bound_ligand_residue_interactions"] = pfam_domain_ligand_interactions["bound_ligand_residue_interactions"].astype("str").str.split("|")
-        pfam_domain_ligand_interactions["bound_ligand_residue_interactions"] = pfam_domain_ligand_interactions["bound_ligand_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
-        pfam_domain_ligand_interactions["domain_residue_interactions"] = pfam_domain_ligand_interactions["domain_residue_interactions"].astype("str").str.split("|")
-        pfam_domain_ligand_interactions["domain_residue_interactions"] = pfam_domain_ligand_interactions["domain_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
         pfam_interface_mapping = pfam_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
         pfam_interface_mapping["allProteinInterface"] = pfam_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
         pfam_interface_mapping["allProteinInterface"] = pfam_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
@@ -326,10 +314,6 @@ def main():
     
     if len(interpro_domains) > 0:
         interpro_domain_ligand_interactions = interpro_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
-        interpro_domain_ligand_interactions["bound_ligand_residue_interactions"] = interpro_domain_ligand_interactions["bound_ligand_residue_interactions"].astype("str").str.split("|")
-        interpro_domain_ligand_interactions["bound_ligand_residue_interactions"] = interpro_domain_ligand_interactions["bound_ligand_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
-        interpro_domain_ligand_interactions["domain_residue_interactions"] = interpro_domain_ligand_interactions["domain_residue_interactions"].astype("str").str.split("|")
-        interpro_domain_ligand_interactions["domain_residue_interactions"] = interpro_domain_ligand_interactions["domain_residue_interactions"].apply(lambda x: sorted_set(x)).str.join("|")
         interpro_interface_mapping = interpro_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
         interpro_interface_mapping["allProteinInterface"] = interpro_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
         interpro_interface_mapping["allProteinInterface"] = interpro_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
