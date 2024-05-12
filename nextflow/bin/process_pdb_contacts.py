@@ -34,7 +34,7 @@ def extract_data(elem):
     data_df = pd.DataFrame(data)
     return data_df
 
-def sort_numeric_with_inscode(string):
+def sort_numeric_with_inscode(tosort):
     numeric_split = [re.findall(r'(\d+)_*(\D*)', item) for item in tosort] # Find all numeric parts in the string (we define format as numeric_inscode) - keep the underscore outside of the split to remove this 
     sorted_parts = sorted(numeric_split, key=lambda x: int(x[0][0]))  # Sort numeric parts (each item in the original list is broken into a one item list where the first item is the numeric item to be sorted by)
     return '|'.join([''.join(tup for tup in sorted_parts_list[0]) for sorted_parts_list in sorted_parts])  # Concat numeric and non-numeric parts
