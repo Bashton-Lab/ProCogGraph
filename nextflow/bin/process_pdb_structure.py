@@ -61,9 +61,9 @@ def main():
         print("Mixed separators detected, exiting")
         sys.exit(1)
     
-    if len(bioh_struct_asym) >= 30:
-        print("Large structure detected, run individually instead of in pipeline. exiting")
-        sys.exit(100)
+    # if len(bioh_struct_asym) >= 30:
+    #     print("Large structure detected, run individually instead of in pipeline. exiting")
+    #     sys.exit(100)
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description']), columns = ["entity_id", "description"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
