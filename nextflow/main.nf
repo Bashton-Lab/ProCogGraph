@@ -38,6 +38,7 @@ process RUN_ARPEGGIO {
 }
 
 process PROCESS_CONTACTS {
+    label 'lowmem' //gives 8gb and single core (max observed usage is 8gb)
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts"
     errorStrategy { task.exitStatus in 103..106 ? 'ignore' : 'terminate' }
@@ -52,6 +53,7 @@ process PROCESS_CONTACTS {
 }
 
 process PROCESS_ALL_CONTACTS {
+    label 'largecpu_largmem'
     publishDir "${params.publish_dir}/contacts"
     cache 'lenient'
     input:
@@ -108,6 +110,7 @@ process SCORE_LIGANDS {
 }
 
 process PRODUCE_NEO4J_FILES {
+    label 'largecpu_largmem'
     cache 'lenient'
     publishDir "${params.publish_dir}/neo4j"
     input:
