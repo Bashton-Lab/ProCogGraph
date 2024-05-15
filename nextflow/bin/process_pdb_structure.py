@@ -95,7 +95,7 @@ def main():
     #unknown atom or ion can result in ? in molweight - e.g. 1svu, so filter the df before taking molweight sum (also filter dot as we know these can occur elsewhere)
     assembly_molwt_kda = struct_asym_info.loc[struct_asym_info.molweight.isin(["?", "."]) == False].molweight.astype("float").sum() / 1000
 
-    if assembly_molwt_kda >= 100:
+    if assembly_molwt_kda >= 250:
         print("Large structure detected, run individually instead of in pipeline. exiting")
         sys.exit(100)
 
