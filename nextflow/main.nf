@@ -1,6 +1,7 @@
 #! /usr/bin/env nextflow
 
 process PROCESS_MMCIF {
+    label 'smallmem' //gives 8gb and single core (max observed usage is 8gb)
     publishDir "${params.publish_dir}/process_struct"
     errorStrategy { task.exitStatus in 99..102 ? 'ignore' : 'terminate' }
     cache 'lenient'
