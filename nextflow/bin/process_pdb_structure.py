@@ -61,7 +61,7 @@ def main():
         print("Mixed separators detected, exiting")
         sys.exit(1)
 
-    entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description']), columns = ["entity_id", "description"])
+    entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description', '_entity.formula_weight']), columns = ["entity_id", "description", "molweight"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
