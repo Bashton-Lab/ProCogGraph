@@ -92,7 +92,8 @@ def main():
 
     struct_asym_info = struct_asym_info.merge(assembly_info_exploded_oper, on = "struct_asym_id", indicator = True)
     assert(len(struct_asym_info.loc[struct_asym_info._merge != "both"]) == 0)
-    assembly_molwt_kda = struct_asym_info.molweight.astype("float").sum() / 1000
+    #unknown atom or ion can result in ? in molweight - e.g. 1svu, so filter the df before taking molweight sum (also filter dot as we know these can occur elsewhere)
+    assembly_molwt_kda = struct_asym_info.loc[struct_asym_info.molweight.isin(["?", "."]) == False].molweight.astype("float").sum() / 1000
 
     if assembly_molwt_kda >= 100:
         print("Large structure detected, run individually instead of in pipeline. exiting")
