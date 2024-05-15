@@ -60,10 +60,6 @@ def main():
     else:
         print("Mixed separators detected, exiting")
         sys.exit(1)
-    
-    # if len(bioh_struct_asym) >= 30:
-    #     print("Large structure detected, run individually instead of in pipeline. exiting")
-    #     sys.exit(100)
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description']), columns = ["entity_id", "description"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
@@ -88,6 +84,19 @@ def main():
     assembly_info_exploded_oper.loc[assembly_info_exploded_oper.type == "'identity operation'", "oper_expression"] = ""
     assembly_info_exploded_oper.drop(columns = ["oper_expression_id", "type" , "_merge"], inplace = True)
 
+    #arpeggio can spend over 30 hours running on some structures which have a high molecular weight like capsid structures. In order to build the database in a realistic time, we filter out structures with assemblies > Xkda
+    struct_asym_info = pd.DataFrame(block.find(['_struct_asym.id', '_struct_asym.entity_id']), columns = ["struct_asym_id", "entity_id"])
+    struct_asym_info = struct_asym_info.merge(entity_info, on = "entity_id", indicator = True)
+    assert(len(struct_asym_info.loc[struct_asym_info._merge != "both"]) == 0)
+    struct_asym_info.drop(columns = "_merge", inplace = True)
+
+    struct_asym_info = struct_asym_info.merge(assembly_info_exploded_oper, on = "struct_asym_id", indicator = True)
+    assert(len(struct_asym_info.loc[struct_asym_info._merge != "both"]) == 0)
+    assembly_molwt_kda = struct_asym_info.molweight.astype("float").sum() / 1000
+
+    if assembly_molwt_kda >= 100:
+        print("Large structure detected, run individually instead of in pipeline. exiting")
+        sys.exit(100)
 
     ##check if the structure has any domains before continuing (if not the structure should not be processed) - e.g. 1lg1 (1i8q shows why auth doesn't work)
     domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
