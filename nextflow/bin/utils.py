@@ -200,22 +200,9 @@ def extract_interpro_domain_annotations(xml_file):
             gene3d_annotations = {}
             interpro_id = interpro.attrib['id']
             interpro_short_name = interpro.attrib['short_name']
-            # Find db_xref elements with db attribute as PFAM
-            superfamily_refs = interpro.findall('.//db_xref[@db="SSF"]')
-            gene3d_refs = interpro.findall('.//db_xref[@db="CATHGENE3D"]')
-            superfamily_accessions = []
-            gene3d_accessions = []
-            # Extract PFAM accessions for the current interpro element
-            for superfamily_ref in superfamily_refs:
-                superfamily_accessions.append("SUPERFAMILY:" + superfamily_ref.attrib.get('dbkey'))
-            for gene3d_ref in gene3d_refs:
-                gene3d_accessions.append(gene3d_ref.attrib.get('dbkey')) #no prefix for gene3d as it is prefixed in ref
-            accessions = gene3d_accessions + superfamily_accessions
-            accessions = "|".join(accessions)
             # Store PFAM annotations for the interpro ID
             interpro_info.append({"interpro_accession": interpro_id,
-                                        "interpro_name": interpro_short_name,
-                                          "dbxref": accessions})
+                                        "interpro_name": interpro_short_name})
     interpro_info_df = pd.DataFrame(interpro_info)       
 
     return interpro_info_df

@@ -218,9 +218,7 @@ def main():
     if len(interpro_contacts) > 0:
         interpro_annotations = extract_interpro_domain_annotations(args.interpro_xml)
         interpro_contacts = interpro_contacts.merge(interpro_annotations, left_on = "xref_db_acc", right_on = "interpro_accession", how = "left")
-        interpro_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & ((interpro_contacts.xref_db_acc.str.contains("SSF")) | (interpro_contacts.xref_db_acc.str.contains("G3DSA")))]
-        superfamily_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("SSF"))]
-        gene3d_sa_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("G3DSA"))]
+        interpro_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False)]
         interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
         interpro_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
