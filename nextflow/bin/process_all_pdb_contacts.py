@@ -71,7 +71,7 @@ def build_cath_dataframe(cath_names, cath_domain_list):
         architecture_name = cath_names.loc[cath_names.cath_code == architecture, "name"].values[0]
         class_ = re.search(class_regex, homologous_superfamily).group(1)
         class_name = cath_names.loc[cath_names.cath_code == class_, "name"].values[0]
-        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
+        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_homologous_superfamily": homologous_superfamily, "cath_homologous_superfamily_name": homologous_superfamily_name, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
         domain_list.append(domain)
     domain_df = pd.DataFrame(domain_list)
     return domain_df
@@ -198,7 +198,7 @@ def main():
 
     if len(scop_contacts) > 0:
         scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
-        scop_contacts = scop_contacts.merge(scop_domains_info, how = "left", left_on = "xref_db_acc", right_on = "scop_id", indicator = True)
+        scop_contacts = scop_contacts.merge(scop_domains_info, how = "left", left_on = "xref_db_acc", right_on = "domain_sunid", indicator = True)
         assert(len(scop_contacts.loc[scop_contacts._merge != "both"]) == 0)
         scop_contacts.drop(columns = "_merge", inplace = True)
         scop_contacts.to_csv(f"scop_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")

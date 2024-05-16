@@ -174,6 +174,7 @@ if not os.path.exists(pickle_filename):
         results_df = pre_calculated
         # Save the smiles_ec_pairs for the chunk as a pickle file
         results_df.to_pickle(pickle_filename)
+        cache_df.to_pickle(f"cache_parity_calcs_new.pkl") #output the original cache as new if no new calculations are done
 
 
 end = time.time()

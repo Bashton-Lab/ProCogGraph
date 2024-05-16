@@ -128,7 +128,7 @@ def main():
     scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", "cath_homologous_superfamily"]].drop_duplicates()
+    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", "cath_domain"]].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"]
     cath_domains_nodes[":LABEL"] = cath_domains_nodes["type"] + "|domain"
@@ -190,15 +190,18 @@ def main():
     scop_fold_class_rels.rename(columns = {"cf_id": ":START_ID(scop-fold-id)", "cl_id": ":END_ID(scop-class-id)"}, inplace = True)
     scop_fold_class_rels.to_csv(f"scop_fold_class_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_class_nodes = cath_domains.cath_class.unique()
-    cath_architecture_nodes = cath_domains.cath_architecture.unique()
-    cath_topology_nodes = cath_domains.cath_topology.unique()
-    cath_homologous_superfamily_nodes = cath_domains.cath_homologous_superfamily.unique()
-
-    np.savetxt(f"cath_class_nodes.csv.gz", cath_class_nodes, delimiter='\t',fmt='%s', header='cathClass:ID(cath-class-ID)', comments='')
-    np.savetxt(f"cath_architecture_nodes.csv.gz", cath_architecture_nodes, delimiter='\t',fmt='%s', header='cathArchitecture:ID(cath-architecture-ID)', comments='')
-    np.savetxt(f"cath_topology_nodes.csv.gz", cath_topology_nodes, delimiter='\t',fmt='%s', header='cathTopology:ID(cath-topology-ID)', comments='')
-    np.savetxt(f"cath_homologous_superfamily_nodes.csv.gz", cath_homologous_superfamily_nodes, delimiter='\t',fmt='%s', header='cathHomologousSuperfamily:ID(cath-homologous-superfamily-ID)', comments='')
+    cath_class_nodes = cath_domains[["cath_class", "cath_class_name"]].drop_duplicates()
+    cath_class_nodes.rename(columns = {"cath_class": "cathClass:ID(cath-class-ID)", "cath_class_name": "description"}, inplace = True)
+    cath_class_nodes.to_csv(f"cath_class_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+    cath_architecture_nodes = cath_domains[["cath_architecture", "cath_architecture_name"]].drop_duplicates()
+    cath_architecture_nodes.rename(columns = {"cath_architecture": "cathArchitecture:ID(cath-architecture-ID)", "cath_architecture_name": "description"}, inplace = True)
+    cath_architecture_nodes.to_csv(f"cath_architecture_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+    cath_topology_nodes = cath_domains[["cath_topology", "cath_topology_name"]].drop_duplicates()
+    cath_topology_nodes.rename(columns = {"cath_topology": "cathTopology:ID(cath-topology-ID)", "cath_topology_name": "description"}, inplace = True)
+    cath_topology_nodes.to_csv(f"cath_topology_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+    cath_homologous_superfamily_nodes = cath_domains[["cath_homologous_superfamily", "cath_homologous_superfamily_name"]].drop_duplicates()
+    cath_homologous_superfamily_nodes.rename(columns = {"cath_homologous_superfamily": "cathHomologousSuperfamily:ID(cath-homologous-superfamily-ID)", "cath_homologous_superfamily_name": "description"}, inplace = True)
+    cath_homologous_superfamily_nodes.to_csv(f"cath_homologous_superfamily_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     cath_class_architecture_rels = cath_domains[["cath_class", "cath_architecture"]].rename(columns = {"cath_class": ":END_ID(cath-class-ID)", "cath_architecture" : ":START_ID(cath-architecture-ID)"}).drop_duplicates()
     cath_architecture_topology_rels = cath_domains[["cath_architecture", "cath_topology"]].rename(columns = {"cath_architecture": ":END_ID(cath-architecture-ID)", "cath_topology" : ":START_ID(cath-topology-ID)"}).drop_duplicates()
