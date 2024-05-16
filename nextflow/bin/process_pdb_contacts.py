@@ -227,10 +227,8 @@ def main():
     domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
     domain_info_df_exploded.drop_duplicates()
 
-    protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "left", indicator = True)
-    assert(len(protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain._merge != "both"]) == 0)
-    protein_entity_df_assembly_domain.drop(columns = "_merge", inplace = True)
-
+    protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "inner") #keep the chains in the assembly which have domain information (but not domains in chains not in the assembly)
+    
     protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
     protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db"] = "G3DSA"
     protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
