@@ -225,6 +225,8 @@ def main():
     if len(domain_info_df.loc[domain_info_df.xref_db == "InterPro"]) > 0:
         domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"] = domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"].str.split("_")
         domain_info_df_exploded = domain_info_df.explode("xref_db_acc")
+    else:
+        domain_info_df_exploded = domain_info_df
     domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
     domain_info_df_exploded.drop_duplicates()
 
