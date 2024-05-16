@@ -43,12 +43,12 @@ process PROCESS_CONTACTS {
     publishDir "${params.publish_dir}/process_contacts" mode: 'copy'
     errorStrategy { task.exitStatus in 124..126 ? 'ignore' : 'terminate' }
     input:
-        tuple val(pdb_id), val(assembly_id), path(updated_cif), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
+        tuple val(pdb_id), val(assembly_id), path(updated_cif), path(sifts_xml), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
     output:
         path("${pdb_id}_bound_entity_contacts.tsv")
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --bound_entity_pickle ${bound_entity_pickle} --cif ${updated_cif} --contacts ${arpeggio_json} --pdb_id ${pdb_id} --assembly_id ${assembly_id} --domain_contact_cutoff ${domain_contact_cutoff}
+    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --bound_entity_pickle ${bound_entity_pickle} --cif ${updated_cif} --contacts ${arpeggio_json} --pdb_id ${pdb_id} --sifts_xml ${sifts_xml} --assembly_id ${assembly_id} --domain_contact_cutoff ${domain_contact_cutoff}
     """
 }
 
@@ -193,7 +193,7 @@ workflow {
         pdb_ids
             .map { all_out -> [all_out[0], file(all_out[3])] } ))
     contacts = PROCESS_CONTACTS(
-       pdb_ids.map { all_out -> [all_out[0], all_out[1], all_out[2]] } 
+       pdb_ids.map { all_out -> [all_out[0], all_out[1], all_out[2], all_out[4]] } 
        .join(
         process_mmcif.map { all_out -> [all_out[0], all_out[1]] })
         .join(
