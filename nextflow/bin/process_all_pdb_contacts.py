@@ -198,6 +198,7 @@ def main():
 
     if len(scop_contacts) > 0:
         scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
+        scop_contacts["xref_db_acc"] = scop_contacts["xref_db_acc"].astype(int)
         scop_contacts = scop_contacts.merge(scop_domains_info, how = "left", left_on = "xref_db_acc", right_on = "domain_sunid", indicator = True)
         assert(len(scop_contacts.loc[scop_contacts._merge != "both"]) == 0)
         scop_contacts.drop(columns = "_merge", inplace = True)
