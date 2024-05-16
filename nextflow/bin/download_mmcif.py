@@ -164,8 +164,8 @@ def download_sifts_xml(host, remote_dir, pdb_ids, local_dir):
 
     ftp.quit()
 
-    xml_manifest = pd.DataFrame({"pdb_id": pdb_file_ids, "protonated_assembly": pdb_file_paths})
-    print(xml_manifest)
+    xml_manifest = pd.DataFrame({"pdb_id": pdb_file_ids, "sifts_xml": pdb_file_paths})
+
     return xml_manifest
 
 def main():
