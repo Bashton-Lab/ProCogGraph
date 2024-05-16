@@ -232,17 +232,17 @@ def main():
 
     protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "inner") #keep the chains in the assembly which have domain information (but not domains in chains not in the assembly)
     
+    if len(protein_entity_df_assembly_domain) == 0:
+        #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
+        print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
+        sys.exit(126)
+        
     protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
 
-    if len(protein_entity_df_assembly_domain) == 0:
-        #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
-        print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
-        sys.exit(126)
     #need to map auth id's for protein entities to seq ids for domain ranges
-
     seq_sites = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.label_seq_id', '_atom_site.auth_asym_id', '_atom_site.auth_seq_id', '_atom_site.pdbx_PDB_ins_code']), columns = ["protein_entity_id","chain_id", "seq_id", "auth_asym_id", "auth_seq_id", "pdb_ins_code"]).drop_duplicates()
     protein_seq_sites = seq_sites.loc[seq_sites.protein_entity_id.isin(protein_entity_df_assembly.protein_entity_id.unique())].copy()
     assert(len(protein_seq_sites.loc[protein_seq_sites.seq_id == "."]) == 0) #need to have a seq id to map to
