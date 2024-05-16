@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, parse_cddf, build_cath_dataframe, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
@@ -172,8 +172,8 @@ def main():
     superfamily_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SuperFamily"].copy()
 
     core_cols = contacts_ec_uniprot.columns.tolist()
-    cath_cols = ['cath_db_version', 'cath_db_verdate', 'cath_name', 'cath_source', 'cath_code', 'cath_class', 'cath_architecture', 'cath_topology',
-        'cath_homologous_superfamily', 'cath_domain_length', 'cath_domain_seq_header', 'cath_domain_seqs', 'cath_num_segments', 'cath_segments_dict']
+    cath_cols = ['cath_domain', 'cath_name', 'cath_code', 'cath_class', 'cath_class_name', 'cath_architecture', 'cath_architecture_name', 'cath_topology', 'cath_topology_name',
+        'cath_homologous_superfamily', 'cath_homologous_superfamily_name']
     scop_cols = ['scop_id', 'sccs', 'domain_sunid', 'ancestor_sunid', 'cl_id', 'cf_id', 'sf_id', 'fa_id', 'dm_id', 'sp_id',
         'px_id', 'cl_description', 'cf_description', 'sf_description','fa_description', 'dm_description', 'sp_description', 'px_description']
     scop2b_cols = []
