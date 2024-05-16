@@ -135,11 +135,11 @@ def main():
     cath_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    interpro_domain_nodes = interpro_domains[["assembly_chain_id_protein", "domain_accession", 'interpro_id','interpro_short_name', 'dbxref']].drop_duplicates()
+    interpro_domain_nodes = interpro_domains[["assembly_chain_id_protein", "domain_accession", 'interpro_id','interpro_name']].drop_duplicates()
     interpro_domain_nodes["type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_id"]
     interpro_domain_nodes[":LABEL"] = interpro_domain_nodes["type"] + "|domain"
-    interpro_domain_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(interpro-domain-id)" , "interpro_id": "interproAccession", "interpro_short_name": "name", "dbxref": "dbxref:string[]"}, inplace = True)
+    interpro_domain_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(interpro-domain-id)" , "interpro_id": "interproAccession", "interpro_name": "name""}, inplace = True)
     interpro_domain_nodes.to_csv(f"interpro_domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[["assembly_chain_id_protein", "domain_accession", 'pfam_accession', 'pfam_name', 'pfam_description']].drop_duplicates()
