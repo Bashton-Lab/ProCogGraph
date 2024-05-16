@@ -58,6 +58,24 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
 
     return sifts_chains_ec, sifts_chains_uniprot
 
+def build_cath_dataframe(cath_names, cath_domain_list):
+    topology_regex = r'^(\d+\.\d+\.\d+)\.'
+    architecture_regex = r'^(\d+\.\d+)\.'
+    class_regex = r'^(\d+)\.'
+    domain_list = []
+    for homologous_superfamily in cath_domain_list:
+        homologous_superfamily_name = cath_names.loc[cath_names.cath_code == homologous_superfamily, "name"].values[0]
+        topology = re.search(topology_regex, homologous_superfamily).group(1)
+        topology_name = cath_names.loc[cath_names.cath_code == topology, "name"].values[0]
+        architecture = re.search(architecture_regex, homologous_superfamily).group(1)
+        architecture_name = cath_names.loc[cath_names.cath_code == architecture, "name"].values[0]
+        class_ = re.search(class_regex, homologous_superfamily).group(1)
+        class_name = cath_names.loc[cath_names.cath_code == class_, "name"].values[0]
+        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
+        domain_list.append(domain)
+    domain_df = pd.DataFrame(domain_list)
+    return domain_df
+
 def main():
 
     parser = argparse.ArgumentParser(description='')
@@ -69,7 +87,7 @@ def main():
     parser.add_argument('--scop_domains_info_file', type=str, help='scop domains info file')
     parser.add_argument('--scop_descriptions_file', type=str, help='scop descriptions file')
     parser.add_argument('--interpro_xml', type=str, help='interpro xml file')
-    parser.add_argument('--cddf', type=str, help='cath domain description file')
+    parser.add_argument('--cath_names', type=str, help='cath names file')
     parser.add_argument('--glycoct_cache', type=str, help='glycoct cache file')
     parser.add_argument('--smiles_cache', type=str, help='smiles cache file')
     parser.add_argument('--csdb_linear_cache', type=str, help='csdb linear cache file')
@@ -167,8 +185,9 @@ def main():
     if len(cath_contacts) > 0:
         #run the cath_domain_list on only the domains we need
         cath_domain_list = cath_contacts.xref_db_acc.unique()
-        cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
-        cath_domains_info = build_cath_dataframe(cath_parsed_data)
+        cath_names = pd.read_csv(args.cath_names, sep = "    ", header = None, comment = "#", names = ["cath_code", "representative_domain", "name"])
+        cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
+        cath_domains_info = build_cath_dataframe(cath_names,cath_domain_list)
         cath_contacts = cath_contacts.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
         assert(len(cath_contacts.loc[cath_contacts._merge != "both"]) == 0)
         cath_contacts.drop(columns = "_merge", inplace = True)
