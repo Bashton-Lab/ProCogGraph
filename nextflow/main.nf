@@ -2,8 +2,8 @@
 
 process PROCESS_MMCIF {
     label 'lowmem' //gives 8gb and single core (max observed usage is 8gb)
-    publishDir "${params.publish_dir}/process_struct"
-    errorStrategy { task.exitStatus in 99..102 ? 'ignore' : 'terminate' }
+    publishDir "${params.publish_dir}/process_struct" mode: 'copy'
+    errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
         tuple( val(pdb_id), val(assembly_id), path(updated_cif), path(protonated_cif) )
@@ -18,11 +18,11 @@ process PROCESS_MMCIF {
 }
 
 process RUN_ARPEGGIO {
-    label 'medmem' //medmem gives 4 cores and 16gb in slurm submission (max observed usage is 4gb - offering overhead for complex structures)
+    label 'arpeggio' //gives 18gb mem for arpeggio in slurm submission (offering overhead for complex structures)
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
     errorStrategy 'ignore' //temporary - arpeggio has errors when chem_comp.name is empty (bool false e.g. 2c16 - working on a fix)
-    publishDir "${params.publish_dir}/arpeggio"
+    publishDir "${params.publish_dir}/arpeggio" mode: 'copy'
     input:
         tuple val(pdb_id), path(arpeggio_selections), path(bio_h_cif)
 
@@ -38,10 +38,10 @@ process RUN_ARPEGGIO {
 }
 
 process PROCESS_CONTACTS {
-    label 'lowmem' //gives 8gb and single core (max observed usage is 8gb)
+    label 'medmem' //gives 12gb and single core (max observed usage is below 12gb)
     cache 'lenient'
-    publishDir "${params.publish_dir}/process_contacts"
-    errorStrategy { task.exitStatus in 103..106 ? 'ignore' : 'terminate' }
+    publishDir "${params.publish_dir}/process_contacts" mode: 'copy'
+    errorStrategy { task.exitStatus in 124..126 ? 'ignore' : 'terminate' }
     input:
         tuple val(pdb_id), val(assembly_id), path(updated_cif), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
     output:
@@ -54,7 +54,7 @@ process PROCESS_CONTACTS {
 
 process PROCESS_ALL_CONTACTS {
     label 'largecpu_largmem'
-    publishDir "${params.publish_dir}/contacts"
+    publishDir "${params.publish_dir}/contacts" mode: 'copy'
     cache 'lenient'
     input:
         path combined_contacts
@@ -92,7 +92,7 @@ process PROCESS_ALL_CONTACTS {
 process SCORE_LIGANDS {
     label 'largecpu_largmem'
     cache 'lenient'
-    publishDir "${params.publish_dir}/scores"
+    publishDir "${params.publish_dir}/scores" mode: 'copy'
     input:
         path bound_entities_to_score
         path cognate_ligands
@@ -112,7 +112,7 @@ process SCORE_LIGANDS {
 process PRODUCE_NEO4J_FILES {
     label 'largecpu_largmem'
     cache 'lenient'
-    publishDir "${params.publish_dir}/neo4j"
+    publishDir "${params.publish_dir}/neo4j" mode: 'copy'
     input:
         path all_parity_calcs
         path cognate_ligands
@@ -183,7 +183,7 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly) ] }
+    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml) ] }
     process_mmcif = PROCESS_MMCIF( pdb_ids
         .map { all_out -> [all_out[0], all_out[1], file(all_out[2]), file(all_out[3])] } )
     arpeggio = RUN_ARPEGGIO(
