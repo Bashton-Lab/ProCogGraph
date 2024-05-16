@@ -208,6 +208,7 @@ def main():
     combined_manifest = pd.concat(manifests)
     final_manifest = sifts_assemblies.merge(combined_manifest, left_on="PDB", right_on="pdb_id", how="left")
     final_manifest.drop(columns = ["pdb_id"], inplace = True)
+    final_manifest = final_manifest.loc[(final_manifest.updated_mmcif.notnull()) & (final_manifest.protonated_assembly.notnull()) & (final_manifest.sifts_xml.notnull())]
     final_manifest.to_csv("final_manifest.csv", index=False)
 
     
