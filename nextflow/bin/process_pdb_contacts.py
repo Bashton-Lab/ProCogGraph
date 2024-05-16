@@ -222,17 +222,18 @@ def main():
     # combine with domain info df
     domain_info_df = pd.merge(domain_df_grouped, db_df, on='xref_db', how='left')
 
-    domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"] = domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"].str.split("_")
-    domain_info_df_exploded = domain_info_df.explode("xref_db_acc")
+    if len(domain_info_df.loc[domain_info_df.xref_db == "InterPro"]) > 0:
+        domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"] = domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"].str.split("_")
+        domain_info_df_exploded = domain_info_df.explode("xref_db_acc")
     domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
     domain_info_df_exploded.drop_duplicates()
 
     protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "inner") #keep the chains in the assembly which have domain information (but not domains in chains not in the assembly)
     
     protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
-    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db"] = "G3DSA"
-    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
-    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF"), "xref_db"] = "SuperFamily"
+    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
+    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
+    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
 
     if len(protein_entity_df_assembly_domain) == 0:
         #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
