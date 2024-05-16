@@ -1,5 +1,5 @@
 #/usr/bin/env python
-
+from ftplib import FTP
 import pandas as pd
 import argparse
 import requests
@@ -83,6 +83,14 @@ def process_pdb_chunk(pdb_ids):
 
     manifest = manifest.merge(protonated_manifest, on="pdb_id", how="left")
 
+    #get the sifts xml files.
+    host = 'ftp.ebi.ac.uk'
+    remote_dir = '/pub/databases/msd/sifts/xml'
+    local_dir = os.getcwd()
+    xml_manifest = download_sifts_xml(host, remote_dir, pdb_ids, local_dir)
+
+    manifest = manifest.merge(xml_manifest, on="pdb_id", how="left")
+
     return manifest
 
 
@@ -127,6 +135,38 @@ def make_modelserver_query(pdb_ids, chunk_size = 50):
             print(f"Request failed with status code {protonated_assembly_response.status_code} on ids: {protonated_query_ids}")
 
     return protonated_id_list
+
+def download_sifts_xml(host, remote_dir, pdb_ids, local_dir):
+    ftp = FTP(host)
+    ftp.login()
+
+    # Change to the remote directory
+    ftp.cwd(remote_dir)
+    pdb_file_paths = []
+    pdb_file_ids = []
+    # Iterate over pdb ids and download each file
+    for pdb in pdb_ids:
+        file_name = f"{pdb}.xml.gz"  # Modify the file extension as needed
+        local_file_path = os.path.join(local_dir, file_name)
+        if os.path.exists(local_file_path):
+            pdb_file_paths.append(local_file_path)
+            pdb_file_ids.append(pdb)
+            continue
+        try:
+            with open(local_file_path, 'wb') as local_file:
+                ftp.retrbinary(f"RETR {file_name}", local_file.write)
+            pdb_file_paths.append(local_file_path)
+            pdb_file_ids.append(pdb)
+        except:
+            print(f"Error downloading {file_name}")
+            pdb_file_paths.append(None)
+            pdb_file_ids.append(pdb)
+
+    ftp.quit()
+
+    xml_manifest = pd.DataFrame({"pdb_id": pdb_file_ids, "protonated_assembly": pdb_file_paths})
+    print(xml_manifest)
+    return xml_manifest
 
 def main():
     parser = argparse.ArgumentParser(description='')
