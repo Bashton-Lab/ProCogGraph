@@ -150,6 +150,8 @@ def main():
     scop2b_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
     interpro_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "InterPro"].copy()
+    gene3d_sa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
+    superfamily_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SuperFamily"].copy()
 
     core_cols = contacts_ec_uniprot.columns.tolist()
     cath_cols = ['cath_db_version', 'cath_db_verdate', 'cath_name', 'cath_source', 'cath_code', 'cath_class', 'cath_architecture', 'cath_topology',
@@ -200,21 +202,26 @@ def main():
         superfamily_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("SSF"))]
         gene3d_sa_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False) & (interpro_contacts.xref_db_acc.str.contains("G3DSA"))]
         interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-        superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-        gene3d_sa_contacts.to_csv(f"g3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
         interpro_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
         superfamily_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
         gene3d_sa_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
         interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-        superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-        gene3d_sa_contacts.to_csv(f"g3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    #output the processed contacts files
     if len(scop2b_contacts) > 0:
         scop2b_contacts.to_csv(f"scop2b_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
         scop2b_contacts = pd.DataFrame()
         scop2b_contacts.to_csv(f"scop2b_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(gene3d_sa_contacts) > 0:
+        gene3d_sa_contacts.to_csv(f"gene3d_sa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    else:
+        gene3d_sa_contacts = pd.DataFrame()
+        gene3d_sa_contacts.to_csv(f"gene3d_sa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(superfamily_contacts) > 0:
+        superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    else:
+        superfamily_contacts = pd.DataFrame()
+        superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
 if __name__ == "__main__":
     main()

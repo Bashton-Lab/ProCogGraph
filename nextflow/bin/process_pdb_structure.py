@@ -18,10 +18,9 @@ def main():
     The script will output a csv file containing the arpeggio query and a pickled dataframe containing information on the bound
     ligands in the structure.
     Script may be expected to fail if:
-        1. The cif file does not have the right number of values in loop _atom_site (exitcode 99)
-        2. The assembly contains more than 30 struct_asym ids (exitcode 100) - run these structures individually and combine manually.
-        3. No domains are found in the cif file (exitcode 101)
-        4. No bound entities are found in the cif file/assembly mapping (exitcode 102)
+        1. The cif file does not have the right number of values in loop _atom_site (exitcode 120)
+        2. The assembly has high molwt (exitcode 121) - run these structures individually and combine manually.
+        3. No domains/bound entities are found in the cif file, or none map to the units in the assembly (exitcode 122)
 
     """
 
@@ -37,9 +36,9 @@ def main():
     except ValueError as e:
         # know of at least one case of this error: 8j07_updated, so we catch it here and allow it in nextflow pipelien by specific exit code
         if "Wrong number of values in loop _atom_site" in str(e):
-            sys.exit(100)
+            sys.exit(120)
         else:
-            sys.exit(1)
+            sys.exit(1) #exit with default error code and pause pipeline
 
     block = doc.sole_block()
 
@@ -59,7 +58,7 @@ def main():
         separator = separators[0]
     else:
         print("Mixed separators detected, exiting")
-        sys.exit(1)
+        sys.exit(1) #exit with default error code and pause pipeline
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description', '_entity.formula_weight']), columns = ["entity_id", "description", "molweight"])
     entity_info["description"] = entity_info["description"].str.strip("\"|'")
@@ -95,18 +94,10 @@ def main():
     #unknown atom or ion can result in ? in molweight - e.g. 1svu, so filter the df before taking molweight sum (also filter dot as we know these can occur elsewhere)
     assembly_molwt_kda = struct_asym_info.loc[struct_asym_info.molweight.isin(["?", "."]) == False].molweight.astype("float").sum() / 1000
 
-    if assembly_molwt_kda >= 250:
+    if assembly_molwt_kda >= 300:
         print("Large structure detected, run individually instead of in pipeline. exiting")
-        sys.exit(100)
+        sys.exit(121)
 
-    ##check if the structure has any domains before continuing (if not the structure should not be processed) - e.g. 1lg1 (1i8q shows why auth doesn't work)
-    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
-        columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
-    ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this
-    domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
-    if len(domain_info_dataframe_filtered) == 0:
-        print("No domains found in cif file [CATH, SCOP, SCOP2B, Pfam, InterPro]")
-        sys.exit(101)
     #switched auth_asym_id to pdb_asym_id (which is a pointer to atom_site auth asym id and seems to hold up better for branch structures in the mapping to pdb-h structure)
     branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.pdb_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
     branched_seq_info_merged =  pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'hetCode', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'descriptor'])
@@ -142,7 +133,7 @@ def main():
         #assembly may not include all bound entities. e.g. 3m43 GOL not in assembly
         if len(bound_entity_info_assembly) == 0:
             print("No bound entities mapped to the assembly operations for preferred assembly")
-            sys.exit(102)
+            sys.exit(122)
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
         #originally beleived the protonated structure for branch used struct asym id, but it seems to use auth asym id so following two lines are identical and could be deduplicated once we are sure this is true
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + separator + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
@@ -163,7 +154,7 @@ def main():
         bound_entity_info_grouped.to_pickle(f"{args.pdb_id}_bound_entity_info.pkl")
     else:
         print("No bound entities found in cif file")
-        sys.exit(102)
+        sys.exit(122)
 
 if __name__ == "__main__":
     main()

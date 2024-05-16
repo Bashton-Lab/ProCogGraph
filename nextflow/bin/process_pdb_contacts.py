@@ -84,10 +84,9 @@ def main():
     Extracts domain information from the updated MMCIF file and assigns ownership categories to ligands based on domain contact percentages
     derived from pdbe-arpeggio.
     Is expected to fail if:
-        1. No contacts are found between the ligand and any protein entity (e.g. only to DNA) (exitcode 103)
-        2. No contacts are present within an annotated domain (exitcode 104)
-        3. No contacts are found between the ligand and any domains in the annotation (exitcode 105)
-        4. No domains are present for any protein entities in the assembly (exitcode 106)
+        1. No contacts are found between the ligand and any protein entity (e.g. only to DNA) (exitcode 124)
+        2. No contacts are present within an annotated domain (exitcode 125)
+        3. No domains are present for any protein entities in the assembly (exitcode 126)
     """
 
     parser = argparse.ArgumentParser(description='')
@@ -97,6 +96,7 @@ def main():
     parser.add_argument('--pdb_id', type=str, help='pdb id of the structure')
     parser.add_argument('--assembly_id', type=str, help='assembly id of the structure')
     parser.add_argument('--domain_contact_cutoff' , type = int, default = 3, help = 'minimum number of contacts for a domain to be considered')
+    parser.add_argument('--sifts_xml', type=str, help='sifts xml file (gzipped)')
     args = parser.parse_args()
 
     doc = cif.read(args.cif)
@@ -151,32 +151,95 @@ def main():
     protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["assembly_chain_id_protein"].str.strip("_")
     protein_entity_df_assembly.drop(columns = ["_merge", "oper_expression"], inplace = True)
 
-    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
-            columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
+    
+    ##THE UPDATED MMCIF FILE DOES NOT CONTAIN A FULL SET OF DOMAIN INFORMATION, WE NEED TO USE THE PDBE SIFTS XML DATA FILES TO GET THIS.
+    with gzip.open(args.sifts_xml, 'rb') as f:
+        tree = ET.parse(f)
+        root = tree.getroot()
 
-    ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this
-    ##we check in process_pdb_structure that domains are present for the structure, so no need to fail here.
-    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
-        columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
-    domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
+    entity_id_list = []
+    db_resnum_list = []
+    dbsource_list = []
+    dbaccessionid_list = []
 
-    #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
-    domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"] 
-    domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
-    domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
-    #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
-    #assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
-    domain_info_dataframe_filtered_grouped["seq_range_chain"] = domain_info_dataframe_filtered_grouped["seq_range"].apply(lambda x: list(chain(*x)))
-    domain_info_dataframe_filtered_grouped.drop(columns = ["domain_name","seq_range", "instance_id"], inplace = True) #drop instance id now that assertion has passed - if this fails need to investigate struct
+    # Iterate over entities
+    for entity in root.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}entity'):
+        entity_id = entity.attrib['entityId']
+        # Iterate over all segments and listresidues in segments 
+        for segment in entity.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}segment'):
+            # Iterate over listResidue elements
+            for residue in segment.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}residue'):
+                db_resnum = residue.attrib['dbResNum']
+                # search crossrefdb for matching dbs
+                for crossRefDb in residue.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb'):
+                    dbsource = crossRefDb.attrib['dbSource']
+                    if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B"]:
+                        dbaccessionid = crossRefDb.attrib['dbAccessionId']
+                    elif dbsource == "InterPro":
+                        dbevidence = crossRefDb.attrib['dbEvidence']
+                        if dbevidence.startswith("SSF") or dbevidence.startswith("G3DSA"):
+                            dbaccessionid = crossRefDb.attrib['dbAccessionId'] + "_" + dbevidence
+                        else:
+                            continue
+                    else:
+                        continue
+                    # get db data in lists
+                    entity_id_list.append(entity_id)
+                    db_resnum_list.append(db_resnum)
+                    dbsource_list.append(dbsource)
+                    dbaccessionid_list.append(dbaccessionid)
+
+    # convert to dataframe
+    domain_df = pd.DataFrame({
+        'proteinStructAsymID': entity_id_list,
+        'seq_range_chain': db_resnum_list,
+        'xref_db': dbsource_list,
+        'xref_db_acc': dbaccessionid_list
+    })
+
+    # aggregate db resnum to lists 
+    domain_df_grouped = domain_df.groupby(['proteinStructAsymID', 'xref_db', 'xref_db_acc'])['seq_range_chain'].agg(list).reset_index()
 
 
-    protein_entity_df_assembly_domain = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
+    #get db specific info
+    db_source_list = []
+    db_version_list = []
+
+    # parse db info
+    for db_list in root.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}listDB'):
+        for db in db_list: 
+            db_source = db.attrib['dbSource']
+            db_version = db.attrib['dbVersion']
+            db_source_list.append(db_source)
+            db_version_list.append(db_version)
+
+    # convert to df 
+    db_df = pd.DataFrame({
+        'xref_db': db_source_list,
+        'xref_db_version': db_version_list
+    })
+
+    # combine with domain info df
+    domain_info_df = pd.merge(domain_df_grouped, db_df, on='xref_db', how='left')
+
+    domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"] = domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"].str.split("_")
+    domain_info_df_exploded = domain_info_df.explode("xref_db_acc")
+    domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
+    domain_info_df_exploded.drop_duplicates()
+
+    protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "left", indicator = True)
+    assert(len(protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain._merge != "both"]) == 0)
+    protein_entity_df_assembly_domain.drop(columns = "_merge", inplace = True)
+
+    protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
+    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db"] = "G3DSA"
+    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
+    protein_entity_df_assembly_domain.loc[protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF"), "xref_db"] = "SuperFamily"
+
     if len(protein_entity_df_assembly_domain) == 0:
         #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
         print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
-        sys.exit(106)
-    protein_entity_df_assembly_domain.drop(columns = ["entity_id", "asym_id"],inplace = True)
-
+        sys.exit(126)
     #need to map auth id's for protein entities to seq ids for domain ranges
 
     seq_sites = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.label_seq_id', '_atom_site.auth_asym_id', '_atom_site.auth_seq_id', '_atom_site.pdbx_PDB_ins_code']), columns = ["protein_entity_id","chain_id", "seq_id", "auth_asym_id", "auth_seq_id", "pdb_ins_code"]).drop_duplicates()
@@ -187,18 +250,17 @@ def main():
     protein_seq_sites["auth_seq_id_combined"] = protein_seq_sites["auth_seq_id_combined"].str.strip().str.rstrip("?._") 
     protein_entity_df_assembly_domain["auth_seq_range"] = protein_entity_df_assembly_domain.apply(lambda x: protein_seq_sites.loc[(protein_seq_sites.protein_entity_id == x.protein_entity_id) & (protein_seq_sites.seq_id.isin(x.seq_range_chain)), 'auth_seq_id_combined'].values.tolist(), axis = 1)
 
-
     #load the contacts data
     contacts = pd.read_json(f"{args.contacts}")
     if len(contacts) == 0:
         #for example, only proximal contacts - see 1a1q
         print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
-        sys.exit(103)
+        sys.exit(124)
     contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER" )].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
     if len(contacts_filtered) == 0:
         #for example, only proximal contacts - see 1a1q
         print(f"No valid contacts found for {args.pdb_id} between ligand and protein entity")
-        sys.exit(103)
+        sys.exit(124)
     contacts_filtered[["bgn_contact", "bgn_auth_asym_id", "bgn_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['bgn'].get('auth_asym_id')}/{str(x['bgn'].get('auth_seq_id'))}{str(x['bgn'].get('pdbx_PDB_ins_code')) if str(x['bgn'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['bgn'].get('auth_asym_id'), f"{x['bgn'].get('auth_seq_id')}_{x['bgn'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
     contacts_filtered[["end_contact", "end_auth_asym_id", "end_auth_seq_id"]] = contacts_filtered.apply(lambda x: [f"/{x['end'].get('auth_asym_id')}/{str(x['end'].get('auth_seq_id'))}{str(x['end'].get('pdbx_PDB_ins_code')) if str(x['end'].get('pdbx_PDB_ins_code')) not in [' ', '.', '?'] else ''}/", x['end'].get('auth_asym_id'), f"{x['end'].get('auth_seq_id')}_{x['end'].get('pdbx_PDB_ins_code')}"], axis = 1, result_type = "expand")
     contacts_filtered["end_auth_seq_id"] = contacts_filtered["end_auth_seq_id"].str.strip().str.rstrip("?._")
@@ -215,14 +277,14 @@ def main():
     if len(contacts_poly_merged) == 0:
         #for example, ligand interacts with DNA only in structure - see 2fjx
         print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
-        sys.exit(104)
+        sys.exit(124)
     
     contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
     contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
     if len(contacts_poly_merged_filtered) == 0:
         #for example - see 1y82
         print(f"No contacts found for {args.pdb_id} between ligand and any domains in annotation")
-        sys.exit(105)
+        sys.exit(125)
     contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
     contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
     contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]]).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index()
