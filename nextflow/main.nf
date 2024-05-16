@@ -2,7 +2,7 @@
 
 process PROCESS_MMCIF {
     label 'lowmem' //gives 8gb and single core (max observed usage is 8gb)
-    publishDir "${params.publish_dir}/process_struct" mode: 'copy'
+    publishDir "${params.publish_dir}/process_struct", mode: 'copy'
     errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
@@ -22,7 +22,7 @@ process RUN_ARPEGGIO {
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
     errorStrategy 'ignore' //temporary - arpeggio has errors when chem_comp.name is empty (bool false e.g. 2c16 - working on a fix)
-    publishDir "${params.publish_dir}/arpeggio" mode: 'copy'
+    publishDir "${params.publish_dir}/arpeggio", mode: 'copy'
     input:
         tuple val(pdb_id), path(arpeggio_selections), path(bio_h_cif)
 
@@ -40,7 +40,7 @@ process RUN_ARPEGGIO {
 process PROCESS_CONTACTS {
     label 'medmem' //gives 12gb and single core (max observed usage is below 12gb)
     cache 'lenient'
-    publishDir "${params.publish_dir}/process_contacts" mode: 'copy'
+    publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
     errorStrategy { task.exitStatus in 124..126 ? 'ignore' : 'terminate' }
     input:
         tuple val(pdb_id), val(assembly_id), path(updated_cif), path(sifts_xml), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
@@ -54,7 +54,7 @@ process PROCESS_CONTACTS {
 
 process PROCESS_ALL_CONTACTS {
     label 'largecpu_largmem'
-    publishDir "${params.publish_dir}/contacts" mode: 'copy'
+    publishDir "${params.publish_dir}/contacts", mode: 'copy'
     cache 'lenient'
     input:
         path combined_contacts
@@ -92,7 +92,7 @@ process PROCESS_ALL_CONTACTS {
 process SCORE_LIGANDS {
     label 'largecpu_largmem'
     cache 'lenient'
-    publishDir "${params.publish_dir}/scores" mode: 'copy'
+    publishDir "${params.publish_dir}/scores", mode: 'copy'
     input:
         path bound_entities_to_score
         path cognate_ligands
@@ -112,7 +112,7 @@ process SCORE_LIGANDS {
 process PRODUCE_NEO4J_FILES {
     label 'largecpu_largmem'
     cache 'lenient'
-    publishDir "${params.publish_dir}/neo4j" mode: 'copy'
+    publishDir "${params.publish_dir}/neo4j", mode: 'copy'
     input:
         path all_parity_calcs
         path cognate_ligands
