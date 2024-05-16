@@ -234,7 +234,7 @@ def main():
     
     protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
-    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
+    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
 
     if len(protein_entity_df_assembly_domain) == 0:
