@@ -128,9 +128,9 @@ def main():
     scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", "cath_domain"]].drop_duplicates()
+    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name"]].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
-    cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"]
+    cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + cath_domains_nodes["cath_domain"]
     cath_domains_nodes[":LABEL"] = cath_domains_nodes["type"] + "|domain"
     cath_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily"}, inplace = True)
     cath_domains_nodes.to_csv(f"cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
