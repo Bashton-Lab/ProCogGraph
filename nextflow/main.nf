@@ -53,7 +53,7 @@ process PROCESS_CONTACTS {
 }
 
 process PROCESS_ALL_CONTACTS {
-    label 'largecpu_largmem'
+    label 'largecpu_largemem'
     publishDir "${params.publish_dir}/contacts", mode: 'copy'
     cache 'lenient'
     input:
@@ -90,7 +90,7 @@ process PROCESS_ALL_CONTACTS {
 }
 
 process SCORE_LIGANDS {
-    label 'largecpu_largmem'
+    label 'largecpu_largemem'
     cache 'lenient'
     publishDir "${params.publish_dir}/scores", mode: 'copy'
     input:
@@ -110,7 +110,7 @@ process SCORE_LIGANDS {
 }
 
 process PRODUCE_NEO4J_FILES {
-    label 'largecpu_largmem'
+    label 'largecpu_largemem'
     cache 'lenient'
     publishDir "${params.publish_dir}/neo4j", mode: 'copy'
     input:
