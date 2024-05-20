@@ -165,13 +165,17 @@ def main():
     domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
     #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
     #assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
-    domain_info_dataframe_filtered_grouped["seq_range_chain"] = domain_info_dataframe_filtered_grouped["seq_range"].apply(lambda x: list(chain(*x)))
-    domain_info_dataframe_filtered_grouped.drop(columns = ["domain_name","seq_range", "instance_id"], inplace = True) #drop instance id now that assertion has passed - if this fails need to investigate struct
+    if len(domain_info_dataframe_filtered_grouped) > 0:
+        domain_info_dataframe_filtered_grouped["seq_range_chain"] = domain_info_dataframe_filtered_grouped["seq_range"].apply(lambda x: list(chain(*x)))
+        domain_info_dataframe_filtered_grouped.drop(columns = ["domain_name","seq_range", "instance_id"], inplace = True) #drop instance id now that assertion has passed - if this fails need to investigate struct
 
-    protein_entity_df_assembly_domain_mmcif = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
-    protein_entity_df_assembly_domain_mmcif.drop(columns = ["entity_id", "asym_id"],inplace = True)
-    protein_entity_df_assembly_domain_mmcif["seq_range_chain"] = protein_entity_df_assembly_domain_mmcif["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))])) #to match the xml data format
-    mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+        protein_entity_df_assembly_domain_mmcif = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
+        protein_entity_df_assembly_domain_mmcif.drop(columns = ["entity_id", "asym_id"],inplace = True)
+        protein_entity_df_assembly_domain_mmcif["seq_range_chain"] = protein_entity_df_assembly_domain_mmcif["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))])) #to match the xml data format
+        mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+    else:
+        protein_entity_df_assembly_domain_mmcif = pd.DataFrame()
+        mmcif_domains = []
     ##THE UPDATED MMCIF FILE DOES NOT CONTAIN A FULL SET OF DOMAIN INFORMATION, WE NEED TO USE THE PDBE SIFTS XML DATA FILES TO GET ANY DB SOURCES NOT REFERENCED IN THE UPDATED MMCIF
     # WE PREFER THE UPDATED MMCIF REFERENCES WHERE POSSIBLE DUE TO THEIR RICHER ANNOTATION DETAIL FOR E.G. CATH DOMAINS WHERE SPECIFIC DOMAINS ARE REFERENCED INSTEAD OF HOMOLOGOUS SUPERFAMILIES.
     with gzip.open(args.sifts_xml, 'rb') as f:
