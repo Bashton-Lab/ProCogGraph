@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, build_cath_dataframe, parse_cddf
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
@@ -58,7 +58,7 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
 
     return sifts_chains_ec, sifts_chains_uniprot
 
-def build_cath_dataframe(cath_names, cath_domain_list):
+def build_cath_names_dataframe(cath_names, cath_domain_list):
     topology_regex = r'^(\d+\.\d+\.\d+)\.'
     architecture_regex = r'^(\d+\.\d+)\.'
     class_regex = r'^(\d+)\.'
@@ -88,6 +88,7 @@ def main():
     parser.add_argument('--scop_descriptions_file', type=str, help='scop descriptions file')
     parser.add_argument('--interpro_xml', type=str, help='interpro xml file')
     parser.add_argument('--cath_names', type=str, help='cath names file')
+    parser.add_argument('--cddf', type=str, help='cath domain definition file')
     parser.add_argument('--glycoct_cache', type=str, help='glycoct cache file')
     parser.add_argument('--smiles_cache', type=str, help='smiles cache file')
     parser.add_argument('--csdb_linear_cache', type=str, help='csdb linear cache file')
@@ -174,6 +175,7 @@ def main():
     core_cols = contacts_ec_uniprot.columns.tolist()
     cath_cols = ['cath_domain', 'cath_name', 'cath_code', 'cath_class', 'cath_class_name', 'cath_architecture', 'cath_architecture_name', 'cath_topology', 'cath_topology_name',
         'cath_homologous_superfamily', 'cath_homologous_superfamily_name']
+    cath_mmcif_cols = ['cath_db_version', 'cath_db_verdate', 'cath_source', 'cath_domain_length', 'cath_domain_seq_header', 'cath_domain_seqs', 'cath_num_segments', 'cath_segments_dict']
     scop_cols = ['scop_id', 'sccs', 'domain_sunid', 'ancestor_sunid', 'cl_id', 'cf_id', 'sf_id', 'fa_id', 'dm_id', 'sp_id',
         'px_id', 'cl_description', 'cf_description', 'sf_description','fa_description', 'dm_description', 'sp_description', 'px_description']
     scop2b_cols = []
@@ -183,17 +185,31 @@ def main():
 
     #process domain database information
     if len(cath_contacts) > 0:
-        #run the cath_domain_list on only the domains we need
-        cath_domain_list = cath_contacts.xref_db_acc.unique()
-        cath_names = pd.read_csv(args.cath_names, sep = "    ", header = None, comment = "#", names = ["cath_code", "representative_domain", "name"])
-        cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
-        cath_domains_info = build_cath_dataframe(cath_names,cath_domain_list)
-        cath_contacts = cath_contacts.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
-        assert(len(cath_contacts.loc[cath_contacts._merge != "both"]) == 0)
-        cath_contacts.drop(columns = "_merge", inplace = True)
+        cath_contacts_mmcif = cath_contacts.loc[cath_contacts.domain_type == "mmcif"].copy()
+        if len(cath_contacts_mmcif) > 0:
+            cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
+            cath_domains_info = build_cath_dataframe(cath_parsed_data)
+            cath_contacts_mmcif = cath_contacts_mmcif.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
+            assert(len(cath_contacts_mmcif.loc[cath_contacts_mmcif._merge != "both"]) == 0)
+            cath_contacts_mmcif.drop(columns = "_merge", inplace = True)
+        else:
+            cath_contacts_mmcif = pd.DataFrame(columns = core_cols + cath_cols + cath_mmcif_cols)
+        cath_contacts_xml = cath_contacts.loc[cath_contacts.domain_type == "xml"].copy()
+        if len(cath_contacts_xml) > 0:
+            cath_domain_list = cath_contacts_xml.xref_db_acc.unique()
+            cath_names = pd.read_csv(args.cath_names, sep = "    ", header = None, comment = "#", names = ["cath_code", "representative_domain", "name"])
+            cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
+            cath_domains_info = build_cath_names_dataframe(cath_names,cath_domain_list)
+            cath_contacts_xml = cath_contacts_xml.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
+            assert(len(cath_contacts.loc[cath_contacts_xml._merge != "both"]) == 0)
+            cath_contacts_xml.drop(columns = "_merge", inplace = True)
+            cath_contacts_xml[cath_mmcif_cols] = np.nan
+        else:
+            cath_contacts_xml = pd.DataFrame(columns = core_cols + cath_cols + cath_mmcif_cols)
+        cath_contacts = pd.concat([cath_contacts_mmcif, cath_contacts_xml])
         cath_contacts.to_csv(f"cath_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        cath_contacts = pd.DataFrame(columns = core_cols + cath_cols)
+        cath_contacts = pd.DataFrame(columns = core_cols + cath_cols + cath_mmcif_cols)
         cath_contacts.to_csv(f"cath_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
     if len(scop_contacts) > 0:

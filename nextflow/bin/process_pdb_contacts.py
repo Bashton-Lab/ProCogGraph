@@ -109,7 +109,7 @@ def main():
     pdb_info_list = [args.pdb_id] + [block.find_value(item) for item in ["_struct.pdbx_descriptor", "_struct.title", "_struct_keywords.pdbx_keywords"]]
     pdb_info_series = pd.Series(pdb_info_list, index = ["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords"])
     pdb_info_series = pdb_info_series.str.strip("\"|'")
-    
+
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
@@ -151,9 +151,30 @@ def main():
     protein_entity_df_assembly["assembly_chain_id_protein"] = protein_entity_df_assembly["assembly_chain_id_protein"].str.strip("_")
     protein_entity_df_assembly.drop(columns = ["_merge", "oper_expression"], inplace = True)
 
-    
-    ##THE UPDATED MMCIF FILE DOES NOT CONTAIN A FULL SET OF DOMAIN INFORMATION, WE NEED TO USE THE PDBE SIFTS XML DATA FILES TO GET THIS.
-    with gzip.open(args.sifts_xml, 'rb') as f:
+    #parse the domain information from the updated mmcif file
+    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
+            columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
+    ##for now, we are ready to handle annotations from CATH, SCOP, SCOP2B, Pfam and InterPro, so we filter to this
+    ##we check in process_pdb_structure that domains are present for the structure, so no need to fail here.
+    domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
+        columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
+    domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
+    #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
+    domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"] 
+    domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
+    domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
+    #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
+    #assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
+    domain_info_dataframe_filtered_grouped["seq_range_chain"] = domain_info_dataframe_filtered_grouped["seq_range"].apply(lambda x: list(chain(*x)))
+    domain_info_dataframe_filtered_grouped.drop(columns = ["domain_name","seq_range", "instance_id"], inplace = True) #drop instance id now that assertion has passed - if this fails need to investigate struct
+
+    protein_entity_df_assembly_domain_mmcif = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
+    protein_entity_df_assembly_domain_mmcif.drop(columns = ["entity_id", "asym_id"],inplace = True)
+    protein_entity_df_assembly_domain_mmcif["seq_range_chain"] = protein_entity_df_assembly_domain_mmcif["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))])) #to match the xml data format
+    mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+    ##THE UPDATED MMCIF FILE DOES NOT CONTAIN A FULL SET OF DOMAIN INFORMATION, WE NEED TO USE THE PDBE SIFTS XML DATA FILES TO GET ANY DB SOURCES NOT REFERENCED IN THE UPDATED MMCIF
+    # WE PREFER THE UPDATED MMCIF REFERENCES WHERE POSSIBLE DUE TO THEIR RICHER ANNOTATION DETAIL FOR E.G. CATH DOMAINS WHERE SPECIFIC DOMAINS ARE REFERENCED INSTEAD OF HOMOLOGOUS SUPERFAMILIES.
+    with gzip.open(args.sifts.xml, 'rb') as f:
         tree = ET.parse(f)
         root = tree.getroot()
 
@@ -173,9 +194,9 @@ def main():
                 # search crossrefdb for matching dbs
                 for crossRefDb in residue.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb'):
                     dbsource = crossRefDb.attrib['dbSource']
-                    if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B"]:
+                    if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B"] and dbsource not in mmcif_domains:
                         dbaccessionid = crossRefDb.attrib['dbAccessionId']
-                    elif dbsource == "InterPro":
+                    elif dbsource == "InterPro" and dbsource not in mmcif_domains:
                         dbevidence = crossRefDb.attrib['dbEvidence']
                         if dbevidence.startswith("SSF") or dbevidence.startswith("G3DSA"):
                             dbaccessionid = crossRefDb.attrib['dbAccessionId'] + "_" + dbevidence
@@ -219,24 +240,30 @@ def main():
         'xref_db_version': db_version_list
     })
 
-    # combine with domain info df
-    domain_info_df = pd.merge(domain_df_grouped, db_df, on='xref_db', how='left')
-
-    if len(domain_info_df.loc[domain_info_df.xref_db == "InterPro"]) > 0:
-        domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"] = domain_info_df.loc[domain_info_df.xref_db == "InterPro", "xref_db_acc"].str.split("_")
-        domain_info_df_exploded = domain_info_df.explode("xref_db_acc")
+    if len(domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro"]) > 0:
+        domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_")
+        domain_info_df_exploded = domain_df_grouped.explode("xref_db_acc")
     else:
-        domain_info_df_exploded = domain_info_df
+        domain_info_df_exploded = domain_df_grouped
+
+    domain_info_df_exploded = domain_info_df_exploded.drop_duplicates(subset = ["proteinStructAsymID","xref_db","xref_db_acc"])
     domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
     domain_info_df_exploded.drop_duplicates()
 
-    protein_entity_df_assembly_domain = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "inner") #keep the chains in the assembly which have domain information (but not domains in chains not in the assembly)
-    
+    protein_entity_df_assembly_domain_xml = domain_info_df_exploded.merge(protein_entity_df_assembly, on = "proteinStructAsymID", how = "inner") #keep the chains in the assembly which have domain information (but not domains in chains not in the assembly)
+    protein_entity_df_assembly_domain_mmcif["domain_type"] = "mmcif"
+    protein_entity_df_assembly_domain_xml["domain_type"] = "xml"
+
+    protein_entity_df_assembly_domain = pd.concat([protein_entity_df_assembly_domain_mmcif, protein_entity_df_assembly_domain_xml], ignore_index = True)
+
+    # combine with domain info df
+    protein_entity_df_assembly_domain = pd.merge(protein_entity_df_assembly_domain, db_df, on='xref_db', how='left')
+
     if len(protein_entity_df_assembly_domain) == 0:
         #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
         print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
         sys.exit(126)
-        
+
     protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
@@ -252,12 +279,12 @@ def main():
     protein_entity_df_assembly_domain["auth_seq_range"] = protein_entity_df_assembly_domain.apply(lambda x: protein_seq_sites.loc[(protein_seq_sites.protein_entity_id == x.protein_entity_id) & (protein_seq_sites.seq_id.isin(x.seq_range_chain)), 'auth_seq_id_combined'].values.tolist(), axis = 1)
 
     #load the contacts data
-    contacts = pd.read_json(f"{args.contacts}")
+    contacts = pd.read_json("/raid/MattC/repos/ProCogGraph/nextflow/1b42_bio-h.json")
     if len(contacts) == 0:
         #for example, only proximal contacts - see 1a1q
         print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
         sys.exit(124)
-    contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER" )].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
+    contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER")].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
     if len(contacts_filtered) == 0:
         #for example, only proximal contacts - see 1a1q
         print(f"No valid contacts found for {args.pdb_id} between ligand and protein entity")
@@ -280,7 +307,7 @@ def main():
         #for example, ligand interacts with DNA only in structure - see 2fjx
         print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
         sys.exit(124)
-    
+
     contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
     contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
     if len(contacts_poly_merged_filtered) == 0:
@@ -292,7 +319,7 @@ def main():
     contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]]).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index()
     contacts_poly_merged_filtered_grouped.rename(columns = {"contact_counts": "domain_contact_counts", "hbond_counts": "domain_hbond_counts", "covalent_counts": "domain_covalent_counts"}, inplace = True)
     #at this point we may be able to integrate some grouping on identical symmetries?
-    
+
     bound_entity_info_arp_exploded = bound_entity_info_grouped.explode("arpeggio")
     bound_entity_info_arp_exploded_merged = bound_entity_info_arp_exploded.merge(contacts_poly_merged_filtered_grouped, left_on = "arpeggio", right_on = "bgn_contact", how = "inner")
 
@@ -303,8 +330,8 @@ def main():
 
     bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged.groupby(["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords", "uniqueID", "xref_db", "xref_db_acc", "domain_accession", "descriptor", "description", "hetCode", "type", "bound_ligand_struct_asym_id", "ligand_entity_id_numerical", "bound_entity_pdb_residues", "assembly_chain_id_ligand", "assembly_chain_id_protein", "bound_molecule_display_id", "proteinStructAsymID", "auth_chain_id"], dropna=False).agg(
             {"bound_ligand_residue_interactions": set, "domain_residue_interactions": set, "domain_contact_counts": "sum", "domain_hbond_counts": "sum", "domain_covalent_counts": "sum"}).reset_index()
-            
-    bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= args.domain_contact_cutoff]
+
+    bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= 3]
     bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"] = bound_entity_info_arp_exploded_merged_aggregated.groupby(["uniqueID", "xref_db"])["domain_contact_counts"].transform("sum")
     bound_entity_info_arp_exploded_merged_aggregated["domain_contact_perc"] = bound_entity_info_arp_exploded_merged_aggregated["domain_contact_counts"] / bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"]
     bound_entity_info_arp_exploded_merged_aggregated["domain_hbond_perc"] = bound_entity_info_arp_exploded_merged_aggregated["domain_hbond_counts"] / bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"]
@@ -323,7 +350,6 @@ def main():
     #bound_entity_info_arp_exploded_merged_aggregated_sym_agg["represents"] = bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"].str.join("|")
     #bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"] = bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"].apply(lambda x: x[0]) 
     bound_entity_info_arp_exploded_merged_aggregated_sym_agg = bound_entity_info_arp_exploded_merged_aggregated.copy()
-    bound_entity_info_arp_exploded_merged_aggregated_sym_agg.to_csv(f"{args.pdb_id}_bound_entity_contacts.tsv", sep = "\t", index = False)
 
 if __name__ == "__main__":
     main()
