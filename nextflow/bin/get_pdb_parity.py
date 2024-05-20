@@ -8,7 +8,6 @@ import io
 import time
 import pickle
 import re
-from rich.progress import Progress
 from rdkit import Chem
 from collections import Counter
 
@@ -29,7 +28,7 @@ from contextlib import redirect_stderr
 from utils import pdbe_sanitise_smiles
 from rdkit.Chem.Draw import MolsMatrixToGridImage
 
-def parity_score_smiles(row, threshold, progress, task): #, 
+def parity_score_smiles(row, threshold): #, 
     ec = row.entry
     pdb_ligand_id = row.pdb_ligand_id
     smiles = row.smiles
@@ -87,7 +86,6 @@ def parity_score_smiles(row, threshold, progress, task): #,
                     scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles,  "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : 0, "error" : f"Sanitisation error", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
         except Exception as e:
             scores_dict = {"ec": ec,"pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": cognate_ligand_smiles, "score" : 0, "error" : f"Parity error: {str(e)}", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
-    progress.update(task, advance=1)
     return scores_dict
 
 def get_compound_pairs(row, cognate_ligands_df):
@@ -149,27 +147,24 @@ if not os.path.exists(pickle_filename):
     print(f"To calculate: {len(to_calculate)}")
     results = []
     if len(to_calculate) > 0:
-        with Progress() as progress:
-            task = progress.add_task("[red]Calculating parity scores...", total=len(to_calculate))
-            
-            with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
-                futures = []
-                for index, row in to_calculate.iterrows():
-                    futures.append(executor.submit(parity_score_smiles, row, args.threshold, progress,task))
-                for future in concurrent.futures.as_completed(futures):
-                    results.extend([future.result()])
-                    futures.remove(future)
+        with concurrent.futures.ThreadPoolExecutor(args.threads) as executor:
+            futures = []
+            for index, row in to_calculate.iterrows():
+                futures.append(executor.submit(parity_score_smiles, row, args.threshold))
+            for future in concurrent.futures.as_completed(futures):
+                results.extend([future.result()])
+                futures.remove(future)
 
-            results_df = pd.DataFrame(results)
-            results_df = pd.concat([results_df, pre_calculated], ignore_index = True).reset_index(drop = True)
-            # Save the smiles_ec_pairs for the chunk as a pickle file
-            results_df.to_pickle(pickle_filename)
+        results_df = pd.DataFrame(results)
+        results_df = pd.concat([results_df, pre_calculated], ignore_index = True).reset_index(drop = True)
+        # Save the smiles_ec_pairs for the chunk as a pickle file
+        results_df.to_pickle(pickle_filename)
 
-            #save the cache scores
-            cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"])
-            #when dropping duplicates here consider that it needs to drop the max theshold duplicate - better to do this in a groupby?
-            cache_results = pd.concat([cache_df, cache_results], ignore_index = True).drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold"])
-            cache_results.to_pickle(f"cache_parity_calcs_new.pkl")
+        #save the cache scores
+        cache_results = results_df[["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold", "score", "error", "pdbl_subparity", "bl_subparity", "parity_match", "parity_smarts"]].drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"])
+        #when dropping duplicates here consider that it needs to drop the max theshold duplicate - better to do this in a groupby?
+        cache_results = pd.concat([cache_df, cache_results], ignore_index = True).drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles", "threshold"])
+        cache_results.to_pickle(f"cache_parity_calcs_new.pkl")
     else:
         results_df = pre_calculated
         # Save the smiles_ec_pairs for the chunk as a pickle file
