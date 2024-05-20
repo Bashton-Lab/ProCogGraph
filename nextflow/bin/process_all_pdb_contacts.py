@@ -37,7 +37,7 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
         lig_block = ccd_doc.find_block(ligand)
         if lig_block is not None:
             lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
-            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|'")
+            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|';")
             lig_descriptor = lig_descriptors.loc[lig_descriptors.type == "SMILES"].descriptor.values[0]
             ligand_descriptors[ligand] = lig_descriptor
         else:
