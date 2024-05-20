@@ -184,7 +184,7 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml) ] } | randomSample( 10, 42)
+    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml) ] }
     process_mmcif = PROCESS_MMCIF( pdb_ids
         .map { all_out -> [all_out[0], all_out[1], file(all_out[2]), file(all_out[3])] } )
     arpeggio = RUN_ARPEGGIO(
