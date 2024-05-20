@@ -279,3 +279,85 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
     df_merged.drop(columns = "_merge", inplace = True)
     df_merged = df_merged.loc[df_merged.ec_list != ""] #remove any rows where the ec_list is empty - we cant process these anyway.
     return(df_merged)
+
+def parse_cddf(file_path, domain_list):
+    with open(file_path, 'r') as file:
+        entries = {}
+        lines = []
+        for line in file:
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            if line.startswith("//"):
+                entries[domain] = lines
+                lines = []
+            elif line.startswith("DOMAIN"):
+                domain = line[10:]
+                lines.append(line)
+            else:
+                lines.append(line)
+    matching_entries = []
+    for domain in domain_list:
+        if domain in entries.keys():
+            current_entry = {}
+            current_segment = {}
+            for line in entries[domain]:
+                if line.startswith('SEGMENT'):
+                    if 'SEGMENTS' not in current_entry:
+                        current_entry['SEGMENTS'] = []
+                    if current_segment:
+                        current_entry['SEGMENTS'].append(current_segment)
+                    current_segment = {'SEGMENT': line.split()[1]}
+                elif line.startswith('ENDSEG'):
+                    if current_segment:
+                        current_entry['SEGMENTS'].append(current_segment)
+                    current_segment = {}
+                else:
+                    tag = line[0:9].strip()
+                    value = line[10:]
+
+                    if tag == 'FORMAT':
+                        if 'FORMAT' not in current_entry:
+                            current_entry['FORMAT'] = []
+                        current_entry['FORMAT'].append(value)
+                    elif tag in ['DOMAIN', 'PDBID', 'VERSION', 'VERDATE', 'NAME', 'SOURCE', 'CATHCODE', 'CLASS', 'ARCH', 'TOPOL', 'HOMOL', 'DLENGTH', 'DSEQH', 'DSEQS', 'NSEGMENTS']:
+                        if tag not in current_entry:
+                            current_entry[tag] = []
+                        current_entry[tag].append(value)
+                    elif tag in ['SRANGE', 'SLENGTH', 'SSEQH', 'SSEQS']:
+                        current_segment[tag] = value
+                    elif tag == 'COMMENTS':
+                        if 'COMMENTS' not in current_entry:
+                            current_entry['COMMENTS'] = []
+                        current_entry['COMMENTS'].append(value)
+                    else:
+                        # Invalid tag
+                        continue
+            matching_entries.append(current_entry)
+    return matching_entries
+
+
+def build_cath_dataframe(parsed_data):
+    combine_keys = ["DOMAIN", "PDBID", "VERSION", "VERDATE", "NAME", "SOURCE", "CATHCODE", "CLASS", "ARCH", "TOPOL", "HOMOL", "DLENGTH", "DSEQH", "DSEQS", "NSEGMENTS"]
+    cath_df_columns = {"DOMAIN": "cath_domain" , "VERSION": "cath_db_version", "VERDATE": "cath_db_verdate", "NAME":"cath_name", "SOURCE": "cath_source", "CATHCODE": "cath_code", "CLASS": "cath_class_description", "ARCH":"cath_architecture_description", "TOPOL": "cath_topology_description", "HOMOL": "cath_homologous_superfamily_description", "DLENGTH": "cath_domain_length", "DSEQH":"cath_domain_seq_header", "DSEQS": "cath_domain_seqs", "NSEGMENTS": "cath_num_segments", "SEGMENTS": "cath_segments_dict"}
+    dfs = []
+    for entry in parsed_data:
+        df_dict = {}
+        for key, values in entry.items():
+            if key in combine_keys:
+                df_dict[cath_df_columns[key]] = ' '.join(values) if isinstance(values, list) else values
+            elif key == "FORMAT":
+                continue
+            else:
+                df_dict[cath_df_columns[key]] = values
+        dfs.append(pd.DataFrame([df_dict]))
+    dfs_combined = pd.concat(dfs, ignore_index=True)
+    topology_regex = r'^(\d+\.\d+\.\d+)\.'
+    architecture_regex = r'^(\d+\.\d+)\.'
+    class_regex = r'^(\d+)\.'
+    
+    dfs_combined["cath_class"] = dfs_combined.cath_code.str.extract(class_regex, expand = True)
+    dfs_combined["cath_architecture"] = dfs_combined.cath_code.str.extract(architecture_regex, expand = True)
+    dfs_combined["cath_topology"] = dfs_combined.cath_code.str.extract(topology_regex, expand = True)
+    dfs_combined["cath_homologous_superfamily"] = dfs_combined["cath_code"]
+    return dfs_combined

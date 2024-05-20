@@ -187,7 +187,8 @@ def main():
     if len(cath_contacts) > 0:
         cath_contacts_mmcif = cath_contacts.loc[cath_contacts.domain_type == "mmcif"].copy()
         if len(cath_contacts_mmcif) > 0:
-            cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
+            cath_domain_list = cath_contacts_mmcif.xref_db_acc.unique()
+            cath_parsed_data = parse_cddf(args.cddf, cath_contacts_mmcif.domain_accession.unique())
             cath_domains_info = build_cath_dataframe(cath_parsed_data)
             cath_contacts_mmcif = cath_contacts_mmcif.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
             assert(len(cath_contacts_mmcif.loc[cath_contacts_mmcif._merge != "both"]) == 0)
