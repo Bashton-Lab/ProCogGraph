@@ -61,7 +61,7 @@ def main():
         sys.exit(1) #exit with default error code and pause pipeline
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description', '_entity.formula_weight']), columns = ["entity_id", "description", "molweight"])
-    entity_info["description"] = entity_info["description"].str.strip("\"|';")
+    entity_info["description"] = entity_info["description"].str.strip("\"|';").str.replace(r"\n$","", regex = True)
     ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
     assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
     assembly_info = assembly_info.loc[assembly_info.assembly_id == args.assembly_id].copy() #preferred assembly id
@@ -107,7 +107,7 @@ def main():
         branched_sugar_info_wurcs = branched_sugar_info.loc[branched_sugar_info.type == "WURCS"].groupby("entity_id").first()
         if len(branched_sugar_info_wurcs) == 0:
             print("No sugars with WURCS representation found")
-        branched_sugar_info_wurcs["descriptor"] = branched_sugar_info_wurcs["descriptor"].str.strip("\"|';")
+        branched_sugar_info_wurcs["descriptor"] = branched_sugar_info_wurcs["descriptor"].str.strip("\"|';").str.replace(r"\n$","", regex = True)
         branched_seq_info_merged = branched_seq_info.merge(branched_sugar_info_wurcs, on = "entity_id", indicator = True)
         assert(len(branched_seq_info_merged.loc[branched_seq_info_merged._merge != "both"]) == 0)
         branched_seq_info_merged.drop(columns = ["_merge", "type"], inplace = True)
