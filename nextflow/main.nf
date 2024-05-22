@@ -41,7 +41,7 @@ process PROCESS_CONTACTS {
     label 'medmem' //gives 12gb and single core (max observed usage is below 12gb)
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
-    errorStrategy { task.exitStatus in 124..126 ? 'ignore' : 'terminate' }
+    errorStrategy { task.exitStatus in 124..127 ? 'ignore' : 'terminate' }
     input:
         tuple val(pdb_id), val(assembly_id), path(updated_cif), path(sifts_xml), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
     output:

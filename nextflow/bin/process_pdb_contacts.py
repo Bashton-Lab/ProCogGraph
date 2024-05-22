@@ -87,6 +87,7 @@ def main():
         1. No contacts are found between the ligand and any protein entity (e.g. only to DNA) (exitcode 124)
         2. No contacts are present within an annotated domain (exitcode 125)
         3. No domains are present for any protein entities in the assembly (exitcode 126)
+        4. No contacts remain at minimum contact count (exitcode 127)
     """
 
     parser = argparse.ArgumentParser(description='')
@@ -337,6 +338,11 @@ def main():
             {"bound_ligand_residue_interactions": set, "domain_residue_interactions": set, "domain_contact_counts": "sum", "domain_hbond_counts": "sum", "domain_covalent_counts": "sum"}).reset_index()
 
     bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= args.domain_contact_cutoff]
+    if len(bound_entity_info_arp_exploded_merged_aggregated) == 0:
+        #if no domain interactions above the cutoff are found e.g. 5i63
+        print(f"No domains found for any protein entities in the assembly for {args.pdb_id} with at least {args.domain_contact_cutoff} contacts")
+        sys.exit(127)
+
     bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"] = bound_entity_info_arp_exploded_merged_aggregated.groupby(["uniqueID", "xref_db"])["domain_contact_counts"].transform("sum")
     bound_entity_info_arp_exploded_merged_aggregated["domain_contact_perc"] = bound_entity_info_arp_exploded_merged_aggregated["domain_contact_counts"] / bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"]
     bound_entity_info_arp_exploded_merged_aggregated["domain_hbond_perc"] = bound_entity_info_arp_exploded_merged_aggregated["domain_hbond_counts"] / bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"]
