@@ -37,8 +37,21 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
         lig_block = ccd_doc.find_block(ligand)
         if lig_block is not None:
             lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
-            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|';")
-            lig_descriptor = lig_descriptors.loc[lig_descriptors.type == "SMILES"].descriptor.values[0]
+            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|';").str.replace(r"\n$","", regex = True)
+            lig_descriptors = lig_descriptors.loc[lig_descriptors.type == "SMILES"]
+            PandasTools.AddMoleculeColumnToFrame(lig_descriptors, smilesCol='descriptor', molCol='pdb_ROMol')
+            lig_descriptors = lig_descriptors.loc[lig_descriptors.pdb_ROMol.isna() == False]
+            if len(lig_descriptors) == 0:
+                lig_descriptor = None
+                print(f"Error, no SMILES string can be loaded into RDKit for ligand {ligand}")
+            else:
+                #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
+                preferred_row = lig_descriptors.loc[ligand_descriptors.program.str.startswith("OpenEye")]
+                if not preferred_row.empty:
+                    lig_descriptor = preferred_row.iloc[0].descriptor
+                else:
+                    # Otherwise, select the first row with a SMILES string
+                    lig_descriptor = lig_descriptors.iloc[0].descriptor
             ligand_descriptors[ligand] = lig_descriptor
         else:
             print(f"Error, ligand {ligand} is not found in the CCD MMCIF file")
@@ -139,7 +152,6 @@ def main():
 
     sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
     sifts_chains_ec, sifts_chains_uniprot = process_sifts_ec_map(sifts_chains, ec_records_df)
-    
     contacts_ec = contacts.merge(sifts_chains_ec, left_on = "pdb_id", right_on = "PDB", how = "left", indicator = True)
     contacts_ec_unmatched = contacts_ec.loc[contacts_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB"])
     contacts_ec = contacts_ec.loc[contacts_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
