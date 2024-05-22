@@ -8,6 +8,7 @@ import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
 from urllib.parse import quote
+from rdkit.Chem import PandasTools
 
 def get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, glycoct_cache):
     sugar_smiles = {}
@@ -117,12 +118,12 @@ def main():
     if args.glycoct_cache:
         glycoct_cache = pd.read_pickle(args.glycoct_cache)
         #sometimes a second nan value is added to the cache, this is a sanity check to remove these
-        glycoct_cache[glycoct_cache['WURCS'].duplicated(keep=False) & glycoct_cache['glycoct'].isna()]
+        glycoct_cache[~(glycoct_cache['WURCS'].duplicated(keep=False) & glycoct_cache['glycoct'].isna())]
     else:
         glycoct_cache = pd.DataFrame(columns = ["WURCS", "glycoct"])
     if args.smiles_cache:
         smiles_cache = pd.read_pickle(args.smiles_cache)
-        smiles_cache = smiles_cache.loc[smiles_cache.csdb.duplicated(keep = False) & smiles_cache.descriptor.isna()]
+        smiles_cache = smiles_cache.loc[~(smiles_cache.csdb.duplicated(keep = False) & smiles_cache.descriptor.isna())]
     else:
         smiles_cache = pd.DataFrame(columns = ["csdb", "descriptor"])
     if args.csdb_linear_cache:
