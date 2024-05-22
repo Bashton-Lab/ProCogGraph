@@ -20,7 +20,7 @@ def get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, gly
         updated_glycoct_cache.append({"WURCS": wurcs, "glycoct": glycoct})
         if not pd.isna(glycoct):
             csdb = get_csdb_from_glycoct(glycoct, csdb_linear_cache)
-            updated_csdb_cache.append({"glycoct": glycoct, "wurcs": wurcs})
+            updated_csdb_cache.append({"glycoct": glycoct, "csdb": csdb})
             if not pd.isna(csdb):
                 smiles = get_smiles_from_csdb(csdb, smiles_cache)
                 updated_smiles_cache.append({"csdb": csdb, "descriptor" : smiles})
@@ -116,14 +116,18 @@ def main():
     
     if args.glycoct_cache:
         glycoct_cache = pd.read_pickle(args.glycoct_cache)
+        #sometimes a second nan value is added to the cache, this is a sanity check to remove these
+        glycoct_cache[glycoct_cache['WURCS'].duplicated(keep=False) & glycoct_cache['glycoct'].isna()]
     else:
         glycoct_cache = pd.DataFrame(columns = ["WURCS", "glycoct"])
     if args.smiles_cache:
         smiles_cache = pd.read_pickle(args.smiles_cache)
+        smiles_cache = smiles_cache.loc[smiles_cache.csdb.duplicated(keep = False) & smiles_cache.descriptor.isna()]
     else:
         smiles_cache = pd.DataFrame(columns = ["csdb", "descriptor"])
     if args.csdb_linear_cache:
         csdb_linear_cache = pd.read_pickle(args.csdb_linear_cache)
+        csdb_linear_cache.loc[~(csdb_linear_cache['glycoct'].duplicated(keep=False) & csdb_linear_cache['csdb'].isna())]  
     else:
         csdb_linear_cache = pd.DataFrame(columns = ["glycoct", "csdb"])
 
