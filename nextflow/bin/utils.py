@@ -272,6 +272,7 @@ def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
 
     residue_ec_records_grouped = residue_ec_records.groupby(ec_col).agg({"TRANSFER": set}).reset_index()
     residue_ec_records_grouped["TRANSFER"] = residue_ec_records_grouped["TRANSFER"].apply(lambda x: ",".join(x) if x != "" else "")
+    residue_ec_records_grouped["TRANSFER"] = residue_ec_records_grouped["TRANSFER"].str.strip(",")
     residue_ec_records_grouped.rename(columns = {"TRANSFER" : "ec_list"}, inplace = True)
     
     df_merged = df.merge(residue_ec_records_grouped, on = ec_col, how = "left", indicator = True)

@@ -60,12 +60,15 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
 
 def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
     sifts_chains_ec = sifts_ec_mapping_file.loc[sifts_ec_mapping_file.EC_NUMBER != "?"].copy()
+    #the sifts mapping often has quotes in ec numbers because of extraction with gemmi it seems, strip these e.g. 2ex1
+    sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].str.strip("'")
     sifts_chains_uniprot = sifts_ec_mapping_file.groupby(["PDB", "CHAIN"]).agg({"ACCESSION": set}).reset_index().copy()
     sifts_chains_uniprot["ACCESSION"] = sifts_chains_uniprot["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
     sifts_chains_uniprot.rename(columns = {"ACCESSION" : "uniprot_accession"}, inplace = True)
 
     sifts_chains_ec = sifts_chains_ec[["PDB", "EC_NUMBER"]].groupby(["PDB"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb associated ec's
-    sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function 
+    sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function
+    sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].str.strip(",") #strip any leading or trailing commas - eventually drop the "" for np.nan in df before doing join so this isnt problem
     sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_file, ec_col = "EC_NUMBER")
     sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec"}, inplace = True)
 
