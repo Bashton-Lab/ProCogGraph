@@ -47,7 +47,7 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
                 print(f"Error, no SMILES string can be loaded into RDKit for ligand {ligand}")
             else:
                 #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
-                preferred_row = lig_descriptors.loc[ligand_descriptors.program.str.startswith("OpenEye")]
+                preferred_row = lig_descriptors.loc[lig_descriptors.program.str.startswith("OpenEye")]
                 if not preferred_row.empty:
                     lig_descriptor = preferred_row.iloc[0].descriptor
                 else:

@@ -1,7 +1,7 @@
 #! /usr/bin/env nextflow
 
 process PROCESS_MMCIF {
-    label 'lowmem' //gives 8gb and single core (max observed usage is 8gb)
+    label 'medmem' //gives 8gb and single core (max observed usage is 8gb)
     publishDir "${params.publish_dir}/process_struct", mode: 'copy'
     errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
