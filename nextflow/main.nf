@@ -9,7 +9,8 @@ process PROCESS_MMCIF {
         tuple( val(pdb_id), val(assembly_id), path(updated_cif), path(protonated_cif) )
         
     output:
-        tuple val(pdb_id), path("${pdb_id}_bound_entity_info.pkl"), path("${pdb_id}_arpeggio.csv")
+        path("new_manifest.txt")
+        path("process_mmcif_log.txt")
     script:
     """
     python3 ${workflow.projectDir}/bin/process_pdb_structure.py --cif ${updated_cif} --pdb_id ${pdb_id} --assembly_id ${assembly_id} --bio_h ${protonated_cif}
@@ -31,8 +32,7 @@ process RUN_ARPEGGIO {
 
     script:
     """
-    gzip -dkc ${bio_h_cif} > ${pdb_id}_bio-h.cif
-    timeout -k 10 6h pdbe-arpeggio -sf ${arpeggio_selections} ${pdb_id}_bio-h.cif -i 6
+    ${workflow.projectDir}/bin/run_arpeggio.sh ${bio_h_cif} ${arpeggio_selections} ${pdb_id}
     """
 
 }
@@ -43,12 +43,17 @@ process PROCESS_CONTACTS {
     publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
     errorStrategy { task.exitStatus in 124..127 ? 'ignore' : 'terminate' }
     input:
-        tuple val(pdb_id), val(assembly_id), path(updated_cif), path(sifts_xml), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
+        path combined_json
+        path manifest
+        val domain_contact_cutoff
     output:
-        path("${pdb_id}_bound_entity_contacts.tsv")
+        path("*_bound_entity_contacts.tsv")
+        path("process_contacts_log.txt")
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --bound_entity_pickle ${bound_entity_pickle} --cif ${updated_cif} --contacts ${arpeggio_json} --pdb_id ${pdb_id} --sifts_xml ${sifts_xml} --assembly_id ${assembly_id} --domain_contact_cutoff ${domain_contact_cutoff}
+    sed '$ s/,$//' ${combined_json} > combined_json_formatted.json
+    echo "{ $(cat combined_json_formatted.json) }" > combined_json_formatted.json
+    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --contacts_json combined_json_formatted.json --manifest ${manifest} --domain_contact_cutoff ${domain_contact_cutoff}
     """
 }
 
@@ -184,15 +189,12 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml) ] }
-    process_mmcif = PROCESS_MMCIF( pdb_ids
-        .map { all_out -> [all_out[0], all_out[1], file(all_out[2]), file(all_out[3])] } )
+    processed_struct_manifest = PROCESS_MMCIF( Channel.fromPath(params.manifest) )
+    updated_manifest = processed_struct_manifest.splitCsv(header:true) | map { [ it.pdb_id, it.assembly_id, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml), file(it.arpeggio_queries), file(it.bound_entity_info) ] }
     arpeggio = RUN_ARPEGGIO(
-        process_mmcif
-            .map { all_out -> [all_out[0], file(all_out[2])] }
-        .join( 
-        pdb_ids
-            .map { all_out -> [all_out[0], file(all_out[3])] } ))
+        updated_manifest
+            .map { all_out -> [file(all_out[3]), file(all_out[5]), all_out[0]] } )
+    collected = arpeggio.collectFile(name: 'combined_contacts.json', storeDir: "${params.publish_dir}/contacts", cache: true)
     contacts = PROCESS_CONTACTS(
        pdb_ids.map { all_out -> [all_out[0], all_out[1], all_out[2], all_out[4]] }
        .join(
@@ -200,7 +202,7 @@ workflow {
         .join(
         arpeggio.map { all_out -> [all_out[0], all_out[1]] } )
         .combine( Channel.from(params.domain_contact_cutoff) ) )
-    collected = contacts.collectFile(name: 'combined_files.tsv', keepHeader: true, skip: 1)
+    
     all_contacts = PROCESS_ALL_CONTACTS( collected, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
     produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
