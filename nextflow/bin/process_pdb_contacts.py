@@ -10,6 +10,8 @@ import numpy as np
 from itertools import chain
 import sys
 import re 
+import json
+
 def extract_data(elem):
     data = []
     if elem.get("type") == "protein":
@@ -100,11 +102,13 @@ def main():
     args = parser.parse_args()
 
     manifest = pd.read_csv(args.manifest)
-    all_contacts = pd.read_json(args.contacts_json)
+    with open(args.contacts_json) as user_file:
+        file_contents = user_file.read()
+    all_contacts = json.loads(file_contents)
     
     for index, row in manifest.iterrows():
         updated_cif = row["updated_mmcif"]
-        xml = row["xml_file"]
+        xml = row["sifts_xml"]
         pdb_id = row["pdb_id"]
         bound_entity_pickle = row["bound_entity_pickle"]
         assembly_id = str(row["assembly_id"])
