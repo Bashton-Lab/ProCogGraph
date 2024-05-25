@@ -189,12 +189,12 @@ def main():
     final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
     final_manifest_names = ["pdb_id","assembly_id","updated_mmcif","protonated_assembly","sifts_xml","arpeggio_queries","bound_entity_info","assembly_molwt"]
     final_manifest_df = pd.DataFrame(final_manifest_entries, columns = final_manifest_names)
-    final_manifest_df.to_pickle("final_mainfest.pkl")
+    final_manifest_df.to_csv("combined_arpeggio_manifest.csv", index = False)
 
-    threshold = df['assembly_molwt'].quantile(0.9)
+    threshold = final_manifest_df['assembly_molwt'].quantile(0.9)
     #bottom 90% by molwt saved in batches of X
-    top_10_percent = df[df['assembly_molwt'] >= threshold]
-    remaining_90_percent = df[df['assembly_molwt'] < threshold]
+    top_10_percent = final_manifest_df[final_manifest_df['assembly_molwt'] >= threshold]
+    remaining_90_percent = final_manifest_df[final_manifest_df['assembly_molwt'] < threshold]
 
     #save top 10% biggest structures as individual manifests to process them as separate jobs in pipeline
     for index, row in top_10_percent.iterrows():
