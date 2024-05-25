@@ -44,7 +44,6 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
             lig_descriptors = lig_descriptors.loc[lig_descriptors.pdb_ROMol.isna() == False]
             if len(lig_descriptors) == 0:
                 lig_descriptor = None
-                print(f"Error, no SMILES string can be loaded into RDKit for ligand {ligand}")
             else:
                 #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
                 preferred_row = lig_descriptors.loc[lig_descriptors.program.str.startswith("OpenEye")]
@@ -55,7 +54,6 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
                     lig_descriptor = lig_descriptors.iloc[0].descriptor
             ligand_descriptors[ligand] = lig_descriptor
         else:
-            print(f"Error, ligand {ligand} is not found in the CCD MMCIF file")
             ligand_descriptors[ligand] = None
     return ligand_descriptors
 

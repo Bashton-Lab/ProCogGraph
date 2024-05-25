@@ -99,42 +99,47 @@ def main():
     parser.add_argument('--contacts_json', type=str, help='json file of contacts from pdbe-arpeggio')
     parser.add_argument('--manifest', type=str, help='manifest mapping files')
     parser.add_argument('--domain_contact_cutoff' , type = int, default = 3, help = 'minimum number of contacts for a domain to be considered')
-    args = parser.parse_args()
+    main_args = parser.parse_args()
 
-    manifest = pd.read_csv(args.manifest)
-    with open(args.contacts_json) as user_file:
+    manifest = pd.read_csv(main_args.manifest)
+    with open(main_args.contacts_json) as user_file:
         file_contents = user_file.read()
     all_contacts = json.loads(file_contents)
-    
+    logs = []
     for index, row in manifest.iterrows():
         updated_cif = row["updated_mmcif"]
         xml = row["sifts_xml"]
         pdb_id = row["pdb_id"]
-        bound_entity_pickle = row["bound_entity_pickle"]
+        bound_entity_pickle = row["bound_entity_info"]
         assembly_id = str(row["assembly_id"])
-        args = argparse.Namespace(cif = updated_cif, xml = xml, pdb_id = pdb_id, assembly_id = assembly_id)
+        args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = main_args.domain_contact_cutoff)
         pdb_contacts = all_contacts.get(pdb_id)
         if pdb_contacts is None:
-            print(f"No contacts record found for {args.pdb_id}")
-            sys.exit(127)
+            log = f"{pdb_id},127,no_contacts_record"
+            logs.append(log)
+            continue
         elif pdb_contacts == "timeout":
-            print(f"Arpeggio command reached max run time for {args.pdb_id}")
-            sys.exit(127)
+            log = f"{pdb_id},127,arpeggio_timeout"
+            logs.append(log)
+            continue
         elif pdb_contacts == "arpeggio_failure":
-            print(f"Arpeggio command failed for {args.pdb_id}")
-            sys.exit(127)
+            log = f"{pdb_id},127,arpeggio_failure"
+            logs.append(log)
+            continue
         else:
             #load the contacts data
             contacts = pd.DataFrame.from_records(pdb_contacts)
             if len(contacts) == 0:
                 #for example, only proximal contacts - see 1a1q
-                print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
-                sys.exit(124)
+                log = f"{pdb_id},124,no_ligand_protein_contacts"
+                logs.append(log)
+                continue
             contacts_filtered = contacts.loc[(contacts['contact'].apply(lambda x: any(contact_type not in {"proximal", "vdw_clash", "clash"} for contact_type in x))) & (contacts.interacting_entities == "INTER")].copy() #we use inter here becasue we specifically dont want matches to any other selections in the query e.g sugar contacts - only those to non selected positions
             if len(contacts_filtered) == 0:
                 #for example, only proximal contacts - see 1a1q
-                print(f"No valid contacts found for {args.pdb_id} between ligand and protein entity")
-                sys.exit(124)
+                log = f"{pdb_id},124,no_valid_ligand_protein_contacts"
+                logs.append(log)
+                continue
 
     
 
@@ -305,8 +310,9 @@ def main():
 
         if len(protein_entity_df_assembly_domain) == 0:
             #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
-            print(f"Domains do not exist for any protein entities in the assembly for {args.pdb_id}")
-            sys.exit(126)
+            log = f"{pdb_id},126,no_domains_in_assembly"
+            logs.append(log)
+            continue
 
         protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
@@ -338,15 +344,17 @@ def main():
         contacts_poly_merged = contacts_filtered_filtered.merge(protein_entity_df_assembly_domain, left_on = "end_auth_asym_id", right_on = "assembly_chain_id_protein", how = "inner")
         if len(contacts_poly_merged) == 0:
             #for example, ligand interacts with DNA only in structure - see 2fjx
-            print(f"No contacts found for {args.pdb_id} between ligand and protein entity")
-            sys.exit(124)
+            log = f"{pdb_id},124,no_ligand_protein_contacts"
+            logs.append(log)
+            continue
 
         contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
         contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
         if len(contacts_poly_merged_filtered) == 0:
             #for example - see 1y82
-            print(f"No contacts found for {args.pdb_id} between ligand and any domains in annotation")
-            sys.exit(125)
+            log = f"{pdb_id},125,no_ligand_domain_contacts"
+            logs.append(log)
+            continue
         contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
         contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
         contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]]).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index()
@@ -367,8 +375,9 @@ def main():
         bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= args.domain_contact_cutoff]
         if len(bound_entity_info_arp_exploded_merged_aggregated) == 0:
             #if no domain interactions above the cutoff are found e.g. 5i63
-            print(f"No domains found for any protein entities in the assembly for {args.pdb_id} with at least {args.domain_contact_cutoff} contacts")
-            sys.exit(127)
+            log = f"{pdb_id},127,no_domains_over_contact_cutoff"
+            logs.append(log)
+            continue
 
         bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"] = bound_entity_info_arp_exploded_merged_aggregated.groupby(["uniqueID", "xref_db"])["domain_contact_counts"].transform("sum")
         bound_entity_info_arp_exploded_merged_aggregated["domain_contact_perc"] = bound_entity_info_arp_exploded_merged_aggregated["domain_contact_counts"] / bound_entity_info_arp_exploded_merged_aggregated["total_contact_counts"]
@@ -389,6 +398,12 @@ def main():
         #bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"] = bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"].apply(lambda x: x[0]) 
         bound_entity_info_arp_exploded_merged_aggregated_sym_agg = bound_entity_info_arp_exploded_merged_aggregated.copy()
         bound_entity_info_arp_exploded_merged_aggregated_sym_agg.to_csv(f"{args.pdb_id}_bound_entity_contacts.tsv", sep = "\t", index = False)
+        log = f"{pdb_id},0,success"
+        logs.append(log)
+        
+    with open("process_contacts_log.txt", "w") as f:
+        for line in logs:
+            f.write("%s\n" % line)
 
 if __name__ == "__main__":
     main()
