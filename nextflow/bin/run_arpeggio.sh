@@ -17,7 +17,7 @@ process_row() {
     elif [ $exit_code -ne 0 ]; then
         echo "\"${pdb_id}\": \"arpeggio_failure\"" > "${pdb_id}_bio-h.json"
     else
-        echo "\"${pdb_id}\": $(cat ${pdb_id}_bio-h.json)" > "${pdb_id}_bio-h.json"
+        echo "\"${pdb_id}\": $(cat ${pdb_id}_bio-h.json)," > "${pdb_id}_bio-h.json"
     fi
 
     # Remove the decompressed CIF file
