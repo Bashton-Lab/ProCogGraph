@@ -181,7 +181,8 @@ def main():
     log_entries, final_manifest_entries = zip(*results)
     logs = logs + list(log_entries)
     final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
-
+    final_manifest = final_manifest + list(final_manifest_entries)
+    
     with open("process_mmcif_log.txt", mode='w', newline='') as file:
         for line in logs:
             file.write("%s\n" % line)
