@@ -13,9 +13,9 @@ def pattern_to_range(pattern):
     start, end = map(int, re.search(r'(\d+)-(\d+)', pattern).groups())
     return ",".join([str(x) for x in range(start, end + 1)])
 
-def process_manifest_row(row, cwd):
+def process_manifest_row(row, cwd, max_molwt):
     log = ""
-    final_manifest_entry = ""
+    final_manifest_entry = []
     
     updated_cif = row["updated_mmcif"]
     bio_h = row["protonated_assembly"]
@@ -87,7 +87,7 @@ def process_manifest_row(row, cwd):
     #unknown atom or ion can result in ? in molweight - e.g. 1svu, so filter the df before taking molweight sum (also filter dot as we know these can occur elsewhere)
     assembly_molwt_kda = struct_asym_info.loc[struct_asym_info.molweight.isin(["?", "."]) == False].molweight.astype("float").sum() / 1000
 
-    if assembly_molwt_kda >= 500:
+    if assembly_molwt_kda >= max_molwt:
         log = f"{pdb_id},121,Large structure detected run individually instead of in pipeline"
         return log,final_manifest_entry
     #switched auth_asym_id to pdb_asym_id (which is a pointer to atom_site auth asym id and seems to hold up better for branch structures in the mapping to pdb-h structure)
@@ -145,7 +145,7 @@ def process_manifest_row(row, cwd):
         bound_entity_info_grouped["arpeggio"].explode().to_csv(f"{args.pdb_id}_arpeggio.csv", index = False, header = None)
         bound_entity_info_grouped.to_pickle(f"{args.pdb_id}_bound_entity_info.pkl")
         log = f"{args.pdb_id},0,Success"
-        final_manifest_entry = f"{args.pdb_id},{args.assembly_id},{args.cif},{args.bio_h},{args.sifts_xml},{cwd}/{args.pdb_id}_arpeggio.csv,{cwd}/{args.pdb_id}_bound_entity_info.pkl"
+        final_manifest_entry = [args.pdb_id,args.assembly_id,args.cif,args.bio_h,args.sifts_xml,f"{cwd}/{args.pdb_id}_arpeggio.csv",f"{cwd}/{args.pdb_id}_bound_entity_info.pkl",assembly_molwt_kda]
     else:
         log = f"{pdb_id},122,No bound entities found in cif file"
     return log, final_manifest_entry
@@ -165,30 +165,46 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--manifest', type =str, help='manifest file containing the list of structures to process, their updated and protonated cif files, pdb id of structure and assembly id of structure.')
     parser.add_argument('--threads', type = int, default = 1, help= 'number of threads to use for processing the structures')
+    parser.add_argument('--chunk_size', type = int, default = 100, help = 'number of structures to process in a single chunk')
+    parsed.add_argument('--max_molwt', type = int, default = 500, help = 'maximum molecular weight of assembly to process in pipeline')
     args = parser.parse_args()
 
     manifest = pd.read_csv(args.manifest)
     cwd = Path.cwd()
     logs = []
     logs.append("pdb_id,error_code,error_message")
-    final_manifest = []
-    final_manifest.append("pdb_id,assembly_id,updated_mmcif,protonated_assembly,sifts_xml,arpeggio_queries,bound_entity_info")
+    
     #we can parallelise this for loop.
-    tasks = [(row,cwd) for _, row in manifest.iterrows()]
+    tasks = [(row,cwd, args.max_molwt) for _, row in manifest.iterrows()]
     with Pool(args.threads) as pool:
         results = pool.starmap(process_manifest_row, tasks)
     
     log_entries, final_manifest_entries = zip(*results)
     logs = logs + list(log_entries)
-    final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
-    final_manifest = final_manifest + list(final_manifest_entries)
-    
+
     with open("process_mmcif_log.txt", mode='w', newline='') as file:
         for line in logs:
             file.write("%s\n" % line)
-    with open("mmcif_manifest.txt", mode = "w", newline = '') as file:
-        for line in final_manifest:
-            if line != "":
-                file.write("%s\n" % line)
+
+    final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
+    final_manifest_names = ["pdb_id","assembly_id","updated_mmcif","protonated_assembly","sifts_xml","arpeggio_queries","bound_entity_info","assembly_molwt"]
+    final_manifest_df = pd.DataFrame(final_manifest_entries, names = final_manifest_names)
+    final_manifest_df.to_pickle("final_mainfest.pkl")
+
+    threshold = df['assembly_molwt'].quantile(0.9)
+    #bottom 90% by molwt saved in batches of X
+    top_10_percent = df[df['assembly_molwt'] >= threshold]
+    remaining_90_percent = df[df['assembly_molwt'] < threshold]
+
+    #save top 10% biggest structures as individual manifests to process them as separate jobs in pipeline
+    for index, row in top_10_percent.iterrows():
+        row.to_frame().T.to_csv(os.path.join(f'bio_h_cif_{index}.csv'), index=False)
+
+    # Save remaining 90% in chunks of X rows
+    chunk_size = args.chunk_size
+    for i in range(0, len(remaining_90_percent), chunk_size):
+        chunk = remaining_90_percent.iloc[i:i + chunk_size]
+        chunk.to_csv(os.path.join(output_dir, f'bio_h_cif_chunk_{i + 1 + index}.csv'), index=False)
+        
 if __name__ == "__main__":
     main()
