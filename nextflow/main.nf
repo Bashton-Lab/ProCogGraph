@@ -9,7 +9,7 @@ process PROCESS_MMCIF {
         path manifest
         
     output:
-        path("new_manifest.txt"), emit: updated_manifest
+        path("mmcif_manifest.txt"), emit: updated_manifest
         path("process_mmcif_log.txt"), emit: log
     script:
     """
