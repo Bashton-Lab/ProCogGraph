@@ -13,7 +13,7 @@ process PROCESS_MMCIF {
         path("process_mmcif_log.txt"), emit: log
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest}
+    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest} --threads ${task.cpus}
     """
 
 }

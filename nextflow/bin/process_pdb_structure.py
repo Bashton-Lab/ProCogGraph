@@ -13,7 +13,7 @@ def pattern_to_range(pattern):
     start, end = map(int, re.search(r'(\d+)-(\d+)', pattern).groups())
     return ",".join([str(x) for x in range(start, end + 1)])
 
-def process_manifest_row(row):
+def process_manifest_row(row, cwd):
     log = ""
     final_manifest_entry = ""
     
@@ -30,13 +30,9 @@ def process_manifest_row(row):
         # know of at least one case of this error: 8j07_updated, so we catch it here and allow it in nextflow pipelien by specific exit code
         if "Wrong number of values in loop _atom_site" in str(e):
             log = f"{pdb_id},120,{e}"
-            logs.append(log)
-            continue
         else:
             log = f"{pdb_id},1,{e}"
-            logs.append(log)
-            continue
-
+        return log,final_manifest_entry
     block = doc.sole_block()
 
     #we read in the protonated structure to verify the mapping between updated and protonated structure
@@ -54,8 +50,8 @@ def process_manifest_row(row):
     elif len(separators) == 1:
         separator = separators[0]
     else:
-        print("Mixed separators detected, exiting")
         log = f"{pdb_id},1,Mixed separators detected"
+        return log,final_manifest_entry
 
     entity_info = pd.DataFrame(block.find(['_entity.id', '_entity.pdbx_description', '_entity.formula_weight']), columns = ["entity_id", "description", "molweight"])
     entity_info["description"] = entity_info["description"].str.strip("\"|';").str.replace(r"\n$","", regex = True)
@@ -93,7 +89,7 @@ def process_manifest_row(row):
 
     if assembly_molwt_kda >= 500:
         log = f"{pdb_id},121,Large structure detected run individually instead of in pipeline"
-
+        return log,final_manifest_entry
     #switched auth_asym_id to pdb_asym_id (which is a pointer to atom_site auth asym id and seems to hold up better for branch structures in the mapping to pdb-h structure)
     branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.pdb_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
     branched_seq_info_merged =  pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'hetCode', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'descriptor'])
@@ -129,6 +125,7 @@ def process_manifest_row(row):
         #assembly may not include all bound entities. e.g. 3m43 GOL not in assembly
         if len(bound_entity_info_assembly) == 0:
             log = f"{pdb_id},122,No bound entities mapped to the assembly operations for preferred assembly"
+            return log,final_manifest_entry
         #assert(len(bound_entity_info_assembly.loc[bound_entity_info_assembly._merge != "both"]) == 0)
         #originally beleived the protonated structure for branch used struct asym id, but it seems to use auth asym id so following two lines are identical and could be deduplicated once we are sure this is true
         bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "assembly_chain_id_ligand"] = bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "auth_asym_id"] + separator + bound_entity_info_assembly.loc[(bound_entity_info_assembly.type == "ligand"), "oper_expression"]
@@ -148,7 +145,6 @@ def process_manifest_row(row):
         bound_entity_info_grouped["arpeggio"].explode().to_csv(f"{args.pdb_id}_arpeggio.csv", index = False, header = None)
         bound_entity_info_grouped.to_pickle(f"{args.pdb_id}_bound_entity_info.pkl")
         log = f"{args.pdb_id},0,Success"
-        logs.append(log)
         final_manifest_entry = f"{args.pdb_id},{args.assembly_id},{args.cif},{args.bio_h},{args.sifts_xml},{cwd}/{args.pdb_id}_arpeggio.csv,{cwd}/{args.pdb_id}_bound_entity_info.pkl"
     else:
         log = f"{pdb_id},122,No bound entities found in cif file"
@@ -168,7 +164,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--manifest', type =str, help='manifest file containing the list of structures to process, their updated and protonated cif files, pdb id of structure and assembly id of structure.')
-    parser.add_argumetn('--threads', type = int, default = 1, help= 'number of threads to use for processing the structures')
+    parser.add_argument('--threads', type = int, default = 1, help= 'number of threads to use for processing the structures')
     args = parser.parse_args()
 
     manifest = pd.read_csv(args.manifest)
@@ -178,10 +174,12 @@ def main():
     final_manifest = []
     final_manifest.append("pdb_id,assembly_id,updated_mmcif,protonated_assembly,sifts_xml,arpeggio_queries,bound_entity_info")
     #we can parallelise this for loop.
+    tasks = [(row,cwd) for _, row in manifest.iterrows()]
     with Pool(args.threads) as pool:
-        results = pool.map(process_row, [row for _, row in manifest_df.iterrows()])
+        results = pool.starmap(process_manifest_row, tasks)
     
-    logs, final_manifest_entries = zip(*results)
+    log_entries, final_manifest_entries = zip(*results)
+    logs = logs + list(log_entries)
     final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
 
     with open("process_mmcif_log.txt", mode='w', newline='') as file:
