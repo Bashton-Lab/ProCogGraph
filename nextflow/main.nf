@@ -9,8 +9,8 @@ process PROCESS_MMCIF {
         path manifest
         
     output:
-        path("mmcif_manifest.txt"), emit: updated_manifest
         path("process_mmcif_log.txt"), emit: log
+        path("bio_h_cif_*.csv"), emit: arpeggio_batch
     script:
     """
     python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest} --threads ${task.cpus}
@@ -22,17 +22,16 @@ process RUN_ARPEGGIO {
     label 'arpeggio' //gives 18gb mem for arpeggio in slurm submission (offering overhead for complex structures)
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
-    errorStrategy 'ignore' //temporary - arpeggio has errors when chem_comp.name is empty (bool false e.g. 2c16 - working on a fix)
     publishDir "${params.publish_dir}/arpeggio", mode: 'copy'
     input:
-        tuple path(bio_h_cif),path(arpeggio_selections),val(pdb_id)
+        path arpeggio_batch
 
     output:
-        path("${pdb_id}_bio-h.json")
+        path("*_bio-h.json")
 
     script:
     """
-    ${workflow.projectDir}/bin/run_arpeggio.sh ${bio_h_cif} ${arpeggio_selections} ${pdb_id}
+    ${workflow.projectDir}/bin/run_arpeggio.sh ${arpeggio_batch}
     """
 
 }
@@ -190,10 +189,7 @@ process PRODUCE_NEO4J_FILES {
 
 workflow {
     processed_struct_manifest = PROCESS_MMCIF( Channel.fromPath(params.manifest) )
-    updated_manifest = processed_struct_manifest.updated_manifest.splitCsv(header:true) | map { [ it.pdb_id, it.assembly_id, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml), file(it.arpeggio_queries), file(it.bound_entity_info) ] }
-    arpeggio = RUN_ARPEGGIO(
-        updated_manifest
-            .map { all_out -> [file(all_out[3]), file(all_out[5]), all_out[0]] } ).collectFile(name: 'combined_contacts.json', storeDir: "${params.publish_dir}/arpeggio", cache: true )
+    arpeggio = RUN_ARPEGGIO( processed_struct_manifest.arpeggio_manifest ).collectFile(name: 'combined_contacts.json', storeDir: "${params.publish_dir}/arpeggio", cache: true )
     contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
     collected_contacts = contacts.contacts.collectFile(name: 'combined_contacts.tsv', storeDir: "${params.publish_dir}/contacts", cache: true)
     all_contacts = PROCESS_ALL_CONTACTS( collected_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
