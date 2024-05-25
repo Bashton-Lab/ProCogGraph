@@ -166,7 +166,7 @@ def main():
     parser.add_argument('--manifest', type =str, help='manifest file containing the list of structures to process, their updated and protonated cif files, pdb id of structure and assembly id of structure.')
     parser.add_argument('--threads', type = int, default = 1, help= 'number of threads to use for processing the structures')
     parser.add_argument('--chunk_size', type = int, default = 100, help = 'number of structures to process in a single chunk')
-    parsed.add_argument('--max_molwt', type = int, default = 500, help = 'maximum molecular weight of assembly to process in pipeline')
+    parser.add_argument('--max_molwt', type = int, default = 500, help = 'maximum molecular weight of assembly to process in pipeline')
     args = parser.parse_args()
 
     manifest = pd.read_csv(args.manifest)
@@ -188,7 +188,7 @@ def main():
 
     final_manifest_entries = [entry for entry in final_manifest_entries if entry != ""]
     final_manifest_names = ["pdb_id","assembly_id","updated_mmcif","protonated_assembly","sifts_xml","arpeggio_queries","bound_entity_info","assembly_molwt"]
-    final_manifest_df = pd.DataFrame(final_manifest_entries, names = final_manifest_names)
+    final_manifest_df = pd.DataFrame(final_manifest_entries, columns = final_manifest_names)
     final_manifest_df.to_pickle("final_mainfest.pkl")
 
     threshold = df['assembly_molwt'].quantile(0.9)
