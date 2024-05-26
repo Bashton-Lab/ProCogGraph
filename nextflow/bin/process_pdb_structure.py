@@ -193,8 +193,8 @@ def main():
 
     threshold = final_manifest_df['assembly_molwt'].quantile(0.9)
     #bottom 90% by molwt saved in batches of X
-    top_10_percent = final_manifest_df[final_manifest_df['assembly_molwt'] >= threshold].reset_index()
-    remaining_90_percent = final_manifest_df[final_manifest_df['assembly_molwt'] < threshold].reset_index()
+    top_10_percent = final_manifest_df[final_manifest_df['assembly_molwt'] >= threshold].reset_index(drop = True)
+    remaining_90_percent = final_manifest_df[final_manifest_df['assembly_molwt'] < threshold].reset_index(drop = True)
 
     #save top 10% biggest structures as individual manifests to process them as separate jobs in pipeline
     for index, row in top_10_percent.iterrows():
