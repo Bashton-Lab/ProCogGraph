@@ -111,7 +111,7 @@ def main():
         xml = row["sifts_xml"]
         pdb_id = row["pdb_id"]
         bound_entity_pickle = row["bound_entity_info"]
-        assembly_id = str(row["assembly_id"])
+        assembly_id = str(int(row["assembly_id"]))
         args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = main_args.domain_contact_cutoff)
         pdb_contacts = all_contacts.get(pdb_id)
         if pdb_contacts is None:
@@ -400,7 +400,7 @@ def main():
         bound_entity_info_arp_exploded_merged_aggregated_sym_agg.to_csv(f"{args.pdb_id}_bound_entity_contacts.tsv", sep = "\t", index = False)
         log = f"{pdb_id},0,success"
         logs.append(log)
-        
+
     with open("process_contacts_log.txt", "w") as f:
         for line in logs:
             f.write("%s\n" % line)
