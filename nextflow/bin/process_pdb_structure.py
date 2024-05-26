@@ -198,7 +198,7 @@ def main():
 
     #save top 10% biggest structures as individual manifests to process them as separate jobs in pipeline
     for index, row in top_10_percent.iterrows():
-        row.to_frame().T.to_csv(f'bio_h_cif_{index}.csv', index=False)
+        row.to_frame().T.to_csv(f'bio_h_cif_chunk_{index}.csv', index=False)
 
     # Save remaining 90% in chunks of X rows
     chunk_size = args.chunk_size

@@ -1,7 +1,7 @@
 #! /usr/bin/env nextflow
 
 process PROCESS_MMCIF {
-    label 'medmem' //gives 8gb and single core (max observed usage is 8gb)
+    label 'largecpu_largemem' //job runs in parallel within script
     publishDir "${params.publish_dir}/process_struct", mode: 'copy'
     errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
@@ -37,7 +37,7 @@ process RUN_ARPEGGIO {
 }
 
 process PROCESS_CONTACTS {
-    label 'medmem' //gives 12gb and single core (max observed usage is below 12gb)
+    label 'medmem' //needed for loading large json into memory.
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
     errorStrategy { task.exitStatus in 124..127 ? 'ignore' : 'terminate' }

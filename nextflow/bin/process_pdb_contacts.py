@@ -81,9 +81,6 @@ def pattern_to_range(pattern):
     start, end = map(int, re.search(r'(\d+)-(\d+)', pattern).groups())
     return ",".join([str(x) for x in range(start, end + 1)])
 
-
-##add logging here!
-
 def main():
     """
     Extracts domain information from the updated MMCIF file and assigns ownership categories to ligands based on domain contact percentages
