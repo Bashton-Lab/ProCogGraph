@@ -43,7 +43,7 @@ process PROCESS_CONTACTS {
     publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
     errorStrategy { task.exitStatus in 124..127 ? 'ignore' : 'terminate' }
     input:
-        path combined_json
+        path json
         path manifest
         val domain_contact_cutoff
     output:
@@ -51,9 +51,7 @@ process PROCESS_CONTACTS {
         path "process_contacts_log.txt", emit: log
     script:
     """
-    sed '\$ s/,\$//' ${combined_json} > combined_json_formatted.json
-    echo "{ \$(cat combined_json_formatted.json) }" > combined_json_formatted.json
-    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --contacts_json combined_json_formatted.json --manifest ${manifest} --domain_contact_cutoff ${domain_contact_cutoff}
+    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --manifest ${manifest} --domain_contact_cutoff ${domain_contact_cutoff}
     """
 }
 
