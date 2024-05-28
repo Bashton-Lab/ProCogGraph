@@ -13,11 +13,11 @@ process_row() {
 
     #handle various exit conditions
     if [ $exit_code -eq 124 ]; then
-        echo "\"${pdb_id}\": \"timeout\"" > "${pdb_id}_bio-h.json"
+        echo "{\"status\": \"timeout\", \"${pdb_id}\": []}" > "${pdb_id}_bio-h.json"
     elif [ $exit_code -ne 0 ]; then
-        echo "\"${pdb_id}\": \"arpeggio_failure\"" > "${pdb_id}_bio-h.json"
+        echo "{\"status\": \"arpeggio_failure\", \"${pdb_id}\": []}" > "${pdb_id}_bio-h.json"
     else
-        echo "\"${pdb_id}\": $(cat ${pdb_id}_bio-h.json)," > "${pdb_id}_bio-h.json"
+        echo "{\"status\": \"success\", \"${pdb_id}\": $(cat ${pdb_id}_bio-h.json)}" > "${pdb_id}_bio-h.json"
     fi
 
     # Remove the decompressed CIF file

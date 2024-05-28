@@ -93,15 +93,11 @@ def main():
     """
 
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--contacts_json', type=str, help='json file of contacts from pdbe-arpeggio')
     parser.add_argument('--manifest', type=str, help='manifest mapping files')
     parser.add_argument('--domain_contact_cutoff' , type = int, default = 3, help = 'minimum number of contacts for a domain to be considered')
     main_args = parser.parse_args()
 
     manifest = pd.read_csv(main_args.manifest)
-    with open(main_args.contacts_json) as user_file:
-        file_contents = user_file.read()
-    all_contacts = json.loads(file_contents)
     logs = []
     for index, row in manifest.iterrows():
         updated_cif = row["updated_mmcif"]
@@ -110,22 +106,27 @@ def main():
         bound_entity_pickle = row["bound_entity_info"]
         assembly_id = str(int(row["assembly_id"]))
         args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = main_args.domain_contact_cutoff)
-        pdb_contacts = all_contacts.get(pdb_id)
-        if pdb_contacts is None:
+        if os.path.exists(f"{pdb_id}_bio-h.json"):
+            with open(f"{pdb_id}_bio-h.json") as json_file:
+                json_contents = json_file.read()
+            contacts_file = json.loads(json_file)
+        else:    
             log = f"{pdb_id},127,no_contacts_record"
             logs.append(log)
             continue
-        elif pdb_contacts == "timeout":
-            log = f"{pdb_id},127,arpeggio_timeout"
+
+        arpeggio_status = contacts_file.get("status")
+        if arpeggio_status == "timeout":
+            log = f"{pdb_id},127,no_contacts_record"
             logs.append(log)
             continue
-        elif pdb_contacts == "arpeggio_failure":
+        elif arpeggio_status == "arpeggio_failure":
             log = f"{pdb_id},127,arpeggio_failure"
             logs.append(log)
             continue
         else:
             #load the contacts data
-            contacts = pd.DataFrame.from_records(pdb_contacts)
+            contacts = pd.DataFrame.from_json(contacts_file.get(f"{pdb_id}"))
             if len(contacts) == 0:
                 #for example, only proximal contacts - see 1a1q
                 log = f"{pdb_id},124,no_ligand_protein_contacts"
