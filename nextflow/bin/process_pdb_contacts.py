@@ -106,7 +106,7 @@ def main():
         bound_entity_pickle = row["bound_entity_info"]
         assembly_id = str(int(row["assembly_id"]))
         args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = main_args.domain_contact_cutoff)
-        if os.path.exists(f"{pdb_id}_bio-h.json"):
+        if Path(f"{pdb_id}_bio-h.json").is_file():
             with open(f"{pdb_id}_bio-h.json") as json_file:
                 json_contents = json_file.read()
             contacts_file = json.loads(json_file)
