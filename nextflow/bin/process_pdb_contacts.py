@@ -126,7 +126,7 @@ def main():
             continue
         else:
             #load the contacts data
-            contacts = pd.DataFrame.from_json(contacts_file.get(f"{pdb_id}"))
+            contacts = pd.DataFrame.from_records(contacts_file.get(f"{pdb_id}"))
             if len(contacts) == 0:
                 #for example, only proximal contacts - see 1a1q
                 log = f"{pdb_id},124,no_ligand_protein_contacts"
