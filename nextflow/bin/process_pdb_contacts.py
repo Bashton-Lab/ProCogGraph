@@ -109,7 +109,7 @@ def main():
         if Path(f"{pdb_id}_bio-h.json").is_file():
             with open(f"{pdb_id}_bio-h.json") as json_file:
                 json_contents = json_file.read()
-            contacts_file = json.loads(json_file)
+            contacts_file = json.loads(json_contents)
         else:    
             log = f"{pdb_id},127,no_contacts_record"
             logs.append(log)
