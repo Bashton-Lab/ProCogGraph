@@ -7,13 +7,14 @@ process PROCESS_MMCIF {
     cache 'lenient'
     input:
         path manifest
+        val max_molwt
     output:
         path("combined_arpeggio_manifest.csv"), emit:updated_manifest
         path("process_mmcif_log.txt"), emit: log
         path("bio_h_cif_*.csv"), emit: arpeggio_batch
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest} --threads ${task.cpus}
+    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest} --threads ${task.cpus} --max_molwt ${max_molwt}
     """
 
 }
@@ -188,7 +189,7 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    processed_struct_manifest = PROCESS_MMCIF( Channel.fromPath(params.manifest) )
+    processed_struct_manifest = PROCESS_MMCIF( Channel.fromPath(params.manifest), params.max_molwt )
     arpeggio_batches = processed_struct_manifest.arpeggio_batch.flatten()
     arpeggio = RUN_ARPEGGIO( arpeggio_batches ).collectFile(name: 'combined_contacts.json', storeDir: "${params.publish_dir}/arpeggio", cache: true )
     contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
