@@ -83,7 +83,6 @@ def main():
     ec_class_subclass_rel.to_csv(f"ec_class_subclass_rel.csv.gz", compression = "gzip", sep = "\t", index = False)
     ec_subclass_subsubclass_rel.to_csv(f"ec_subclass_subsubclass_rel.csv.gz", compression = "gzip", sep = "\t", index = False)
     ec_subsubclass_id_rel.to_csv(f"ec_subsubclass_id_rel.csv.gz", compression = "gzip", sep = "\t", index = False)
-
     
     cognate_ligands = pd.read_pickle(args.cognate_ligands)
     cognate_ligands_nodes = cognate_ligands[["canonical_smiles", "uniqueID", "ligand_db", "compound_name", "isCofactor", "compound_reaction"]].copy().drop_duplicates(subset = ["canonical_smiles", "uniqueID"])
@@ -99,27 +98,47 @@ def main():
     pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
     interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
 
-    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_ec", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_ec", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_ec", "ec_list"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "protein_entity_ec", "ec_list"]]]).drop_duplicates()
+    #add unique ids for protein chains
+    cath_domains["chainUniqueID"] = cath_domains["pdb_id"] + "_" + cath_domains["proteinStructAsymID"]
+    scop_domains["chainUniqueID"] = scop_domains["pdb_id"] + "_" + scop_domains["proteinStructAsymID"]
+    pfam_domains["chainUniqueID"] = pfam_domains["pdb_id"] + "_" + pfam_domains["proteinStructAsymID"]
+    interpro_domains["chainUniqueID"] = interpro_domains["pdb_id"] + "_" + interpro_domains["proteinStructAsymID"]
+
+    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]]]).drop_duplicates()
+    pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"ec_list": set}).reset_index()
+    pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.join("|")
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_title"] = pdb_nodes["pdb_title"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_descriptor"] = pdb_nodes["pdb_descriptor"].str.replace("\n", " ", regex = True)
-    pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.replace(",", "|")
-    pdb_nodes.loc[(pdb_nodes.protein_entity_ec.str.contains("-") == False) & (pdb_nodes.protein_entity_ec != pdb_nodes.ec_list), "updatedEC"] = "True"
-    pdb_nodes.loc[(pdb_nodes.protein_entity_ec.str.contains("-")), "partialEC"] = "True"
-    pdb_nodes["partialEC"] = pdb_nodes["partialEC"].fillna("False")
-    pdb_nodes["updatedEC"] = pdb_nodes["updatedEC"].fillna("False")
-    pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC"}, inplace = True)
+    pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.replace(",", "|") #maybe we can have the ec list on the entry node be all EC annotations for all protein entities - need to do a groupby agg and join for this
+    pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords", "ec_list" : "ecList:string[]"}, inplace = True)
     pdb_nodes.to_csv(f"pdb_entry_nodes.csv.gz", sep='\t', compression = "gzip", index = False)
 
-    pdb_ec_rels = pdb_nodes[["pdbEntry:ID(pdb-id)","ecList:string[]"]].copy()
-    pdb_ec_rels["ecList:string[]"] = pdb_ec_rels["ecList:string[]"].str.split("|")
-    pdb_ec_rels = pdb_ec_rels.explode("ecList:string[]")
-    print(f"{len(pdb_ec_rels)} before filtering")
-    pdb_ec_rels = pdb_ec_rels.loc[pdb_ec_rels["ecList:string[]"].isin(ec_id_nodes["ecID:ID(ec-id)"].unique())].copy()
-    print(f"{len(pdb_ec_rels)} after filtering")
-    pdb_ec_rels = pdb_ec_rels.loc[(pdb_ec_rels["ecList:string[]"] != "") & (pdb_ec_rels["ecList:string[]"].isna() == False)].reset_index()
-    pdb_ec_rels.rename(columns = {"pdbEntry:ID(pdb-id)": ":START_ID(pdb-id)", "ecList:string[]": ":END_ID(ec-id)"}, inplace = True)
-    pdb_ec_rels.to_csv(f"pdb_ec_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    cath_protein_entities = cath_domains[["chainUniqueID", "proteinStructAsymID",  "protein_entity_ec", "ec_list"]]
+    scop_protein_entities = scop_domains[["chainUniqueID", "proteinStructAsymID","protein_entity_ec", "ec_list"]]
+    pfam_protein_entities = pfam_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    interpro_protein_entities = interpro_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+
+    protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, pfam_protein_entities, interpro_protein_entities])
+    protein_entities = protein_entities.drop_duplicates(subset = ["chainUniqueID", "protein_entity_ec"])
+
+    protein_entities["ec_list"] = protein_entities["ec_list"].str.replace(",", "|")
+    protein_entities.loc[(protein_entities.protein_entity_ec.str.contains("-") == False) & (protein_entities.protein_entity_ec != protein_entities.ec_list), "updatedEC"] = "True"
+    protein_entities.loc[(protein_entities.protein_entity_ec.str.contains("-")), "partialEC"] = "True"
+    protein_entities["partialEC"] = protein_entities["partialEC"].fillna("False")
+    protein_entities["updatedEC"] = protein_entities["updatedEC"].fillna("False")
+    protein_entities.rename(columns = {"chainUniqueID": "pdbProteinChain:ID(pdbp-id)", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC", "proteinStructAsymID" : "chainID"}, inplace = True)
+    protein_entities.to_csv(f"pdb_protein_chain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    protein_ec_rels = protein_entities[["pdbProteinChain:ID(pdbp-id)","ecList:string[]"]].copy()
+    protein_ec_rels["ecList:string[]"] = protein_ec_rels["ecList:string[]"].str.split("|")
+    protein_ec_rels = protein_ec_rels.explode("ecList:string[]")
+    print(f"{len(protein_ec_rels)} before filtering")
+    protein_ec_rels = protein_ec_rels.loc[protein_ec_rels["ecList:string[]"].isin(ec_id_nodes["ecID:ID(ec-id)"].unique())].copy()
+    print(f"{len(protein_ec_rels)} after filtering")
+    protein_ec_rels = protein_ec_rels.loc[(protein_ec_rels["ecList:string[]"] != "") & (protein_ec_rels["ecList:string[]"].isna() == False)].reset_index()
+    protein_ec_rels.rename(columns = {"pdbProteinChain:ID(pdbp-id)": ":START_ID(pdbp-id)", "ecList:string[]": ":END_ID(ec-id)"}, inplace = True)
+    protein_ec_rels.to_csv(f"protein_ec_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_domains_nodes = scop_domains[["domain_accession", "assembly_chain_id_protein", "scop_id", "dm_description", "sccs", "domain_sunid"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
@@ -148,9 +167,6 @@ def main():
     pfam_domains_nodes[":LABEL"] = pfam_domains_nodes["type"] + "|domain"
     pfam_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(pfam-domain-id)", "pfam_accession": "pfamAccession", "pfam_description": "description", "pfam_name": "name"}, inplace = True)
     pfam_domains_nodes.to_csv(f"pfam_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
-
-    #domain_nodes = pd.concat([scop_domains_nodes, cath_domains_nodes, interpro_domain_nodes])
-    #domain_nodes.to_csv(f"domain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_family_nodes = scop_domains[["sccs", "fa_id", "fa_description"]].drop_duplicates()
     scop_family_nodes.rename(columns = {"sccs": "SCCS", "fa_id": "scopFamily:ID(scop-family-id)", "fa_description": "description"}, inplace = True)
@@ -328,16 +344,24 @@ def main():
         interpro_domain_ligand_interactions = pd.DataFrame(columns = [":END_ID(be-id)",":START_ID(interpro-domain-id)"])
     interpro_domain_ligand_interactions.to_csv(f"interpro_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
     
-    cath_pdb_rels = cath_domains[["domain_accession", "pdb_id"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(cath-domain-id)", "pdb_id":":END_ID(pdb-id)"})
-    scop_pdb_rels = scop_domains[["domain_accession", "pdb_id"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(scop-domain-id)", "pdb_id":":END_ID(pdb-id)"})
-    pfam_pdb_rels = pfam_domains[["domain_accession", "pdb_id"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(pfam-domain-id)", "pdb_id":":END_ID(pdb-id)"})
-    interpro_pdb_rels = interpro_domains[["domain_accession", "pdb_id"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(interpro-domain-id)", "pdb_id":":END_ID(pdb-id)"})
+    scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    cath_pdb_protein_rels = cath_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    pfam_pdb_protein_rels = pfam_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    interpro_pdb_protein_rels = interpro_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
 
-    cath_pdb_rels.to_csv(f"cath_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    scop_pdb_rels.to_csv(f"scop_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    pfam_pdb_rels.to_csv(f"pfam_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    interpro_pdb_rels.to_csv(f"interpro_pdb_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    pdb_protein_rels = pd.concat([scop_pdb_protein_rels, cath_pdb_protein_rels, pfam_pdb_protein_rels, interpro_pdb_protein_rels]).drop_duplicates()
+    pdb_protein_rels.rename(columns = {"chainUniqueID": ":START_ID(pdbp-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
+    pdb_protein_rels.to_csv(f"pdb_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
+    cath_protein_rels = cath_domains[["domain_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(cath-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    scop_protein_rels = scop_domains[["domain_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(scop-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    pfam_protein_rels = pfam_domains[["domain_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(pfam-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+    interpro_protein_rels = interpro_domains[["domain_accession", "chainUniqueID"]].drop_duplicates().rename(columns = {"domain_accession": ":START_ID(interpro-domain-id)", "chainUniqueID":":END_ID(pdbp-id)"})
+
+    cath_protein_rels.to_csv(f"cath_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    scop_protein_rels.to_csv(f"scop_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    pfam_protein_rels.to_csv(f"pfam_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    interpro_protein_rels.to_csv(f"interpro_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     procoggraph_node = pd.DataFrame({"procoggraph:ID(procoggraph-id)": ["procoggraph"],
                                     "name": ["ProCogGraph"],
@@ -350,6 +374,7 @@ def main():
                                     "pdbe_graph_scripts_version": ["0.1"],
                                     "pdbe_graph_data_version": ["0.1"],
                                     "input_params": ["-"],})
+    #THE PROCOGGRAPH NODE CAN CONTAIN SOME PRECOMPUTED STATS TO SPEED UP PROCOGDASH ? 
 
     procoggraph_node.to_csv(f"procoggraph_node.csv.gz", compression = "gzip", sep = "\t", index = False)
 

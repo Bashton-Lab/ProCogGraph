@@ -65,7 +65,7 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
     sifts_chains_uniprot["ACCESSION"] = sifts_chains_uniprot["ACCESSION"].apply(lambda x: "|".join(x)) #join the list of uniprot accessions with a pipe for downstream neo4j integration
     sifts_chains_uniprot.rename(columns = {"ACCESSION" : "uniprot_accession"}, inplace = True)
 
-    sifts_chains_ec = sifts_chains_ec[["PDB", "EC_NUMBER"]].groupby(["PDB"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb associated ec's
+    sifts_chains_ec = sifts_chains_ec[["PDB", "CHAIN", "EC_NUMBER"]].groupby(["PDB", "CHAIN"]).agg({"EC_NUMBER": set}).reset_index() #group these into a set of pdb chain associated ec's
     sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].apply(lambda x: ",".join(x)) #join the list of EC numbers into a single string for ec records function
     sifts_chains_ec["EC_NUMBER"] = sifts_chains_ec["EC_NUMBER"].str.strip(",") #strip any leading or trailing commas - eventually drop the "" for np.nan in df before doing join so this isnt problem
     sifts_chains_ec = get_updated_enzyme_records(sifts_chains_ec, ec_records_file, ec_col = "EC_NUMBER")
@@ -158,9 +158,9 @@ def main():
 
     sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
     sifts_chains_ec, sifts_chains_uniprot = process_sifts_ec_map(sifts_chains, ec_records_df)
-    contacts_ec = contacts.merge(sifts_chains_ec, left_on = "pdb_id", right_on = "PDB", how = "left", indicator = True)
-    contacts_ec_unmatched = contacts_ec.loc[contacts_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB"])
-    contacts_ec = contacts_ec.loc[contacts_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB"])
+    contacts_ec = contacts.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
+    contacts_ec_unmatched = contacts_ec.loc[contacts_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
+    contacts_ec = contacts_ec.loc[contacts_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
     contacts_ec_unmatched.to_csv(f"contacts_ec_unmatched.csv", index = False)
 
     #now add uniprot info to the contacts file
