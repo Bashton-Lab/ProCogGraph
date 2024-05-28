@@ -3,7 +3,6 @@
 process PROCESS_MMCIF {
     label 'largecpu_largemem' //job runs in parallel within script
     publishDir "${params.publish_dir}/process_struct", mode: 'copy'
-    errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
         path manifest
