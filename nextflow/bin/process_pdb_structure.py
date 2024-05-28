@@ -204,7 +204,7 @@ def main():
     # Save remaining 90% in chunks of X rows
     #enumerate the range output to get i and also an index trakcer? 
     chunk_size = args.chunk_size
-    for _i, chunk in enumerate(range(0, len(remaining_90_percent), chunk_size)):
+    for _i, i in enumerate(range(0, len(remaining_90_percent), chunk_size)):
         chunk = remaining_90_percent.iloc[i:i + chunk_size]
         chunk.to_csv(f'bio_h_cif_chunk_{_i + 1 + index}.csv', index=False)
         
