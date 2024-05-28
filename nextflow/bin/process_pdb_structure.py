@@ -87,9 +87,10 @@ def process_manifest_row(row, cwd, max_molwt):
     #unknown atom or ion can result in ? in molweight - e.g. 1svu, so filter the df before taking molweight sum (also filter dot as we know these can occur elsewhere)
     assembly_molwt_kda = struct_asym_info.loc[struct_asym_info.molweight.isin(["?", "."]) == False].molweight.astype("float").sum() / 1000
 
-    if assembly_molwt_kda >= max_molwt:
-        log = f"{pdb_id},121,Large structure detected run individually instead of in pipeline"
-        return log,final_manifest_entry
+    if max_molwt != -1:
+        if assembly_molwt_kda >= max_molwt:
+            log = f"{pdb_id},121,Large structure detected run individually instead of in pipeline"
+            return log,final_manifest_entry
     #switched auth_asym_id to pdb_asym_id (which is a pointer to atom_site auth asym id and seems to hold up better for branch structures in the mapping to pdb-h structure)
     branched_seq_info = pd.DataFrame(block.find(['_pdbx_branch_scheme.asym_id', '_pdbx_branch_scheme.mon_id', '_pdbx_branch_scheme.entity_id', '_pdbx_branch_scheme.pdb_seq_num', '_pdbx_branch_scheme.pdb_asym_id', '_pdbx_branch_scheme.auth_seq_num']), columns = ["bound_ligand_struct_asym_id", "hetCode", "entity_id", "pdb_seq_num", "auth_asym_id", "auth_seq_num"])
     branched_seq_info_merged =  pd.DataFrame([], columns = ['bound_ligand_struct_asym_id', 'hetCode', 'entity_id', 'pdb_seq_num', 'auth_asym_id', 'auth_seq_num', 'descriptor'])
@@ -166,7 +167,7 @@ def main():
     parser.add_argument('--manifest', type =str, help='manifest file containing the list of structures to process, their updated and protonated cif files, pdb id of structure and assembly id of structure.')
     parser.add_argument('--threads', type = int, default = 1, help= 'number of threads to use for processing the structures')
     parser.add_argument('--chunk_size', type = int, default = 100, help = 'number of structures to process in a single chunk')
-    parser.add_argument('--max_molwt', type = int, default = 500, help = 'maximum molecular weight of assembly to process in pipeline')
+    parser.add_argument('--max_molwt', type = int, default = -1, help = 'maximum molecular weight of assembly to process in pipeline, set to -1 to not apply')
     args = parser.parse_args()
 
     manifest = pd.read_csv(args.manifest)
@@ -191,7 +192,7 @@ def main():
     final_manifest_df = pd.DataFrame(final_manifest_entries, columns = final_manifest_names)
     final_manifest_df.to_csv("combined_arpeggio_manifest.csv", index = False)
 
-    threshold = final_manifest_df['assembly_molwt'].quantile(0.9)
+    threshold = final_manifest_df['assembly_molwt'].quantile(0.8)
     #bottom 90% by molwt saved in batches of X
     top_10_percent = final_manifest_df[final_manifest_df['assembly_molwt'] >= threshold].reset_index(drop = True)
     remaining_90_percent = final_manifest_df[final_manifest_df['assembly_molwt'] < threshold].reset_index(drop = True)
@@ -201,10 +202,11 @@ def main():
         row.to_frame().T.to_csv(f'bio_h_cif_chunk_{index}.csv', index=False)
 
     # Save remaining 90% in chunks of X rows
+    #enumerate the range output to get i and also an index trakcer? 
     chunk_size = args.chunk_size
-    for i in range(0, len(remaining_90_percent), chunk_size):
+    for _i, chunk in enumerate(range(0, len(remaining_90_percent), chunk_size)):
         chunk = remaining_90_percent.iloc[i:i + chunk_size]
-        chunk.to_csv(f'bio_h_cif_chunk_{i + 1 + index}.csv', index=False)
+        chunk.to_csv(f'bio_h_cif_chunk_{_i + 1 + index}.csv', index=False)
         
 if __name__ == "__main__":
     main()
