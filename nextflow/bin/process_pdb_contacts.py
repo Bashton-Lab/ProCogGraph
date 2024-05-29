@@ -203,7 +203,8 @@ def main():
         domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
         if len(domain_info_dataframe_filtered) > 0:    
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
-            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"] 
+            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
+            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "domain_name"] + "-DOMID:" + domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"]
             domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
             domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
             #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
