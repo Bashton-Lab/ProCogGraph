@@ -150,7 +150,7 @@ def main():
         #generate pdb info and entity descriptions from cif file
         pdb_info_list = [args.pdb_id] + [block.find_value(item) for item in ["_struct.pdbx_descriptor", "_struct.title", "_struct_keywords.pdbx_keywords"]]
         pdb_info_series = pd.Series(pdb_info_list, index = ["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords"])
-        pdb_info_series = pdb_info_series.str.strip("\"|'")
+        pdb_info_series = pdb_info_series.str.strip("\"|';")
 
         ##see this webinar for details https://pdbeurope.github.io/api-webinars/webinars/web5/arpeggio.html
         assembly_info = pd.DataFrame(block.find(['_pdbx_struct_assembly_gen.assembly_id', '_pdbx_struct_assembly_gen.oper_expression', '_pdbx_struct_assembly_gen.asym_id_list']), columns = ["assembly_id", "oper_expression", "asym_id_list"])
@@ -201,13 +201,13 @@ def main():
         domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
             columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
         domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
-        if len(domain_info_dataframe_filtered) > 0:    
+
+        if len(domain_info_dataframe_filtered) > 0:
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
             domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
-            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "domain_name"] + "-DOMID:" + domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] #keep accession format in line with xml.
             #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
-            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("SF")), "xref_db"] + "_SuperFamily"
-            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("FA")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] + "_SuperFamily"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] + "_Family"
          
             domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
             domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
@@ -221,6 +221,7 @@ def main():
             protein_entity_df_assembly_domain_mmcif.drop(columns = ["entity_id", "asym_id"],inplace = True)
             protein_entity_df_assembly_domain_mmcif["seq_range_chain"] = protein_entity_df_assembly_domain_mmcif["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))])) #to match the xml data format
             mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+            mmcif_domains = list(set("SCOP2B" if x.startswith("SCOP2B") else x for x in mmcif_domains)) 
         else:
             protein_entity_df_assembly_domain_mmcif = pd.DataFrame()
             mmcif_domains = []
@@ -234,6 +235,7 @@ def main():
         db_resnum_list = []
         dbsource_list = []
         dbaccessionid_list = []
+        derived_from_list = []
 
         # Iterate over entities
         for entity in root.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}entity'):
@@ -248,10 +250,12 @@ def main():
                         dbsource = crossRefDb.attrib['dbSource']
                         if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B"] and dbsource not in mmcif_domains:
                             dbaccessionid = crossRefDb.attrib['dbAccessionId']
+                            derived_from = np.nan
                         elif dbsource == "InterPro" and dbsource not in mmcif_domains:
                             dbevidence = crossRefDb.attrib['dbEvidence']
                             if dbevidence.startswith("SSF") or dbevidence.startswith("G3DSA"):
-                                dbaccessionid = crossRefDb.attrib['dbAccessionId'] + "_" + dbevidence
+                                dbaccessionid = dbevidence
+                                derived_from = crossRefDb.attrib['dbAccessionId']
                             else:
                                 continue
                         else:
@@ -261,17 +265,19 @@ def main():
                         db_resnum_list.append(db_resnum)
                         dbsource_list.append(dbsource)
                         dbaccessionid_list.append(dbaccessionid)
+                        derived_from_list.append(derived_from)
 
         # convert to dataframe
         domain_df = pd.DataFrame({
             'proteinStructAsymID': entity_id_list,
             'seq_range_chain': db_resnum_list,
             'xref_db': dbsource_list,
-            'xref_db_acc': dbaccessionid_list
+            'xref_db_acc': dbaccessionid_list,
+            'derived_from' : derived_from_list
         })
 
         # aggregate db resnum to lists 
-        domain_df_grouped = domain_df.groupby(['proteinStructAsymID', 'xref_db', 'xref_db_acc'])['seq_range_chain'].agg(list).reset_index()
+        domain_df_grouped = domain_df.groupby(['proteinStructAsymID', 'xref_db', 'xref_db_acc', 'derived_from'], dropna = False)['seq_range_chain'].agg(list).reset_index()
 
 
         #get db specific info
@@ -291,9 +297,11 @@ def main():
             'xref_db': db_source_list,
             'xref_db_version': db_version_list
         })
-
+        db_df.loc[db_df.xref_db == "SCOP2", "xref_db"] = db_df.loc[db_df.xref_db == "SCOP2", "xref_db"].apply(lambda x: ["SCOP2B_SuperFamily", "SCOP2B_Family"]) #we adapt the SCOP2 source to the db formatting we use in ProCogGraph
+        db_df["xref_db"] = db_df["xref_db"].apply(lambda x: [x] if isinstance(x, str) else x)
+        db_df = db_df.explode("xref_db")
+         
         if len(domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro"]) > 0:
-            domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", ["derived_from", "xref_db_acc"]] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_", expand = True)
             domain_info_df_exploded = domain_df_grouped #domain_df_grouped.explode("xref_db_acc") #setting to self to test derived from category
         else:
             domain_info_df_exploded = domain_df_grouped
@@ -312,10 +320,17 @@ def main():
         protein_entity_df_assembly_domain_xml["domain_type"] = "xml"
 
         protein_entity_df_assembly_domain = pd.concat([protein_entity_df_assembly_domain_mmcif, protein_entity_df_assembly_domain_xml], ignore_index = True)
-
         # combine with domain info df
         protein_entity_df_assembly_domain = pd.merge(protein_entity_df_assembly_domain, db_df, on='xref_db', how='left')
-
+        
+        #format the xrefdb for superfamily and gene3d entries
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SSF"), "xref_db_acc"].str.replace("^SSF", "", regex = True)
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"].str.replace("^SF-DOMID:", "", regex = True)
+        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"].str.replace("^FA-DOMID:", "", regex = True)
+        
         if len(protein_entity_df_assembly_domain) == 0:
             #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
             log = f"{pdb_id},126,no_domains_in_assembly"
@@ -323,9 +338,6 @@ def main():
             continue
 
         protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
-        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
-        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
-        protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
 
         #need to map auth id's for protein entities to seq ids for domain ranges
         seq_sites = pd.DataFrame(block.find(['_atom_site.label_entity_id', '_atom_site.label_asym_id', '_atom_site.label_seq_id', '_atom_site.auth_asym_id', '_atom_site.auth_seq_id', '_atom_site.pdbx_PDB_ins_code']), columns = ["protein_entity_id","chain_id", "seq_id", "auth_asym_id", "auth_seq_id", "pdb_ins_code"]).drop_duplicates()
