@@ -289,8 +289,8 @@ def main():
         })
 
         if len(domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro"]) > 0:
-            domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_")
-            domain_info_df_exploded = domain_df_grouped.explode("xref_db_acc")
+            domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", ["derived_from", "xref_db_acc"]] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_")
+            domain_info_df_exploded = domain_df_grouped #domain_df_grouped.explode("xref_db_acc") #setting to self to test derived from category
         else:
             domain_info_df_exploded = domain_df_grouped
 
@@ -368,7 +368,7 @@ def main():
         bound_entity_info_arp_exploded_merged = bound_entity_info_arp_exploded_merged.assign(**pdb_info_series)
         bound_entity_info_arp_exploded_merged.rename(columns = {"end_auth_seq_id": "domain_residue_interactions", "bgn_auth_seq_id": "bound_ligand_residue_interactions"}, inplace = True)
 
-        bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged.groupby(["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords", "uniqueID", "xref_db", "xref_db_acc", "xref_db_version", "domain_accession", "domain_type", "descriptor", "description", "hetCode", "type", "bound_ligand_struct_asym_id", "ligand_entity_id_numerical", "bound_entity_pdb_residues", "assembly_chain_id_ligand", "assembly_chain_id_protein", "bound_molecule_display_id", "proteinStructAsymID", "auth_chain_id"], dropna=False).agg(
+        bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged.groupby(["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords", "uniqueID", "xref_db", "xref_db_acc", "xref_db_version", "domain_accession", "domain_type", "derived_from", "descriptor", "description", "hetCode", "type", "bound_ligand_struct_asym_id", "ligand_entity_id_numerical", "bound_entity_pdb_residues", "assembly_chain_id_ligand", "assembly_chain_id_protein", "bound_molecule_display_id", "proteinStructAsymID", "auth_chain_id"], dropna=False).agg(
                 {"bound_ligand_residue_interactions": set, "domain_residue_interactions": set, "domain_contact_counts": "sum", "domain_hbond_counts": "sum", "domain_covalent_counts": "sum"}).reset_index()
 
         bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= args.domain_contact_cutoff]
