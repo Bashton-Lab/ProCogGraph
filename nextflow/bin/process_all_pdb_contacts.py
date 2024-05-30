@@ -186,7 +186,7 @@ def main():
     cath_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "CATH"].copy()
     scop_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP"].copy()
     scop2b_fa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Family"].copy()
-    scop2b_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Superfamily"].copy()
+    scop2b_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_SuperFamily"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
     interpro_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "InterPro"].copy()
     gene3dsa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
