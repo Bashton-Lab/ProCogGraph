@@ -44,7 +44,7 @@ def get_chem_comp_descriptors(ccd_doc, comp_id_list):
             lig_descriptors = lig_descriptors.loc[lig_descriptors.pdb_ROMol.isna() == False]
             if len(lig_descriptors) == 0:
                 lig_descriptor = None
-            else:
+            else: 
                 #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
                 preferred_row = lig_descriptors.loc[lig_descriptors.program.str.startswith("OpenEye")]
                 if not preferred_row.empty:
@@ -179,6 +179,7 @@ def main():
     bound_entities_to_score.rename(columns = {"index" : "ligand_entity_id", "hetCode": "bl_name"}, inplace = True)
     bound_entities_to_score.to_pickle(f"bound_entities_to_score.pkl")
 
+    # now that we have contacts_ec_uniprot, make a display EC list that aggregates all low level EC annotations into a range.
     
 
     #split the domain information into separate database specific dataframes for annotation
@@ -187,7 +188,7 @@ def main():
     scop2b_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
     interpro_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "InterPro"].copy()
-    gene3d_sa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
+    gene3dsa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
     superfamily_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SuperFamily"].copy()
 
     core_cols = contacts_ec_uniprot.columns.tolist()
@@ -265,11 +266,11 @@ def main():
     else:
         scop2b_contacts = pd.DataFrame()
         scop2b_contacts.to_csv(f"scop2b_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    if len(gene3d_sa_contacts) > 0:
-        gene3d_sa_contacts.to_csv(f"gene3d_sa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(gene3dsa_contacts) > 0:
+        gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        gene3d_sa_contacts = pd.DataFrame()
-        gene3d_sa_contacts.to_csv(f"gene3d_sa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+        gene3dsa_contacts = pd.DataFrame()
+        gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(superfamily_contacts) > 0:
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
