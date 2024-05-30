@@ -185,7 +185,8 @@ def main():
     #split the domain information into separate database specific dataframes for annotation
     cath_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "CATH"].copy()
     scop_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP"].copy()
-    scop2b_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B"].copy()
+    scop2b_fa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Family"].copy()
+    scop2b_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Superfamily"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
     interpro_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "InterPro"].copy()
     gene3dsa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
@@ -261,11 +262,16 @@ def main():
         superfamily_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
         gene3d_sa_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
         interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    if len(scop2b_contacts) > 0:
-        scop2b_contacts.to_csv(f"scop2b_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(scop2b_fa_contacts) > 0:
+        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        scop2b_contacts = pd.DataFrame()
-        scop2b_contacts.to_csv(f"scop2b_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+        scop2b_fa_contacts = pd.DataFrame()
+        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(scop2b_sf_contacts) > 0:
+        scop2b_sf_contacts.to_csv(f"scop2b_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    else:
+        scop2b_sf_contacts = pd.DataFrame()
+        scop2b_sf_contacts.to_csv(f"scop2b_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(gene3dsa_contacts) > 0:
         gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
