@@ -204,7 +204,11 @@ def main():
         if len(domain_info_dataframe_filtered) > 0:    
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
             domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
-            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "domain_name"] + "-DOMID:" + domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"]
+            domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "domain_name"] + "-DOMID:" + domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "SCOP2B", "xref_db_acc"] #keep accession format in line with xml.
+            #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("SF")), "xref_db"] + "_SuperFamily"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("FA")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
+         
             domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
             domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
             #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
@@ -297,7 +301,7 @@ def main():
         #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
         if len(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db == "SCOP2B"]) > 0:
             domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] + "_SuperFamily"
-            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
             
         domain_info_df_exploded = domain_info_df_exploded.drop_duplicates(subset = ["proteinStructAsymID","xref_db","xref_db_acc"])
         domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
