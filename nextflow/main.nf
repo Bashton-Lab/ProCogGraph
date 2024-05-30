@@ -83,7 +83,8 @@ process PROCESS_ALL_CONTACTS {
         path("scop_pdb_residue_interactions.csv.gz"), emit: scop
         path ("pfam_pdb_residue_interactions.csv.gz"), emit: pfam
         path ("interpro_pdb_residue_interactions.csv.gz"), emit: interpro
-        path ("scop2b_pdb_residue_interactions.csv.gz"), emit: scop2b
+        path ("scop2b_fa_pdb_residue_interactions.csv.gz"), emit: scop2b_fa
+        path ("scop2b_sf_pdb_residue_interactions.csv.gz"), emit: scop2b_sf
         
     script:
     """
