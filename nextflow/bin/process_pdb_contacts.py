@@ -289,11 +289,16 @@ def main():
         })
 
         if len(domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro"]) > 0:
-            domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", ["derived_from", "xref_db_acc"]] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_")
+            domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", ["derived_from", "xref_db_acc"]] = domain_df_grouped.loc[domain_df_grouped.xref_db == "InterPro", "xref_db_acc"].str.split("_", expand = True)
             domain_info_df_exploded = domain_df_grouped #domain_df_grouped.explode("xref_db_acc") #setting to self to test derived from category
         else:
             domain_info_df_exploded = domain_df_grouped
 
+        #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
+        if len(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db == "SCOP2B"]) > 0:
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] + "_SuperFamily"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
+            
         domain_info_df_exploded = domain_info_df_exploded.drop_duplicates(subset = ["proteinStructAsymID","xref_db","xref_db_acc"])
         domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
         domain_info_df_exploded.drop_duplicates()
