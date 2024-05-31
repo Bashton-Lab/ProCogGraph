@@ -83,10 +83,11 @@ process PROCESS_ALL_CONTACTS {
         path("bound_entities_to_score.pkl"), emit: bound_entities
         path("cath_pdb_residue_interactions.csv.gz"), emit: cath
         path("scop_pdb_residue_interactions.csv.gz"), emit: scop
-        path ("pfam_pdb_residue_interactions.csv.gz"), emit: pfam
-        path ("interpro_pdb_residue_interactions.csv.gz"), emit: interpro
-        path ("scop2b_fa_pdb_residue_interactions.csv.gz"), emit: scop2b_fa
-        path ("scop2b_sf_pdb_residue_interactions.csv.gz"), emit: scop2b_sf
+        path("pfam_pdb_residue_interactions.csv.gz"), emit: pfam
+        path("superfamily_pdb_residue_interactions.csv.gz"), emit: superfamily
+        path("g3dsa_pdb_residue_interactions.csv.gz"), emit: g3dsa
+        path("scop2b_fa_pdb_residue_interactions.csv.gz"), emit: scop2b_fa
+        path("scop2b_sf_pdb_residue_interactions.csv.gz"), emit: scop2b_sf
         
     script:
     """
@@ -125,8 +126,11 @@ process PRODUCE_NEO4J_FILES {
         path bound_entities
         path cath_domain_ownership
         path scop_domain_ownership
-        path interpro_domain_ownership
         path pfam_domain_ownership
+        path superfamily_domain_ownership
+        path g3dsa_domain_ownership
+        path scop2b_sf_domain_ownership
+        path scop2b_fa_domain_ownership
         path enzyme_dat
         path enzyme_class
         val parity_threshold
@@ -150,7 +154,10 @@ process PRODUCE_NEO4J_FILES {
         path "pdb_protein_rels.csv.gz"
         path "scop_domains_nodes.csv.gz"
         path "cath_domains_nodes.csv.gz"
-        path "interpro_domain_nodes.csv.gz"
+        path "superfamily_domains_nodes.csv.gz"
+        path "g3dsa_domains_nodes.csv.gz"
+        path "scop2b_fa_domains_nodes.csv.gz"
+        path "scop2b_sf_domains_nodes.csv.gz"
         path "pfam_domains_nodes.csv.gz"
         path "scop_family_nodes.csv.gz"
         path "scop_superfamily_nodes.csv.gz"
@@ -178,11 +185,17 @@ process PRODUCE_NEO4J_FILES {
         path "cath_domain_ligand_interactions.csv.gz"
         path "scop_domain_ligand_interactions.csv.gz"
         path "pfam_domain_ligand_interactions.csv.gz"
-        path "interpro_domain_ligand_interactions.csv.gz"
+        path "superfamily_domain_ligand_interactions.csv.gz"
+        path "g3dsa_domain_ligand_interactions.csv.gz"
+        path "scop2b_fa_domain_ligand_interactions.csv.gz"
+        path "scop2b_sf_domain_ligand_interactions.csv.gz"
         path "cath_protein_rels.csv.gz"
         path "scop_protein_rels.csv.gz"
         path "pfam_protein_rels.csv.gz"
-        path "interpro_protein_rels.csv.gz"
+        path "superfamily_protein_rels.csv.gz"
+        path "g3dsa_protein_rels.csv.gz"
+        path "scop2b_fa_protein_rels.csv.gz"
+        path "scop2b_sf_protein_rels.csv.gz"
         path "procoggraph_node.csv.gz"
     script:
     """
@@ -197,5 +210,5 @@ workflow {
     contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
     all_contacts = PROCESS_ALL_CONTACTS( contacts.combined_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
-    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
+    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.pfam, all_contacts.superfamily, all_contacts.g3dsa, all_contacts.scop2b_sf, all_contacts.scop2b_fa, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }

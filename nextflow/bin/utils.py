@@ -363,7 +363,7 @@ def build_cath_dataframe(parsed_data):
     dfs_combined["cath_homologous_superfamily"] = dfs_combined["cath_code"]
     return dfs_combined
 
-def build_g3dsa_dataframe(cath_names, cath_domain_list): #unlike cath, g3dsa annotations are at superfamily level
+def build_g3dsa_dataframe(cath_names, cath_domain_list): #unlike cath, g3dsa annotations are at superfamily level (also works for xml cath annotations from sifts which are at homolsuperfam level)
     topology_regex = r'^(\d+\.\d+\.\d+)\.'
     architecture_regex = r'^(\d+\.\d+)\.'
     class_regex = r'^(\d+)\.'
@@ -376,7 +376,7 @@ def build_g3dsa_dataframe(cath_names, cath_domain_list): #unlike cath, g3dsa ann
         architecture_name = cath_names.loc[cath_names.cath_code == architecture, "name"].values[0]
         class_ = re.search(class_regex, homologous_superfamily).group(1)
         class_name = cath_names.loc[cath_names.cath_code == class_, "name"].values[0]
-        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
+        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_homologous_superfamily": homologous_superfamily, "cath_homologous_superfamily_name": homologous_superfamily_name, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
         domain_list.append(domain)
     domain_df = pd.DataFrame(domain_list)
     return domain_df

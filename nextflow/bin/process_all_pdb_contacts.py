@@ -172,7 +172,6 @@ def main():
     scop2b_fa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Family"].copy()
     scop2b_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_SuperFamily"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
-    #interpro_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "InterPro"].copy()
     gene3dsa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
     superfamily_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SuperFamily"].copy()
 
@@ -185,7 +184,7 @@ def main():
     scop2b_fa_cols = ["SCOPCLA"]
     scop2b_sf_cols = ["SCOPCLA"]
     pfam_cols = ['clan', 'clan_acc', 'clan_comment', 'clan_description', 'pfam', 'pfam_accession', 'pfam_description', 'pfam_name']
-    interpro_cols = ['interpro_id','interpro_short_name', 'dbxref']
+    #interpro_cols = ['interpro_id','interpro_short_name', 'dbxref']
     #gene3dsa_cols
     #superfamily_cols
     #need to mkae the interpro cols be a part of the gene3dsa and superfamily cols - integrate on the derived from field
@@ -207,7 +206,7 @@ def main():
             cath_domain_list = cath_contacts_xml.xref_db_acc.unique()
             cath_names = pd.read_csv(args.cath_names, sep = "    ", header = None, comment = "#", names = ["cath_code", "representative_domain", "name"])
             cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
-            cath_domains_info = build_cath_names_dataframe(cath_names,cath_domain_list)
+            cath_domains_info = build_g3dsa_dataframe(cath_names,cath_domain_list)
             cath_contacts_xml = cath_contacts_xml.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
             assert(len(cath_contacts.loc[cath_contacts_xml._merge != "both"]) == 0)
             cath_contacts_xml.drop(columns = "_merge", inplace = True)
@@ -239,16 +238,6 @@ def main():
         pfam_contacts = pd.DataFrame(columns = core_cols + pfam_cols)
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
-    if len(interpro_contacts) > 0:
-        interpro_annotations = extract_interpro_domain_annotations(args.interpro_xml)
-        interpro_contacts = interpro_contacts.merge(interpro_annotations, left_on = "xref_db_acc", right_on = "interpro_accession", how = "left")
-        interpro_contacts = interpro_contacts.loc[(interpro_contacts.xref_db_acc.isna() == False)]
-        interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    else:
-        interpro_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
-        superfamily_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
-        gene3d_sa_contacts = pd.DataFrame(columns = core_cols + interpro_cols)
-        interpro_contacts.to_csv(f"interpro_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(scop2b_fa_contacts) > 0:
         scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
