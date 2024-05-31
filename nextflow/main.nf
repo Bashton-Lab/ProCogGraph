@@ -46,11 +46,13 @@ process PROCESS_CONTACTS {
         path manifest
         val domain_contact_cutoff
     output:
-        path "*_bound_entity_contacts.tsv", emit: contacts
+        path "combined_contacts.tsv", emit: contacts
         path "process_contacts_log.txt", emit: log
+        path "combined_contacts.tsv", emit: combined_contacts
     script:
     """
     python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --manifest ${manifest} --domain_contact_cutoff ${domain_contact_cutoff}
+    find . -type f -name "*_bound_entity_contacts.tsv" -print0 | xargs -0 tail -q -n +2 >> combined_contacts.tsv
     """
 }
 
@@ -193,8 +195,7 @@ workflow {
     arpeggio_batches = processed_struct_manifest.arpeggio_batch.flatten()
     arpeggio = RUN_ARPEGGIO( arpeggio_batches ).collect()
     contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
-    collected_contacts = contacts.contacts.collectFile(name: 'combined_contacts.tsv', storeDir: "${params.publish_dir}/contacts", cache: true, keepHeader = true, skip = 1)
-    all_contacts = PROCESS_ALL_CONTACTS( collected_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
+    all_contacts = PROCESS_ALL_CONTACTS( contacts.combined_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
     produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }
