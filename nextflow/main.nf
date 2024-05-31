@@ -68,6 +68,7 @@ process PROCESS_ALL_CONTACTS {
         path pfam_clans
         path scop_domains_info
         path scop_domains_description
+        path scop2_domains_info
         path interpro_xml
         path cath_names
         path cddf
@@ -91,7 +92,7 @@ process PROCESS_ALL_CONTACTS {
         
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_all_pdb_contacts.py --contacts ${combined_contacts} --ccd_cif ${ccd_cif} --pfam_a_file ${pfam_a} --pfam_clan_rels ${pfam_clan_rels} --pfam_clans ${pfam_clans} --scop_domains_info_file ${scop_domains_info} --scop_descriptions_file ${scop_domains_description} --interpro_xml ${interpro_xml} --cath_names ${cath_names} --cddf ${cddf} --glycoct_cache ${glycoct_cache} --smiles_cache ${smiles_cache} --csdb_linear_cache ${csdb_linear_cache} --enzyme_dat_file ${enzyme_dat_file} --enzyme_class_file ${enzyme_class_file} --sifts_ec_mapping ${sifts_ec_mapping}
+    python3 ${workflow.projectDir}/bin/process_all_pdb_contacts.py --contacts ${combined_contacts} --ccd_cif ${ccd_cif} --pfam_a_file ${pfam_a} --pfam_clan_rels ${pfam_clan_rels} --pfam_clans ${pfam_clans} --scop_domains_info_file ${scop_domains_info} --scop_descriptions_file ${scop_domains_description} --scop2_domains_info_file ${scop2_domains_info} --interpro_xml ${interpro_xml} --cath_names ${cath_names} --cddf ${cddf} --glycoct_cache ${glycoct_cache} --smiles_cache ${smiles_cache} --csdb_linear_cache ${csdb_linear_cache} --enzyme_dat_file ${enzyme_dat_file} --enzyme_class_file ${enzyme_class_file} --sifts_ec_mapping ${sifts_ec_mapping}
     """
 
 }
@@ -208,7 +209,7 @@ workflow {
     arpeggio_batches = processed_struct_manifest.arpeggio_batch.flatten()
     arpeggio = RUN_ARPEGGIO( arpeggio_batches ).collect()
     contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
-    all_contacts = PROCESS_ALL_CONTACTS( contacts.combined_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
+    all_contacts = PROCESS_ALL_CONTACTS( contacts.combined_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.scop2_domains_info_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
     produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.pfam, all_contacts.superfamily, all_contacts.g3dsa, all_contacts.scop2b_sf, all_contacts.scop2b_fa, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }
