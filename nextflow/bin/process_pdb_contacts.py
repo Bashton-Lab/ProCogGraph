@@ -330,7 +330,7 @@ def main():
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SSF"), "xref_db_acc"].str.replace("^SSF", "", regex = True)
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"].str.replace("^SF-DOMID:", "", regex = True)
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"].str.replace("^FA-DOMID:", "", regex = True)
-        
+
         if len(protein_entity_df_assembly_domain) == 0:
             #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
             log = f"{pdb_id},126,no_domains_in_assembly"
@@ -417,13 +417,27 @@ def main():
         #bound_entity_info_arp_exploded_merged_aggregated_sym_agg["represents"] = bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"].str.join("|")
         #bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"] = bound_entity_info_arp_exploded_merged_aggregated_sym_agg["uniqueID"].apply(lambda x: x[0]) 
         bound_entity_info_arp_exploded_merged_aggregated_sym_agg = bound_entity_info_arp_exploded_merged_aggregated.copy()
-        bound_entity_info_arp_exploded_merged_aggregated_sym_agg.to_csv(f"{args.pdb_id}_bound_entity_contacts.tsv", sep = "\t", index = False)
+        bound_entity_info_arp_exploded_merged_aggregated_sym_agg.to_csv(f"{args.pdb_id}_bound_entity_contacts.tsv", sep = "\t", index = False, header = None)
         log = f"{pdb_id},0,success"
         logs.append(log)
 
     with open("process_contacts_log.txt", "w") as f:
         for line in logs:
             f.write("%s\n" % line)
+    header = ['pdb_id', 'pdb_descriptor', 'pdb_title', 'pdb_keywords', 'uniqueID',
+       'xref_db', 'xref_db_acc', 'xref_db_version', 'domain_accession',
+       'domain_type', 'derived_from', 'descriptor', 'description', 'hetCode',
+       'type', 'bound_ligand_struct_asym_id', 'ligand_entity_id_numerical',
+       'bound_entity_pdb_residues', 'assembly_chain_id_ligand',
+       'assembly_chain_id_protein', 'bound_molecule_display_id',
+       'proteinStructAsymID', 'auth_chain_id',
+       'bound_ligand_residue_interactions', 'domain_residue_interactions',
+       'domain_contact_counts', 'domain_hbond_counts',
+       'domain_covalent_counts', 'total_contact_counts', 'domain_contact_perc',
+       'domain_hbond_perc', 'domain_covalent_perc', 'num_non_minor_domains',
+       'domain_ownership']
+    with open("combined_contacts.tsv", "w") as f:
+        f.write("\t".join(header))
 
 if __name__ == "__main__":
     main()
