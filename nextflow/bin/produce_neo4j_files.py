@@ -36,10 +36,16 @@ def main():
                         help = "path to cath domain ownership file")
     parser.add_argument('--scop_domain_ownership', metavar='scop_domain_ownership', type=str,
                         help = "path to scop domain ownership file")
-    parser.add_argument('--interpro_domain_ownership', metavar='interpro_domain_ownership', type=str,
-                        help = "path to interpro domain ownership file")
+    parser.add_argument('--scop2b_sf_domain_ownership', metavar='scop2b_sf_domain_ownership', type=str,
+                        help = "path to scop2b_sf domain ownership file")
+    parser.add_argument('--scop2b_fa_domain_ownership', metavar='scop2b_fa_domain_ownership', type=str,
+                        help = "path to scop2b_fa domain ownership file")
     parser.add_argument('--pfam_domain_ownership', metavar='pfam_domain_ownership', type=str,
                         help = "path to pfam domain ownership file")
+    parser.add_argument('--superfamily_domain_ownership', metavar='superfamily_domain_ownership', type=str,
+                        help = "path to superfamily domain ownership file")
+    parser.add_argument('--gene3dsa_domain_ownership', metavar='gene3dsa_domain_ownership', type=str,
+                        help = "path to gene3dsa domain ownership file")
     parser.add_argument('--bound_entities', metavar='bound_entities', type=str, 
                         help = "path to bound entities to score df")
     parser.add_argument('--parity_calcs', metavar='parity_calcs', type=str,
@@ -96,15 +102,21 @@ def main():
     cath_domains = pd.read_csv(f"{args.cath_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
     scop_domains = pd.read_csv(f"{args.scop_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
     pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
-    interpro_domains = pd.read_csv(f"{args.interpro_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    superfamily_domains =pd.read_csv(f"{args.superfamily_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    gene3dsa_domains = pd.read_csv(f"{args.gene3dsa_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    scop2b_sf_domains = pd.read_csv(f"{args.scop2b_sf_domains}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    scop2b_fa_domains = pd.read_csv(f"{args.scop2b_fa_domains}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
 
     #add unique ids for protein chains
     cath_domains["chainUniqueID"] = cath_domains["pdb_id"] + "_" + cath_domains["proteinStructAsymID"]
     scop_domains["chainUniqueID"] = scop_domains["pdb_id"] + "_" + scop_domains["proteinStructAsymID"]
     pfam_domains["chainUniqueID"] = pfam_domains["pdb_id"] + "_" + pfam_domains["proteinStructAsymID"]
-    interpro_domains["chainUniqueID"] = interpro_domains["pdb_id"] + "_" + interpro_domains["proteinStructAsymID"]
+    superfamily_domains["chainUniqueID"] = superfamily_domains["pdb_id"] + "_" + superfamily_domains["proteinStructAsymID"]
+    gene3dsa_domains["chainUniqueID"] = gene3dsa_domains["pdb_id"] + "_" + gene3dsa_domains["proteinStructAsymID"]
+    scop2b_sf_domains["chainUniqueID"] = scop2b_sf_domains["pdb_id"] + "_" + scop2b_sf_domains["proteinStructAsymID"]
+    scop2b_fa_domains["chainUniqueID"] = scop2b_fa_domains["pdb_id"] + "_" + scop2b_fa_domains["proteinStructAsymID"]
 
-    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], interpro_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]]]).drop_duplicates()
+    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2b_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2b_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]]]).drop_duplicates()
     pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"ec_list": set}).reset_index()
     pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.join("|")
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
@@ -117,9 +129,13 @@ def main():
     cath_protein_entities = cath_domains[["chainUniqueID", "proteinStructAsymID",  "protein_entity_ec", "ec_list"]]
     scop_protein_entities = scop_domains[["chainUniqueID", "proteinStructAsymID","protein_entity_ec", "ec_list"]]
     pfam_protein_entities = pfam_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
-    interpro_protein_entities = interpro_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    superfamily_protein_entities = superfamily_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    gene3dsa_protein_entities = gene3dsa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    scop2b_sf_protein_entities = scop2b_sf_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    scop2b_fa_protein_entities = scop2b_fa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
 
-    protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, pfam_protein_entities, interpro_protein_entities])
+
+    protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, pfam_protein_entities, superfamily_protein_entities, gene3dsa_protein_entities, scop2b_sf_protein_entities, scop2b_fa_protein_entities])
     protein_entities = protein_entities.drop_duplicates(subset = ["chainUniqueID", "protein_entity_ec"])
 
     protein_entities["ec_list"] = protein_entities["ec_list"].str.replace(",", "|")
@@ -145,6 +161,20 @@ def main():
     scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
+    scop2b_fa_domains_nodes = scop2b_fa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type']].drop_duplicates()
+    scop2b_fa_domains_nodes["type"] = "SCOP2bFA"
+    scop2b_fa_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2b_fa_domains_nodes["xref_db_acc"].astype("str")
+    scop2b_fa_domains_nodes[":LABEL"] = scop2b_fa_domains_nodes["type"] + "|domain"
+    scop2b_fa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2b-fa-domain-id)", "xref_db_acc": "FA-DOMID", 'domain_type': "domainSource"}, inplace = True)
+    scop2b_fa_domains_nodes.to_csv(f"scop2b_fa_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    scop2b_sf_domains_nodes = scop2b_sf_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type']].drop_duplicates()
+    scop2b_sf_domains_nodes["type"] = "SCOP2bSF"
+    scop2b_sf_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2b_sf_domains_nodes["xref_db_acc"].astype("str")
+    scop2b_sf_domains_nodes[":LABEL"] = scop2b_sf_domains_nodes["type"] + "|domain"
+    scop2b_sf_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2b-sf-domain-id)", "xref_db_acc": "SF-DOMID", 'domain_type': "domainSource"}, inplace = True)
+    scop2b_sf_domains_nodes.to_csv(f"scop2b_sf_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
+
     cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", 'domain_type']].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + cath_domains_nodes["cath_domain"]
@@ -153,6 +183,10 @@ def main():
     cath_domains_nodes.to_csv(f"cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     #DROP THIS IN FAVOUR OF SUPERFAMILY AND GENE3D SPECIFIC, WITH INTERPRO NAME AND DERIVED FROM INTERPRO ACCESSION
+    superfamily_domains_nodes = superfamily_domains[["domain_accession", "assembly_chain_id_protein", "superfamily_id", "superfamily_description", 'domain_type', "derived_from"]].drop_duplicates()
+    
+    gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "gene3d_id", "gene3d_description", 'domain_type', , "derived_from"]].drop_duplicates()
+
     interpro_domain_nodes = interpro_domains[["assembly_chain_id_protein", "domain_accession", 'interpro_accession','interpro_name']].drop_duplicates()
     interpro_domain_nodes["type"] = "InterProHomologousSuperfamily"
     interpro_domain_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/" + interpro_domain_nodes["interpro_accession"]
