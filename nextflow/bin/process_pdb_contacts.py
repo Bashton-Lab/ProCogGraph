@@ -307,7 +307,6 @@ def process_manifest_row(row, cutoff):
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
-    protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SSF"), "xref_db_acc"].str.replace("^SSF", "", regex = True)
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"].str.replace("^SF-DOMID:", "", regex = True)
     protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"].str.replace("^FA-DOMID:", "", regex = True)
 
