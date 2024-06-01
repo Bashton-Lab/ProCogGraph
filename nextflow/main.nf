@@ -10,6 +10,7 @@ process PROCESS_MMCIF {
     output:
         path("combined_arpeggio_manifest.csv"), emit:updated_manifest
         path("process_mmcif_log.txt"), emit: log
+        path("*_bound_entity_info.pkl")
         path("bio_h_cif_*.csv"), emit: arpeggio_batch
     script:
     """
