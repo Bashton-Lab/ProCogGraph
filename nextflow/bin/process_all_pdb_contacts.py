@@ -244,6 +244,7 @@ def main():
         scop2b_fa_contacts = pd.DataFrame()
         scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     scop2_domains_info = pd.read_csv(args.scop2_domains_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
+    scop2_domains_info[["SF-DOMID", "FA-DOMID"]] = scop2_domains_info[["SF-DOMID", "FA-DOMID"]].astype(str) #merge as string type with xref_db_acc in contacts 
     if len(scop2b_sf_contacts) > 0:
         scop2_sf_domains_info = scop2_domains_info[["SF-DOMID", "SCOPCLA"]].copy()
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$") #remove the family level from sueprfamily level domains
@@ -251,7 +252,7 @@ def main():
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.join(";")
 
         scop2b_sf_contacts = scop2b_sf_contacts.merge(scop2_sf_domains_info, left_on = "xref_db_acc", right_on = "SF-DOMID", how = "left", indicator = True)
-        assert(len(scop2b_sf_contacts.loc[scop2b_sf_contacts._merge != "both"]) == 0)
+        #assert(len(scop2b_sf_contacts.loc[scop2b_sf_contacts._merge != "both"]) == 0) #we remoive the assertion here , because e.g. 8102391 from 8fvs is not present in the classification but is a domain. need to discuss this with SIFTS or SCOP team potentially
         scop2b_sf_contacts.drop(columns = ["_merge", "SF-DOMID"], inplace = True)
         scop2b_sf_contacts.to_csv(f"scop2b_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
@@ -263,7 +264,7 @@ def main():
         scop2_fa_domains_info["SCOPCLA"] = scop2_fa_domains_info["SCOPCLA"].str.join(";")
 
         scop2b_fa_contacts = scop2b_fa_contacts.merge(scop2_fa_domains_info, left_on = "xref_db_acc", right_on = "FA-DOMID", how = "left", indicator = True)
-        assert(len(scop2b_fa_contacts.loc[scop2b_fa_contacts._merge != "both"]) == 0)
+        #assert(len(scop2b_fa_contacts.loc[scop2b_fa_contacts._merge != "both"]) == 0) #as above 
         scop2b_fa_contacts.drop(columns = ["_merge", "FA-DOMID"], inplace = True)
         scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
