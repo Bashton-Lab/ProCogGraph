@@ -135,7 +135,7 @@ def main():
     contacts.loc[contacts.descriptor.isna() == True].to_csv("failed_descriptors.csv", index = False)
     #maybe we can log where all entities in a pdb strcuture are removed because of this - for summary statistics
     #TODO
-    
+
     print(f"{len(contacts.loc[contacts.descriptor.isna() == True, 'uniqueID'].unique())} bound entities have failed to get a descriptor, removing")
     contacts = contacts.loc[contacts.descriptor.isna() == False].copy()
     ##then we need to assign a ligand uniqueID to all unique ligands in the contacts file - check implementation of this
@@ -146,11 +146,23 @@ def main():
     ec_records_df = ec_records_df_grouped.explode("ID")
 
     sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
+
     sifts_chains_ec, sifts_chains_uniprot = process_sifts_ec_map(sifts_chains, ec_records_df)
-    contacts_ec = contacts.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
-    contacts_ec_unmatched = contacts_ec.loc[contacts_ec._merge != "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
-    contacts_ec = contacts_ec.loc[contacts_ec._merge == "both"].copy().drop(columns = ["_merge", "PDB", "CHAIN"])
-    contacts_ec_unmatched.to_csv(f"contacts_ec_unmatched.csv", index = False)
+    sifts_pdb_ec = sifts_chains_ec.groupby("PDB").agg({"ec_list": set}).rename(columns = {"ec_list": "pdb_ec_list"}).reset_index()
+    #group into a pdb level list of ECs to collect cognate ligands
+    sifts_pdb_ec["pdb_ec_list"] = sifts_pdb_ec["pdb_ec_list"].apply(lambda x: [y for y in x if y != np.nan]).str.join(",")
+    sifts_pdb_ec["pdb_ec_list"].apply(lambda x: ",".join(set(x.split(","))))
+
+    contacts_ec = contacts.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
+    contacts_ec["ec_list"] = contacts_ec["ec_list"].fillna("?")
+    contacts_ec["chain_ec_list"] = contacts_ec["ec_list"]
+    contacts_ec.drop(columns = ["PDB", "CHAIN"], inplace = True)
+    #we make a pdb level ec list for exmaple where a chain binds a ligand but isnt assigned an ec e.g. receptor, but another hcain has enzymatic activity and may act on this ligand. see 5q16
+    contacts_ec = contacts_ec.merge(sifts_pdb_ec, left_on = "pdb_id", right_on = "PDB", how = "left")
+    #output a summary of the dropped records due to unknown or NAN EC for entire pdb record
+    contacts_ec.loc[(contacts_ec.pdb_ec_list.isna()) | (contacts_ec.pdb_ec_list == "?")].to_csv("dropped_ec.tsv", sep = "\t")
+    contacts_ec = contacts_ec.loc[(contacts_ec.pdb_ec_list.isna() == False) & (contacts_ec.pdb_ec_list != "?")]
+    contacts_ec.drop(columns = ["PDB"], inplace = True)
 
     #now add uniprot info to the contacts file
     contacts_ec_uniprot = contacts_ec.merge(sifts_chains_uniprot, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left", indicator = True)
@@ -158,7 +170,7 @@ def main():
     contacts_ec_uniprot.drop(columns = ["PDB", "CHAIN", "_merge"], inplace = True)
     
     #get the unique ligands from the dataset, and assign uniqueIDs - extract unique ligands to file for scoring.
-    bound_entities_to_score = contacts_ec_uniprot[["descriptor", "description", "hetCode", "type", "ec_list"]].groupby(["hetCode", "description", "descriptor"]).agg({"ec_list": set}).reset_index().reset_index()
+    bound_entities_to_score = contacts_ec_uniprot[["descriptor", "description", "hetCode", "type", "pdb_ec_list"]].groupby(["hetCode", "description", "descriptor"]).agg({"pdb_ec_list": set}).rename(columns = {"pdb_ec_list": "ec_list"}).reset_index().reset_index() #rename to ec_list for downstream parity script
     #add ligand entity id to the contacts file
     contacts_ec_uniprot = contacts_ec_uniprot.merge(bound_entities_to_score[["descriptor", "description", "hetCode", "index"]], on = ["descriptor", "description", "hetCode"], how = "left", indicator = True)
     assert(len(contacts_ec_uniprot.loc[contacts_ec_uniprot._merge != "both"]) == 0)
