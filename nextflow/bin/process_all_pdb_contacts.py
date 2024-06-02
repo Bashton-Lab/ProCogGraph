@@ -131,6 +131,11 @@ def main():
 
     contacts.loc[contacts.type == "sugar", "descriptor"] = contacts.loc[contacts.type == "sugar"]["descriptor"].apply(lambda x: sugar_smiles[x])
     #after merging the contacts with descriptors we probably want to flag or remove the ones with failed descriptors
+    #save failed descriptors records for downstream verification of issues.
+    contacts.loc[contacts.descriptor.isna() == True].to_csv("failed_descriptors.csv", index = False)
+    #maybe we can log where all entities in a pdb strcuture are removed because of this - for summary statistics
+    #TODO
+    
     print(f"{len(contacts.loc[contacts.descriptor.isna() == True, 'uniqueID'].unique())} bound entities have failed to get a descriptor, removing")
     contacts = contacts.loc[contacts.descriptor.isna() == False].copy()
     ##then we need to assign a ligand uniqueID to all unique ligands in the contacts file - check implementation of this
