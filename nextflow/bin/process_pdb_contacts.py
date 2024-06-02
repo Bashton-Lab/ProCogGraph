@@ -12,6 +12,7 @@ import sys
 import re 
 import json
 from multiprocessing import Pool
+import os
 
 def extract_data(elem):
     data = []
@@ -83,16 +84,16 @@ def pattern_to_range(pattern):
     return ",".join([str(x) for x in range(start, end + 1)])
 
 def process_manifest_row(row, cutoff):
+    updated_cif = row["updated_mmcif"]
+    xml = row["sifts_xml"]
+    pdb_id = row["pdb_id"]
+    bound_entity_pickle = row["bound_entity_info"]
+    assembly_id = str(int(row["assembly_id"]))
+    args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = cutoff)
     if os.path.exists(f"{args.pdb_id}_bound_entity_contacts.tsv"):
         log = f"{pdb_id},0,success"
         return log
     else:
-        updated_cif = row["updated_mmcif"]
-        xml = row["sifts_xml"]
-        pdb_id = row["pdb_id"]
-        bound_entity_pickle = row["bound_entity_info"]
-        assembly_id = str(int(row["assembly_id"]))
-        args = argparse.Namespace(cif = updated_cif, sifts_xml = xml, pdb_id = pdb_id, assembly_id = assembly_id, bound_entity_pickle = bound_entity_pickle, domain_contact_cutoff = cutoff)
         if Path(f"{pdb_id}_bio-h.json").is_file():
             with open(f"{pdb_id}_bio-h.json") as json_file:
                 json_contents = json_file.read()
@@ -306,18 +307,18 @@ def process_manifest_row(row, cutoff):
         protein_entity_df_assembly_domain = pd.concat([protein_entity_df_assembly_domain_mmcif, protein_entity_df_assembly_domain_xml], ignore_index = True)
         # combine with domain info df
         protein_entity_df_assembly_domain = pd.merge(protein_entity_df_assembly_domain, db_df, on='xref_db', how='left')
-        
+
+        if len(protein_entity_df_assembly_domain) == 0:
+            #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
+            log = f"{pdb_id},126,no_domains_in_assembly"
+            return log
+
         #format the xrefdb for superfamily and gene3d entries
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("G3DSA")), "xref_db"] = "G3DSA"
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "G3DSA"), "xref_db_acc"].str.replace("^G3DSA:", "", regex = True)
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "InterPro") & (protein_entity_df_assembly_domain.xref_db_acc.str.startswith("SSF")), "xref_db"] = "SuperFamily"
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_SuperFamily"), "xref_db_acc"].str.replace("^SF-DOMID:", "", regex = True)
         protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"] = protein_entity_df_assembly_domain.loc[(protein_entity_df_assembly_domain.xref_db == "SCOP2B_Family"), "xref_db_acc"].str.replace("^FA-DOMID:", "", regex = True)
-
-        if len(protein_entity_df_assembly_domain) == 0:
-            #domain that exists in the updated mmcif structure is for a chain that isnt present in the assembly - 6ba1 chain D versus assembly A and E for example
-            log = f"{pdb_id},126,no_domains_in_assembly"
-            return log
 
         protein_entity_df_assembly_domain["seq_range_chain"] = protein_entity_df_assembly_domain["seq_range_chain"].apply(lambda x: [int(y) for y in x.split(",")])
 
