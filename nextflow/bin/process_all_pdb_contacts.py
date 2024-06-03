@@ -262,7 +262,8 @@ def main():
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$") #remove the family level from sueprfamily level domains
         scop2_sf_domains_info = scop2_sf_domains_info.groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.join(";")
-        scop2_sf_contacts["merge_id"] = scop2_sf_contacts["xref_db_acc"].str.extract("SF-DOMID:(.+)").astype("int")
+        scop2_sf_contacts["merge_id"] = scop2_sf_contacts["xref_db_acc"]
+        scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"] = scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"].str.extract("SF-DOMID:(.+)").astype("int")
         scop2_sf_contacts = scop2_sf_contacts.merge(scop2_sf_domains_info, left_on = "merge_id", right_on = "SF-DOMID", how = "left", indicator = True)
         #assert(len(scop2b_sf_contacts.loc[scop2b_sf_contacts._merge != "both"]) == 0) #we remoive the assertion here , because e.g. 8102391 from 8fvs is not present in the classification but is a domain. need to discuss this with SIFTS or SCOP team potentially
         scop2_sf_contacts.drop(columns = ["_merge", "SF-DOMID", "merge_id"], inplace = True)
@@ -274,7 +275,8 @@ def main():
         scop2_fa_domains_info = scop2_domains_info[["FA-DOMID", "SCOPCLA"]].copy()
         scop2_fa_domains_info = scop2_fa_domains_info.groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
         scop2_fa_domains_info["SCOPCLA"] = scop2_fa_domains_info["SCOPCLA"].str.join(";")
-        scop2_fa_contacts["merge_id"] = scop2_fa_contacts["xref_db_acc"].str.extract("FA-DOMID:(.+)").astype("int")
+        scop2_fa_contacts["merge_id"] = scop2_fa_contacts["xref_db_acc"]
+        scop2_fa_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"] = scop2_fa_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"].str.extract("FA-DOMID:(.+)").astype("int")
         scop2_fa_contacts = scop2_fa_contacts.merge(scop2_fa_domains_info, left_on = "merge_id", right_on = "FA-DOMID", how = "left", indicator = True)
         #assert(len(scop2b_fa_contacts.loc[scop2b_fa_contacts._merge != "both"]) == 0) #as above 
         scop2_fa_contacts.drop(columns = ["_merge", "FA-DOMID", "merge_id"], inplace = True)
