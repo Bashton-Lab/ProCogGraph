@@ -202,7 +202,7 @@ def process_manifest_row(row, cutoff):
             domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] = "SCOP2_Family"
 
             domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
-            domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
+            domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]], dropna = False).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
             #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
             #assert(domain_info_dataframe_filtered_grouped.instance_id.astype(int).max() == 1) #assertion to flag when this isnt the case - we have no test examples of this
             
