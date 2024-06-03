@@ -185,15 +185,21 @@ def process_manifest_row(row, cutoff):
         ##we check in process_pdb_structure that domains are present for the structure, so no need to fail here.
         domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
             columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
-        domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "Pfam", "InterPro"])]
+        domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "SCOP2" "Pfam", "InterPro"])]
 
         if len(domain_info_dataframe_filtered) > 0:
+            mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+            mmcif_domains = list(set("SCOP2B" if x.startswith("SCOP2B") else x for x in mmcif_domains))
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
             domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
-            #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
-            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] + "_SuperFamily"
-            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] = domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] + "_Family"
-            
+            #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level - we also unify SCOP2 and SCOP2B annotations into a single source, and specify whether it was derived from SCOP2 or SCOP2B
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B"), "derived_from"] = "SCOP2B"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] = "SCOP2_SuperFamily"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2B") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] = "SCOP2_Family"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2"), "derived_from"] = "SCOP2"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2") & (domain_info_dataframe_filtered.domain_name.str.startswith("SF")), "xref_db"] = "SCOP2_SuperFamily"
+            domain_info_dataframe_filtered.loc[(domain_info_dataframe_filtered.xref_db == "SCOP2") & (domain_info_dataframe_filtered.domain_name.str.startswith("FA")), "xref_db"] = "SCOP2_Family"
+
             domain_info_dataframe_filtered["seq_range"] = domain_info_dataframe_filtered.apply(lambda x: range(int(x.seq_id_start), int(x.seq_id_end) + 1), axis = 1)
             domain_info_dataframe_filtered_grouped = domain_info_dataframe_filtered.groupby([col for col in domain_info_dataframe_filtered.columns if col not in ["seq_id_start", "seq_id_end","segment_id", "seq_range"]]).agg({"seq_range": list}).reset_index() #group by all columns except seq and segment - aggregate segments into a list.
             #multiple domain instances can occur - we just aggregate the seq ranges for each instance.
@@ -205,8 +211,6 @@ def process_manifest_row(row, cutoff):
             protein_entity_df_assembly_domain_mmcif = protein_entity_df_assembly.merge(domain_info_dataframe_filtered_grouped, left_on = ["protein_entity_id", "proteinStructAsymID"], right_on = ["entity_id","asym_id"], how = "inner")
             protein_entity_df_assembly_domain_mmcif.drop(columns = ["entity_id", "asym_id"],inplace = True)
             protein_entity_df_assembly_domain_mmcif["seq_range_chain"] = protein_entity_df_assembly_domain_mmcif["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))])) #to match the xml data format
-            mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
-            mmcif_domains = list(set("SCOP2B" if x.startswith("SCOP2B") else x for x in mmcif_domains)) 
         else:
             protein_entity_df_assembly_domain_mmcif = pd.DataFrame()
             mmcif_domains = []
@@ -282,7 +286,7 @@ def process_manifest_row(row, cutoff):
             'xref_db': db_source_list,
             'xref_db_version': db_version_list
         })
-        db_df.loc[db_df.xref_db == "SCOP2", "xref_db"] = db_df.loc[db_df.xref_db == "SCOP2", "xref_db"].apply(lambda x: ["SCOP2B_SuperFamily", "SCOP2B_Family"]) #we adapt the SCOP2 source to the db formatting we use in ProCogGraph
+        db_df.loc[db_df.xref_db == "SCOP2", "xref_db"] = db_df.loc[db_df.xref_db == "SCOP2", "xref_db"].apply(lambda x: ["SCOP2_SuperFamily", "SCOP2_Family"]) #we adapt the SCOP2 source to the db formatting we use in ProCogGraph
         db_df["xref_db"] = db_df["xref_db"].apply(lambda x: [x] if isinstance(x, str) else x)
         db_df = db_df.explode("xref_db")
             
@@ -293,9 +297,13 @@ def process_manifest_row(row, cutoff):
 
         #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level
         if len(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db == "SCOP2B"]) > 0:
-            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] + "_SuperFamily"
-            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] + "_Family"
-            
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B"), "derived_from"] = "SCOP2B"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = "SCOP2_SuperFamily"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2B") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] = "SCOP2_Family"
+        if len(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db == "SCOP2"]) > 0:
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2"), "derived_from"] = "SCOP2"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = "SCOP2_SuperFamily"
+            domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA")), "xref_db"] = "SCOP2_Family"
         domain_info_df_exploded = domain_info_df_exploded.drop_duplicates(subset = ["proteinStructAsymID","xref_db","xref_db_acc"])
         domain_info_df_exploded["seq_range_chain"] = domain_info_df_exploded["seq_range_chain"].apply(lambda x: ",".join([str(z) for z in sorted(set([int(y) for y in x]))]))#.str.join(",") #sometimes the information per residue is duplicated in sifts xml. join for dropping duplicates then resplit
         domain_info_df_exploded.drop_duplicates()
