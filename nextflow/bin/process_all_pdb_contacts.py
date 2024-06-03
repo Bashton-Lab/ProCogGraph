@@ -186,8 +186,8 @@ def main():
     #split the domain information into separate database specific dataframes for annotation
     cath_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "CATH"].copy()
     scop_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP"].copy()
-    scop2b_fa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_Family"].copy()
-    scop2b_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2B_SuperFamily"].copy()
+    scop2_fa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2_Family"].copy()
+    scop2_sf_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SCOP2_SuperFamily"].copy()
     pfam_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "Pfam"].copy()
     gene3dsa_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "G3DSA"].copy()
     superfamily_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "SuperFamily"].copy()
@@ -198,8 +198,8 @@ def main():
     cath_mmcif_cols = ['cath_db_version', 'cath_db_verdate', 'cath_source', 'cath_domain_length', 'cath_domain_seq_header', 'cath_domain_seqs', 'cath_num_segments', 'cath_segments_dict']
     scop_cols = ['scop_id', 'sccs', 'domain_sunid', 'ancestor_sunid', 'cl_id', 'cf_id', 'sf_id', 'fa_id', 'dm_id', 'sp_id',
         'px_id', 'cl_description', 'cf_description', 'sf_description','fa_description', 'dm_description', 'sp_description', 'px_description']
-    scop2b_fa_cols = ["SCOPCLA"]
-    scop2b_sf_cols = ["SCOPCLA"]
+    scop2_fa_cols = ["SCOPCLA"]
+    scop2_sf_cols = ["SCOPCLA"]
     pfam_cols = ['clan', 'clan_acc', 'clan_comment', 'clan_description', 'pfam', 'pfam_accession', 'pfam_description', 'pfam_name']
     #interpro_cols = ['interpro_id','interpro_short_name', 'dbxref']
     #gene3dsa_cols
@@ -257,31 +257,31 @@ def main():
 
     scop2_domains_info = pd.read_csv(args.scop2_domains_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
     scop2_domains_info[["SF-DOMID", "FA-DOMID"]] = scop2_domains_info[["SF-DOMID", "FA-DOMID"]].astype(str) #merge as string type with xref_db_acc in contacts 
-    if len(scop2b_sf_contacts) > 0:
+    if len(scop2_sf_contacts) > 0:
         scop2_sf_domains_info = scop2_domains_info[["SF-DOMID", "SCOPCLA"]].copy()
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$") #remove the family level from sueprfamily level domains
         scop2_sf_domains_info = scop2_sf_domains_info.groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
         scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.join(";")
 
-        scop2b_sf_contacts = scop2b_sf_contacts.merge(scop2_sf_domains_info, left_on = "xref_db_acc", right_on = "SF-DOMID", how = "left", indicator = True)
+        scop2_sf_contacts = scop2_sf_contacts.merge(scop2_sf_domains_info, left_on = "xref_db_acc", right_on = "SF-DOMID", how = "left", indicator = True)
         #assert(len(scop2b_sf_contacts.loc[scop2b_sf_contacts._merge != "both"]) == 0) #we remoive the assertion here , because e.g. 8102391 from 8fvs is not present in the classification but is a domain. need to discuss this with SIFTS or SCOP team potentially
-        scop2b_sf_contacts.drop(columns = ["_merge", "SF-DOMID"], inplace = True)
-        scop2b_sf_contacts.to_csv(f"scop2b_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+        scop2_sf_contacts.drop(columns = ["_merge", "SF-DOMID"], inplace = True)
+        scop2_sf_contacts.to_csv(f"scop2_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        scop2b_sf_contacts = pd.DataFrame(columns = core_cols + scop2b_sf_cols)
-        scop2b_sf_contacts.to_csv(f"scop2b_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    if len(scop2b_fa_contacts) > 0:
+        scop2_sf_contacts = pd.DataFrame(columns = core_cols + scop2_sf_cols)
+        scop2_sf_contacts.to_csv(f"scop2_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+    if len(scop2_fa_contacts) > 0:
         scop2_fa_domains_info = scop2_domains_info[["FA-DOMID", "SCOPCLA"]].copy()
         scop2_fa_domains_info = scop2_fa_domains_info.groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
         scop2_fa_domains_info["SCOPCLA"] = scop2_fa_domains_info["SCOPCLA"].str.join(";")
 
-        scop2b_fa_contacts = scop2b_fa_contacts.merge(scop2_fa_domains_info, left_on = "xref_db_acc", right_on = "FA-DOMID", how = "left", indicator = True)
+        scop2_fa_contacts = scop2_fa_contacts.merge(scop2_fa_domains_info, left_on = "xref_db_acc", right_on = "FA-DOMID", how = "left", indicator = True)
         #assert(len(scop2b_fa_contacts.loc[scop2b_fa_contacts._merge != "both"]) == 0) #as above 
-        scop2b_fa_contacts.drop(columns = ["_merge", "FA-DOMID"], inplace = True)
-        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+        scop2_fa_contacts.drop(columns = ["_merge", "FA-DOMID"], inplace = True)
+        scop2_fa_contacts.to_csv(f"scop2_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        scop2b_fa_contacts = pd.DataFrame(columns = core_cols + scop2b_fa_cols)
-        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
+        scop2_fa_contacts = pd.DataFrame(columns = core_cols + scop2_fa_cols)
+        scop2_fa_contacts.to_csv(f"scop2_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     
     interpro_annotations = extract_interpro_domain_annotations(args.interpro_xml)
     
