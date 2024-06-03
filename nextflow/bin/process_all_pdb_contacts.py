@@ -257,7 +257,8 @@ def main():
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
     scop2_sf_domains_info, scop2_fa_domains_info, scop2_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
-    
+    scop2_sf_domains_info["SF-DOMID"] = scop2_sf_domains_info["SF-DOMID"].astype("str")
+    scop2_fa_domains_info["FA-DOMID"] = scop2_fa_domains_info["FA-DOMID"].astype("str")
     if len(scop2_sf_contacts) > 0:
         scop2_sf_contacts["merge_id"] = scop2_sf_contacts["xref_db_acc"]
         scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"] = scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"].str.extract("SF-DOMID:(.+)")
@@ -289,7 +290,7 @@ def main():
         g3dsa_domains_info = build_g3dsa_dataframe(cath_names,gene3dsa_domain_list)
         gene3dsa_contacts = gene3dsa_contacts.merge(g3dsa_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
         assert(len(gene3dsa_contacts.loc[gene3dsa_contacts._merge != "both"]) == 0)
-        gene3dsa_contacts.drop(columns = "_merge", inplace = True) 
+        gene3dsa_contacts.drop(columns = "_merge", inplace = True)
         gene3dsa_contacts = gene3dsa_contacts.merge(interpro_annotations, left_on = "derived_from", right_on = "interpro_accession", how = "left")
         gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:

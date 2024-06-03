@@ -304,7 +304,6 @@ def process_manifest_row(row, cutoff):
             domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2_SuperFamily") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF-DOMID")), "xref_db_acc"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2_SuperFamily") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF-DOMID")), "xref_db_acc"].str.extract("SF-DOMID:(.*)", expand=False)
             domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2_Family") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA-DOMID")), "xref_db_acc"] = domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2_Family") & (domain_info_df_exploded.xref_db_acc.str.startswith("FA-DOMID")), "xref_db_acc"].str.extract("FA-DOMID:(.*)", expand=False)
 
-        print(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db_acc.isna()])
         if len(domain_info_df_exploded.loc[domain_info_df_exploded.xref_db == "SCOP2"]) > 0:
             domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2"), "derived_from"] = "SCOP2"
             domain_info_df_exploded.loc[(domain_info_df_exploded.xref_db == "SCOP2") & (domain_info_df_exploded.xref_db_acc.str.startswith("SF")), "xref_db"] = "SCOP2_SuperFamily"
