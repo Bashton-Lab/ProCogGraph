@@ -188,7 +188,7 @@ def process_manifest_row(row, cutoff):
         domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "SCOP2" "Pfam", "InterPro"])]
 
         if len(domain_info_dataframe_filtered) > 0:
-            mmcif_domains = domain_info_dataframe_filtered_grouped.xref_db.unique()
+            mmcif_domains = domain_info_dataframe_filtered.xref_db.unique()
             mmcif_domains = list(set("SCOP2B" if x.startswith("SCOP2B") else x for x in mmcif_domains))
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
             domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
