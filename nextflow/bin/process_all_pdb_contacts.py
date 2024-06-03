@@ -255,11 +255,6 @@ def main():
         pfam_contacts = pd.DataFrame(columns = core_cols + pfam_cols)
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
-    if len(scop2b_fa_contacts) > 0:
-        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-    else:
-        scop2b_fa_contacts = pd.DataFrame()
-        scop2b_fa_contacts.to_csv(f"scop2b_fa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     scop2_domains_info = pd.read_csv(args.scop2_domains_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
     scop2_domains_info[["SF-DOMID", "FA-DOMID"]] = scop2_domains_info[["SF-DOMID", "FA-DOMID"]].astype(str) #merge as string type with xref_db_acc in contacts 
     if len(scop2b_sf_contacts) > 0:

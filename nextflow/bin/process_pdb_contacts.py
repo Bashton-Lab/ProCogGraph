@@ -233,7 +233,7 @@ def process_manifest_row(row, cutoff):
                     # search crossrefdb for matching dbs
                     for crossRefDb in residue.findall('.//{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb'):
                         dbsource = crossRefDb.attrib['dbSource']
-                        if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B"] and dbsource not in mmcif_domains:
+                        if dbsource in ["CATH", "Pfam", "SCOP", "SCOP2B", "SCOP2"] and dbsource not in mmcif_domains:
                             dbaccessionid = crossRefDb.attrib['dbAccessionId']
                             derived_from = np.nan
                         elif dbsource == "InterPro" and dbsource not in mmcif_domains:
