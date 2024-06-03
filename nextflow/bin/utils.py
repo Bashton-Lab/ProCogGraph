@@ -380,3 +380,21 @@ def build_g3dsa_dataframe(cath_names, cath_domain_list): #unlike cath, g3dsa ann
         domain_list.append(domain)
     domain_df = pd.DataFrame(domain_list)
     return domain_df
+
+def get_scop2_domains_info(domain_info_file, descriptions_file):
+    scop_domains_info = pd.read_csv(domain_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
+    scop_fa_domains_info = scop_domains_info[["FA-DOMID", "SCOPCLA"]].groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
+    scop_fa_domains_info["SCOPCLA"] = scop_fa_domains_info["SCOPCLA"].str.join(";")
+
+    scop_sf_domains_info = scop_domains_info[["SF-DOMID", "SCOPCLA"]].groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
+    scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.join(";")
+    with open(descriptions_file) as file:
+        rows = []
+        for row in file:
+            if not row.startswith("#"):
+                pattern = re.compile(r"(\d+) (.+)")
+                matches = pattern.match(row)
+                rows.append([matches.group(1), matches.group(2)])
+    scop_descriptions = pd.DataFrame(rows, columns = ["NODE_ID", "NODE_NAME"])
+
+    return scop_sf_domains_info, scop_fa_domains_info, scop_descriptions
