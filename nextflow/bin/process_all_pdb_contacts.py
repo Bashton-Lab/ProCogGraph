@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe, get_scop2_domains_info
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
@@ -72,6 +72,7 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
     sifts_chains_ec.rename(columns = {"EC_NUMBER": "protein_entity_ec"}, inplace = True)
 
     return sifts_chains_ec, sifts_chains_uniprot
+
 
 def main():
 
@@ -255,13 +256,9 @@ def main():
         pfam_contacts = pd.DataFrame(columns = core_cols + pfam_cols)
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
-    scop2_domains_info = pd.read_csv(args.scop2_domains_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
-    scop2_domains_info[["SF-DOMID", "FA-DOMID"]] = scop2_domains_info[["SF-DOMID", "FA-DOMID"]].astype(str) #merge as string type with xref_db_acc in contacts 
+    scop2_sf_domains_info, scop2_fa_domains_info, scop2_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
+    
     if len(scop2_sf_contacts) > 0:
-        scop2_sf_domains_info = scop2_domains_info[["SF-DOMID", "SCOPCLA"]].copy()
-        scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$") #remove the family level from sueprfamily level domains
-        scop2_sf_domains_info = scop2_sf_domains_info.groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
-        scop2_sf_domains_info["SCOPCLA"] = scop2_sf_domains_info["SCOPCLA"].str.join(";")
         scop2_sf_contacts["merge_id"] = scop2_sf_contacts["xref_db_acc"]
         scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"] = scop2_sf_contacts.loc[scop2_sf_contacts.domain_type == "xml", "merge_id"].str.extract("SF-DOMID:(.+)").astype("int")
         scop2_sf_contacts = scop2_sf_contacts.merge(scop2_sf_domains_info, left_on = "merge_id", right_on = "SF-DOMID", how = "left", indicator = True)
@@ -272,9 +269,6 @@ def main():
         scop2_sf_contacts = pd.DataFrame(columns = core_cols + scop2_sf_cols)
         scop2_sf_contacts.to_csv(f"scop2_sf_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(scop2_fa_contacts) > 0:
-        scop2_fa_domains_info = scop2_domains_info[["FA-DOMID", "SCOPCLA"]].copy()
-        scop2_fa_domains_info = scop2_fa_domains_info.groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
-        scop2_fa_domains_info["SCOPCLA"] = scop2_fa_domains_info["SCOPCLA"].str.join(";")
         scop2_fa_contacts["merge_id"] = scop2_fa_contacts["xref_db_acc"]
         scop2_fa_contacts.loc[scop2_fa_contacts.domain_type == "xml", "merge_id"] = scop2_fa_contacts.loc[scop2_fa_contacts.domain_type == "xml", "merge_id"].str.extract("FA-DOMID:(.+)").astype("int")
         scop2_fa_contacts = scop2_fa_contacts.merge(scop2_fa_domains_info, left_on = "merge_id", right_on = "FA-DOMID", how = "left", indicator = True)
