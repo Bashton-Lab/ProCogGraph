@@ -257,8 +257,8 @@ def main():
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
     scop2_sf_domains_info, scop2_fa_domains_info, scop2_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
-    scop2_sf_domains_info["SF-DOMID"] = scop2_sf_domains_info["SF-DOMID"].astype("str")
-    scop2_fa_domains_info["FA-DOMID"] = scop2_fa_domains_info["FA-DOMID"].astype("str")
+    scop2_sf_domains_info["SF-DOMID"] = scop2_sf_domains_info["SF-DOMID"]
+    scop2_fa_domains_info["FA-DOMID"] = scop2_fa_domains_info["FA-DOMID"]
     if len(scop2_sf_contacts) > 0:
         scop2_sf_contacts["merge_id"] = scop2_sf_contacts["xref_db_acc"].astype("int")
         scop2_sf_contacts = scop2_sf_contacts.merge(scop2_sf_domains_info, left_on = "merge_id", right_on = "SF-DOMID", how = "left", indicator = True)
