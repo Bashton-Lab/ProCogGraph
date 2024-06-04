@@ -386,8 +386,9 @@ def get_scop2_domains_info(domain_info_file, descriptions_file):
     scop_fa_domains_info = scop_domains_info[["FA-DOMID", "SCOPCLA"]].groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
     scop_fa_domains_info["SCOPCLA"] = scop_fa_domains_info["SCOPCLA"].str.join(";")
 
-    scop_sf_domains_info = scop_domains_info[["SF-DOMID", "SCOPCLA"]].groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
-    scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$") #remove the family level from sueprfamily level domains
+    scop_sf_domains_info = scop_domains_info[["SF-DOMID", "SCOPCLA"]]
+    scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$", expand = True) #remove the family level from sueprfamily level domains
+    scop_sf_domains_info = scop_sf_domains_info.groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
     scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.join(";")
     with open(descriptions_file) as file:
         rows = []
