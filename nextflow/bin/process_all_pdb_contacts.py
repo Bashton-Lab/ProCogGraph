@@ -197,14 +197,13 @@ def main():
     cath_cols = ['cath_domain', 'cath_name', 'cath_code', 'cath_class', 'cath_class_name', 'cath_architecture', 'cath_architecture_name', 'cath_topology', 'cath_topology_name',
         'cath_homologous_superfamily', 'cath_homologous_superfamily_name']
     cath_mmcif_cols = ['cath_db_version', 'cath_db_verdate', 'cath_source', 'cath_domain_length', 'cath_domain_seq_header', 'cath_domain_seqs', 'cath_num_segments', 'cath_segments_dict']
-    scop_cols = ['scop_id', 'sccs', 'domain_sunid', 'ancestor_sunid', 'cl_id', 'cf_id', 'sf_id', 'fa_id', 'dm_id', 'sp_id',
+    scop_cols = ['scop_id', 'sccs', 'superfamily_sccs', 'fold_sccs', 'class_sccs', 'domain_sunid', 'ancestor_sunid', 'cl_id', 'cf_id', 'sf_id', 'fa_id', 'dm_id', 'sp_id',
         'px_id', 'cl_description', 'cf_description', 'sf_description','fa_description', 'dm_description', 'sp_description', 'px_description']
     scop2_fa_cols = ["SCOPCLA"]
     scop2_sf_cols = ["SCOPCLA"]
     pfam_cols = ['clan', 'clan_acc', 'clan_comment', 'clan_description', 'pfam', 'pfam_accession', 'pfam_description', 'pfam_name']
-    #interpro_cols = ['interpro_id','interpro_short_name', 'dbxref']
-    #gene3dsa_cols
-    #superfamily_cols
+    gene3dsa_cols = ['interpro_name','interpro_accession']
+    superfamily_cols = ['superfamily_sccs', 'fold_sccs', 'class_sccs', 'cl_id', 'cf_id', 'sf_id','cl_description', 'cf_description', 'sf_description', 'interpro_name','interpro_accession']
     #need to mkae the interpro cols be a part of the gene3dsa and superfamily cols - integrate on the derived from field
 
     #process domain database information
@@ -238,6 +237,9 @@ def main():
         cath_contacts.to_csv(f"cath_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     
     scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
+    scop_domains_info["superfamily_sccs"] = scop_domains_info["sccs"].str.extract(r"^(\w+\.\w+\.\w+)\.")
+    scop_domains_info["fold_sccs"] = scop_domains_info["sccs"].str.extract(r"^(\w+\.\w+)\.")
+    scop_domains_info["class_sccs"] = scop_domains_info["sccs"].str.extract(r"^(\w+)\.")
     if len(scop_contacts) > 0:
         scop_contacts["xref_db_acc"] = scop_contacts["xref_db_acc"].astype(int)
         scop_contacts = scop_contacts.merge(scop_domains_info, how = "left", left_on = "xref_db_acc", right_on = "domain_sunid", indicator = True)
@@ -296,8 +298,7 @@ def main():
         gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(superfamily_contacts) > 0:
         #needs to work on the scop1.75 data.
-        scop_domains_info["superfamily_sccs"] = scop_domains_info["sccs"].str.extract(r"^(\w+\.\w+\.\w+)\.")
-        superfamily_domains_info = scop_domains_info[["cl_id", "cl_description", "cf_id", "cf_description","sf_id", "sf_description", "superfamily_sccs"]].drop_duplicates()
+        superfamily_domains_info = scop_domains_info[["cl_id", "cl_description", "cf_id", "cf_description","sf_id", "sf_description", "superfamily_sccs", "fold_sccs", "class_sccs"]].drop_duplicates()
         assert(superfamily_domains_info.sf_id.nunique() == len(superfamily_domains_info))
         superfamily_contacts["merge_id"] = superfamily_contacts["xref_db_acc"].str.extract(r"SSF(\d+)").astype("int")
         superfamily_contacts = superfamily_contacts.merge(superfamily_domains_info, how = "left", left_on = "merge_id", right_on = "sf_id", indicator = True)
@@ -308,7 +309,7 @@ def main():
         superfamily_contacts = superfamily_contacts.merge(interpro_annotations, left_on = "derived_from", right_on = "interpro_accession", how = "left")
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
-        superfamily_contacts = pd.DataFrame()
+        superfamily_contacts = pd.DataFrame(columns = core_cols + superfamily_cols)
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
 if __name__ == "__main__":
