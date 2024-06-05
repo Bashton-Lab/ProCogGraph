@@ -300,7 +300,9 @@ def main():
         assert(superfamily_domains_info.sf_id.nunique() == len(superfamily_domains_info))
         superfamily_contacts["merge_id"] = superfamily_contacts["xref_db_acc"].str.extract(r"SSF(\d+)").astype("int")
         superfamily_contacts = superfamily_contacts.merge(superfamily_domains_info, how = "left", left_on = "merge_id", right_on = "sf_id", indicator = True)
-        assert(len(scop_contacts.loc[scop_contacts._merge != "both"]) == 0)
+        assert(len(superfamily_contacts.loc[superfamily_contacts._merge != "both"]) == 0)
+        superfamily_contacts.drop(columns = ["_merge","sf_id", "merge_id"], inplace = True)
+        superfamily_contacts.rename(columns = {"sf_description": "domain_description"}, inplace = True)
         #now add the interpro annotations
         superfamily_contacts = superfamily_contacts.merge(interpro_annotations, left_on = "derived_from", right_on = "interpro_accession", how = "left")
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
