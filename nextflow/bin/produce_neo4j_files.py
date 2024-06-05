@@ -312,7 +312,7 @@ def main():
     scop_domain_family_rels.to_csv(f"scop_domain_family_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     superfamily_fold_rels = superfamily_domains[["domain_accession", "cf_id"]].drop_duplicates()
-    superfamily_fold_rels.rename(columns = {"domain_accession": ":START_ID(superfamily-domain-id)", "sf_id": ":END_ID(scop-fold-id)"}, inplace = True)
+    superfamily_fold_rels.rename(columns = {"domain_accession": ":START_ID(superfamily-domain-id)", "cf_id": ":END_ID(scop-fold-id)"}, inplace = True)
     superfamily_fold_rels.to_csv(f"superfamily_fold_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop_family_superfamily_rels = scop_domains[["fa_id", "sf_id"]].drop_duplicates()
