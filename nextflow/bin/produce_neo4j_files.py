@@ -373,7 +373,7 @@ def main():
                             scop2_fa_domains[["bound_ligand_struct_asym_id", "assembly_chain_id_ligand",'bound_entity_pdb_residues', 'bound_molecule_display_id', 'hetCode', 'description', 'uniqueID', 'ligand_uniqueID', 'type' , "pdb_ec_list"]]]).drop_duplicates()
 
     #joining multiple ec lists in the instance where two chains with different ec annotations interact with a ligand.
-    bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["ec_list"]]).agg({"pdb_ec_list": set}).reset_index() 
+    bound_entities = bound_entities.groupby([col for col in bound_entities.columns if col not in ["pdb_ec_list"]]).agg({"pdb_ec_list": set}).reset_index() 
     bound_entities["ec_list"] = bound_entities.ec_list.str.join("|")
     bound_entities["ec_list"] = bound_entities.ec_list.str.replace(",", "|") #replace comma separated lists that already existed with pipe delimiter
 
