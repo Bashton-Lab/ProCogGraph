@@ -260,17 +260,17 @@ def main():
     cath_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily", 'domain_type': "domainSource"}, inplace = True)
     cath_domains_nodes.to_csv(f"cath_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    superfamily_domains_nodes = superfamily_domains[["domain_accession", "xref_db_acc", "assembly_chain_id_protein", 'domain_type', "domain_description", "derived_from", "intepro_name"]].drop_duplicates()
+    superfamily_domains_nodes = superfamily_domains[["domain_accession", "xref_db_acc", "assembly_chain_id_protein", 'domain_type', "domain_description", "derived_from", "interpro_name"]].drop_duplicates()
     superfamily_domains_nodes["type"] = "Superfamily"
     superfamily_domains_nodes["url"] = "https://supfam.org/SUPERFAMILY/cgi-bin/scop.cgi?ipid=" + superfamily_domains_nodes["superfamily_id"]
     superfamily_domains_nodes[":LABEL"] = superfamily_domains_nodes["type"] + "|domain"
-    superfamily_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(superfamily-domain-id)", "domain_description": "description", 'domain_type': "domainSource"}, inplace = True)
+    superfamily_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(superfamily-domain-id)", "domain_description": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
     superfamily_domains_nodes.to_csv(f"superfamily_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "gene3d_id", "gene3d_description", 'domain_type', "derived_from"]].drop_duplicates()
+    gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "gene3d_id", "gene3d_description", 'domain_type', "derived_from", "interpro_name"]].drop_duplicates()
     gene3dsa_domains_nodes["type"] = "Gene3D"
     gene3dsa_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + gene3dsa_domains_nodes["gene3d_id"]
-
+    gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(gene3d-domain-id)", "gene3d_id": "gene3dAccession", "gene3d_description": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
     gene3dsa_domains_nodes.to_csv(f"gene3d_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[["assembly_chain_id_protein", "domain_accession", 'pfam_accession', 'pfam_name', 'pfam_description', 'domain_type']].drop_duplicates()
