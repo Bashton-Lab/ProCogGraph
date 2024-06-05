@@ -225,7 +225,7 @@ def main():
             cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
             cath_domains_info = build_g3dsa_dataframe(cath_names,cath_domain_list)
             cath_contacts_xml = cath_contacts_xml.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
-            assert(len(cath_contacts.loc[cath_contacts_xml._merge != "both"]) == 0)
+            assert(len(cath_contacts_xml.loc[cath_contacts_xml._merge != "both"]) == 0)
             cath_contacts_xml.drop(columns = "_merge", inplace = True)
             cath_contacts_xml[cath_mmcif_cols] = np.nan
         else:
