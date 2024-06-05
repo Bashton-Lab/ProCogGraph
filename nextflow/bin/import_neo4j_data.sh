@@ -47,8 +47,6 @@ bin/neo4j-admin database import full \
 --nodes=scop2Fold=import/scop2_cf_nodes.csv.gz \
 --nodes=scop2Class=import/scop2_cl_nodes.csv.gz \
 --nodes=scop2ProteinType=import/scop2_tp_nodes.csv.gz \
---nodes=scop2faDomain=import/scop2_fa_domains_nodes.csv.gz \
---nodes=scop2sfDomain=import/scop2_sf_domains_nodes.csv.gz \
 --relationships=IS_IN_SCOP2_FAMILY=import/scop2_fa_domains_rels.csv.gz \
 --relationships=IS_IN_SCOP2_SUPERFAMILY=import/scop2_sf_domains_rels.csv.gz \
 --relationships=IS_IN_SCOP2_SUPERFAMILY=import/scop2_sf_fa_rels.csv.gz \

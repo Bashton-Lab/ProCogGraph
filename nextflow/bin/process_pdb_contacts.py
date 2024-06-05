@@ -189,7 +189,7 @@ def process_manifest_row(row, cutoff):
 
         if len(domain_info_dataframe_filtered) > 0:
             mmcif_domains = domain_info_dataframe_filtered.xref_db.unique()
-            mmcif_domains = list(set("SCOP2B" if x.startswith("SCOP2B") else x for x in mmcif_domains))
+            mmcif_domains = list(set(mmcif_domains + (["SCOP2B", "SCOP2"] if any(x.startswith("SCOP2B") for x in mmcif_domains) else [])))
             #when cath database is referenced, the db_accession we care about is the domain_name - so fill this
             domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "xref_db_acc"] = domain_info_dataframe_filtered.loc[domain_info_dataframe_filtered.xref_db == "CATH", "domain_name"]
             #we want to avoid clashing family and superfamily level domains so we make the db source specific to a level - we also unify SCOP2 and SCOP2B annotations into a single source, and specify whether it was derived from SCOP2 or SCOP2B
