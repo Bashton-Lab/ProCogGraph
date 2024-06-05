@@ -249,10 +249,12 @@ def main():
 
     scop2_fa_domains_rels = scop2_fa_rels[["domain_accession", "FA"]].drop_duplicates()
     scop2_fa_domains_rels.rename(columns = {"domain_accession": ":START_ID(scop2-fa-domain-id)", "FA": ":END_ID(scop2-fam-id)"}, inplace = True)
-
+    scop2_fa_domains_rels.to_csv(f"scop2_fa_domains_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    
     scop2_sf_domains_rels = scop2_sf_rels[["domain_accession", "SF"]].drop_duplicates()
     scop2_sf_domains_rels.rename(columns = {"domain_accession": ":START_ID(scop2-sf-domain-id)", "SF": ":END_ID(scop2-superfam-id)"}, inplace = True)
- 
+    scop2_sf_domains_rels.to_csv(f"scop2_sf_domains_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+
     cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", 'domain_type']].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"] #we are assuming here as in all_contacts script that source for all cath domains is the mmcif record not xml (so it is always the domain specificity)
@@ -270,7 +272,7 @@ def main():
     gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", "cath_homologous_superfamily_name", 'domain_type', "derived_from", "interpro_name"]].drop_duplicates()
     gene3dsa_domains_nodes["type"] = "Gene3D"
     gene3dsa_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + gene3dsa_domains_nodes["xref_db_acc"]
-    gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(gene3d-domain-id)", "xref_db_acc": "gene3dAccession", "cath_homologous_superfamily_name": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
+    gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(g3dsa-domain-id)", "xref_db_acc": "gene3dAccession", "cath_homologous_superfamily_name": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
     gene3dsa_domains_nodes.to_csv(f"gene3d_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[["assembly_chain_id_protein", "domain_accession", 'pfam_accession', 'pfam_name', 'pfam_description', 'domain_type']].drop_duplicates()
@@ -475,7 +477,46 @@ def main():
     else:
         superfamily_domain_ligand_interactions = pd.DataFrame(columns = [":END_ID(be-id)",":START_ID(interpro-domain-id)"])
     superfamily_domain_ligand_interactions.to_csv(f"superfamily_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
-    
+
+    if len(gene3dsa_domains) > 0:
+        gene3dsa_domain_ligand_interactions = gene3dsa_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
+        gene3dsa_interface_mapping = gene3dsa_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
+        gene3dsa_interface_mapping["allProteinInterface"] = gene3dsa_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
+        gene3dsa_interface_mapping["allProteinInterface"] = gene3dsa_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
+        gene3dsa_interface_mapping = gene3dsa_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
+        gene3dsa_interface_mapping["allProteinInterface"] = gene3dsa_interface_mapping.allProteinInterface.str.join("|")
+        gene3dsa_domain_ligand_interactions = gene3dsa_domain_ligand_interactions.merge(gene3dsa_interface_mapping, how = "left", on = "uniqueID")
+        gene3dsa_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "domain_accession": ":START_ID(g3dsa-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_residue_interactions": "ligandInterface:string[]", "domain_residue_interactions": "proteinInterface:string[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    else:
+        gene3dsa_domain_ligand_interactions = pd.DataFrame(columns = [":END_ID(be-id)",":START_ID(g3dsa-domain-id)"])
+    gene3dsa_domain_ligand_interactions.to_csv(f"gene3dsa_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    if len(scop2_sf_domains) > 0:
+        scop2_sf_domain_ligand_interactions = scop2_sf_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
+        scop2_sf_interface_mapping = scop2_sf_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
+        scop2_sf_interface_mapping["allProteinInterface"] = scop2_sf_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
+        scop2_sf_interface_mapping["allProteinInterface"] = scop2_sf_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
+        scop2_sf_interface_mapping = scop2_sf_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
+        scop2_sf_interface_mapping["allProteinInterface"] = scop2_sf_interface_mapping.allProteinInterface.str.join("|")
+        scop2_sf_domain_ligand_interactions = scop2_sf_domain_ligand_interactions.merge(scop2_sf_interface_mapping, how = "left", on = "uniqueID")
+        scop2_sf_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "domain_accession": ":START_ID(scop2-sf-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_residue_interactions": "ligandInterface:string[]", "domain_residue_interactions": "proteinInterface:string[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    else:
+        scop2_sf_domain_ligand_interactions = pd.DataFrame(columns = [":END_ID(be-id)",":START_ID(scop2-sf-domain-id)"])
+    scop2_sf_domain_ligand_interactions.to_csv(f"scop2_sf_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
+
+    if len(scop2_fa_domains) > 0:
+        scop2_fa_domain_ligand_interactions = scop2_fa_domains[["assembly_chain_id_protein", "domain_accession", "domain_contact_counts", "domain_contact_perc", "domain_hbond_counts", "domain_hbond_perc", "domain_covalent_counts", "domain_ownership", "uniqueID", "bound_ligand_residue_interactions","domain_residue_interactions"]].drop_duplicates()
+        scop2_fa_interface_mapping = scop2_fa_domain_ligand_interactions[["uniqueID", "assembly_chain_id_protein", "domain_residue_interactions"]].copy()
+        scop2_fa_interface_mapping["allProteinInterface"] = scop2_fa_interface_mapping["domain_residue_interactions"].astype("str").str.split("|")
+        scop2_fa_interface_mapping["allProteinInterface"] = scop2_fa_interface_mapping.apply(lambda x: "|".join([x.assembly_chain_id_protein + ":" + y for y in x.allProteinInterface]), axis = 1)
+        scop2_fa_interface_mapping = scop2_fa_interface_mapping.groupby("uniqueID").agg({"allProteinInterface" : list}).reset_index()
+        scop2_fa_interface_mapping["allProteinInterface"] = scop2_fa_interface_mapping.allProteinInterface.str.join("|")
+        scop2_fa_domain_ligand_interactions = scop2_fa_domain_ligand_interactions.merge(scop2_fa_interface_mapping, how = "left", on = "uniqueID")
+        scop2_fa_domain_ligand_interactions.rename(columns = {"uniqueID": ":END_ID(be-id)", "domain_accession": ":START_ID(scop2-fa-domain-id)", "domain_contact_counts" : "domainContactCounts", "domain_contact_perc": "domainContactPerc", "domain_hbond_counts" : "domainHbondCounts", "domain_hbond_perc" : "domainHbondPerc", "domain_covalent_counts": "domainCovalentCounts", "domain_ownership" : "interactionMode", "bound_ligand_residue_interactions": "ligandInterface:string[]", "domain_residue_interactions": "proteinInterface:string[]", "allProteinInterface" : "allProteinInterface:string[]"}, inplace = True)
+    else:
+        scop2_fa_domain_ligand_interactions = pd.DataFrame(columns = [":END_ID(be-id)",":START_ID(scop2-fa-domain-id)"])
+    scop2_fa_domain_ligand_interactions.to_csv(f"scop2_fa_domain_ligand_interactions.csv.gz", compression = "gzip", sep = "\t", index = False)
+
     scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     cath_pdb_protein_rels = cath_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     pfam_pdb_protein_rels = pfam_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
@@ -502,7 +543,7 @@ def main():
     pfam_protein_rels.to_csv(f"pfam_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     scop2_fa_protein_rels.to_csv(f"scop2_fa_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     scop2_sf_protein_rels.to_csv(f"scop2_sf_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
-    gene3dsa_protein_rels.to_csv(f"gene3dsa_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
+    gene3dsa_protein_rels.to_csv(f"gene3d_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
     superfamily_protein_rels.to_csv(f"superfamily_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     procoggraph_node = pd.DataFrame({"procoggraph:ID(procoggraph-id)": ["procoggraph"],
