@@ -296,7 +296,8 @@ def main():
         gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(superfamily_contacts) > 0:
         #needs to work on the scop1.75 data.
-        superfamily_domains_info = scop_domains_info[["cl_id", "cl_description", "cf_id", "cf_description","sf_id", "sf_description"]].drop_duplicates()
+        scop_domains_info["superfamily_sccs"] = scop_domains_info["sccs"].str.extract(r"(\d+\.\d+\.\d+)")
+        superfamily_domains_info = scop_domains_info[["cl_id", "cl_description", "cf_id", "cf_description","sf_id", "sf_description", "superfamily_sccs"]].drop_duplicates()
         assert(superfamily_domains_info.sf_id.nunique() == len(superfamily_domains_info))
         superfamily_contacts["merge_id"] = superfamily_contacts["xref_db_acc"].str.extract(r"SSF(\d+)").astype("int")
         superfamily_contacts = superfamily_contacts.merge(superfamily_domains_info, how = "left", left_on = "merge_id", right_on = "sf_id", indicator = True)
