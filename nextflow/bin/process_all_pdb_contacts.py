@@ -236,9 +236,9 @@ def main():
     else:
         cath_contacts = pd.DataFrame(columns = core_cols + cath_cols + cath_mmcif_cols)
         cath_contacts.to_csv(f"cath_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
-
+    
+    scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
     if len(scop_contacts) > 0:
-        scop_domains_info = get_scop_domains_info(args.scop_domains_info_file, args.scop_descriptions_file)
         scop_contacts["xref_db_acc"] = scop_contacts["xref_db_acc"].astype(int)
         scop_contacts = scop_contacts.merge(scop_domains_info, how = "left", left_on = "xref_db_acc", right_on = "domain_sunid", indicator = True)
         assert(len(scop_contacts.loc[scop_contacts._merge != "both"]) == 0)
@@ -296,6 +296,12 @@ def main():
         gene3dsa_contacts.to_csv(f"gene3dsa_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     if len(superfamily_contacts) > 0:
         #needs to work on the scop1.75 data.
+        superfamily_domains_info = scop_domains_info[["cl_id", "cl_description", "cf_id", "cf_description","sf_id", "sf_description"]].drop_duplicates()
+        assert(superfamily_domains_info.sf_id.nunique() == len(superfamily_domains_info))
+        superfamily_contacts["merge_id"] = superfamily_contacts["xref_db_acc"].str.extract(r"SSF(\d+)").astype("int")
+        superfamily_contacts = superfamily_contacts.merge(superfamily_domains_info, how = "left", left_on = "merge_id", right_on = "sf_id", indicator = True)
+        assert(len(scop_contacts.loc[scop_contacts._merge != "both"]) == 0)
+        #now add the interpro annotations
         superfamily_contacts = superfamily_contacts.merge(interpro_annotations, left_on = "derived_from", right_on = "interpro_accession", how = "left")
         superfamily_contacts.to_csv(f"superfamily_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:
