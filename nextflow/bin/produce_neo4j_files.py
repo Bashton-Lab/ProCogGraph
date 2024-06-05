@@ -479,9 +479,12 @@ def main():
     scop_pdb_protein_rels = scop_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     cath_pdb_protein_rels = cath_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
     pfam_pdb_protein_rels = pfam_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
-    #interpro_pdb_protein_rels = interpro_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    superfamily_pdb_protein_rels = superfamily_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    gene3dsa_pdb_protein_rels = gene3dsa_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    scop2_sf_pdb_protein_rels = scop2_sf_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
+    scop2_fa_pdb_protein_rels = scop2_fa_domains[["pdb_id", "chainUniqueID"]].drop_duplicates()
 
-    pdb_protein_rels = pd.concat([scop_pdb_protein_rels, cath_pdb_protein_rels, pfam_pdb_protein_rels, interpro_pdb_protein_rels]).drop_duplicates()
+    pdb_protein_rels = pd.concat([scop_pdb_protein_rels, cath_pdb_protein_rels, pfam_pdb_protein_rels, superfamily_pdb_protein_rels, gene3dsa_pdb_protein_rels, scop2_sf_pdb_protein_rels, scop2_fa_pdb_protein_rels]).drop_duplicates()
     pdb_protein_rels.rename(columns = {"chainUniqueID": ":START_ID(pdbp-id)", "pdb_id": ":END_ID(pdb-id)"}, inplace = True)
     pdb_protein_rels.to_csv(f"pdb_protein_rels.csv.gz", compression = "gzip", sep = "\t", index = False)
 
