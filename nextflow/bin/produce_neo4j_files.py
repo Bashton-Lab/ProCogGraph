@@ -119,14 +119,6 @@ def main():
     scop2_sf_domains["chainUniqueID"] = scop2_sf_domains["pdb_id"] + "_" + scop2_sf_domains["proteinStructAsymID"]
     scop2_fa_domains["chainUniqueID"] = scop2_fa_domains["pdb_id"] + "_" + scop2_fa_domains["proteinStructAsymID"]
 
-    cath_domains["domain_uid"] = cath_domains["pdb_id"] + "_" + cath_domains["domain_accession"]
-    scop_domains["domain_uid"] = scop_domains["pdb_id"] + "_" + scop_domains["domain_accession"]
-    pfam_domains["domain_uid"] = pfam_domains["pdb_id"] + "_" + pfam_domains["domain_accession"]
-    superfamily_domains["domain_uid"] = superfamily_domains["pdb_id"] + "_" + superfamily_domains["domain_accession"]
-    gene3dsa_domains["domain_uid"] = gene3dsa_domains["pdb_id"] + "_" + gene3dsa_domains["domain_accession"]
-    scop2_sf_domains["domain_uid"] = scop2_sf_domains["pdb_id"] + "_" + scop2_sf_domains["domain_accession"]
-    scop2_fa_domains["domain_uid"] = scop2_fa_domains["pdb_id"] + "_" + scop2_fa_domains["domain_accession"]
-
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]]]).drop_duplicates()
     pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"ec_list": set}).reset_index()
     pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.join("|")

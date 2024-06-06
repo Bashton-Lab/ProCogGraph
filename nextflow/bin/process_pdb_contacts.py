@@ -365,7 +365,7 @@ def process_manifest_row(row, cutoff):
             log = f"{pdb_id},124,no_ligand_protein_contacts"
             return log
         
-        contacts_poly_merged["domain_accession"] = contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
+        contacts_poly_merged["domain_accession"] = contacts_poly_merged["pdb_id"] + ":" + contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
         contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
         if len(contacts_poly_merged_filtered) == 0:
             #for example - see 1y82
