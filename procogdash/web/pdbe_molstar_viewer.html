@@ -58,9 +58,13 @@
             // Iterate over the 'interface' list
             dataArray.interface.forEach(function(residue_number) {
                 // Create an object with 'auth_asym_id' and 'residue_number'
+                var residue_parts = residue_number.split("_");
+                var residue_number = parseInt(residue_parts[0]);
+                var residue_ins_code = residue_parts[1];
                 var residuePosition = {
                     auth_asym_id: dataArray.interface_chain,
                     auth_residue_number: residue_number,
+                    auth_ins_code: residue_ins_code,
                     //end_residue_number: residue_number,
                     color: {r:0, g:191, b:255}, // Default color
                     sideChain: true // Default value
@@ -73,11 +77,14 @@
                 console.log(chain_residue_number)
                 var parts = chain_residue_number.split(":");
                 var chain = parts[0];
-                var residue_number = parseInt(parts[1]);
+                var residue_parts = parts[1].split("_");
+                var residue_number = parseInt(residue_parts[0]);
+                var residue_ins_code = residue_parts[1];
                 // Create an object with 'auth_asym_id' and 'residue_number'
                 var residuePosition = {
                     auth_asym_id: chain,
                     auth_residue_number: residue_number,
+                    auth_ins_code: residue_ins_code,
                     //end_residue_number: residue_number,
                     color: {r:123, g:101, b:155}, // Default color
                     sideChain: false // Default value

@@ -41,7 +41,7 @@ def extract_data(elem):
 def sort_numeric_with_inscode(tosort):
     numeric_split = [re.findall(r'(\d+)_*(\D*)', item) for item in tosort] # Find all numeric parts in the string (we define format as numeric_inscode) - keep the underscore outside of the split to remove this 
     sorted_parts = sorted(numeric_split, key=lambda x: int(x[0][0]))  # Sort numeric parts (each item in the original list is broken into a one item list where the first item is the numeric item to be sorted by)
-    return '|'.join(['_'.join(tup for tup in sorted_parts_list[0]) for sorted_parts_list in sorted_parts])  # Concat numeric and non-numeric parts
+    return '|'.join(['_'.join(tup for tup in sorted_parts_list[0]).strip("_") for sorted_parts_list in sorted_parts])  # Concat numeric and non-numeric parts
 
 def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", domain_grouping_key = "cath_domain", database_type = None, preassigned = False):
     if database_type:
@@ -94,8 +94,8 @@ def process_manifest_row(row, cutoff):
         log = f"{pdb_id},0,success"
         return log
     else:
-        if Path(f"{pdb_id}_bio-h.json").is_file():
-            with open(f"{pdb_id}_bio-h.json") as json_file:
+        if Path(f"{pdb_id}_bio-h.json.gz").is_file():
+            with gzip.open(f"{pdb_id}_bio-h.json.gz") as json_file:
                 json_contents = json_file.read()
             contacts_file = json.loads(json_contents)
         else:    
