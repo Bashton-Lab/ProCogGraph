@@ -120,12 +120,13 @@ def main():
     scop2_fa_domains["chainUniqueID"] = scop2_fa_domains["pdb_id"] + "_" + scop2_fa_domains["proteinStructAsymID"]
 
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop2_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop2_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]]]).drop_duplicates()
-    pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"pdb_ec_list": set}).reset_index()
+    pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"pdb_ec_list": set, "display_pdb_ec_list": list}).reset_index()
     pdb_nodes["pdb_ec_list"] = pdb_nodes["pdb_ec_list"].str.join("|")
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_title"] = pdb_nodes["pdb_title"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_descriptor"] = pdb_nodes["pdb_descriptor"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_ec_list"] = pdb_nodes["pdb_ec_list"].str.replace(",", "|") #maybe we can have the ec list on the entry node be all EC annotations for all protein entities - need to do a groupby agg and join for this
+    pdb_nodes["display_pdb_ec_list"] = pdb_nodes["display_pdb_ec_list"].str.join("|")
     pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords", "pdb_ec_list" : "pdbECList:string[]","display_pdb_ec_list" : "displayPDBECList:string[]"}, inplace = True)
     pdb_nodes.to_csv(f"pdb_entry_nodes.csv.gz", sep='\t', compression = "gzip", index = False)
 
