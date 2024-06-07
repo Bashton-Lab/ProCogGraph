@@ -73,6 +73,33 @@ def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
 
     return sifts_chains_ec, sifts_chains_uniprot
 
+def find_ec_ranges(series):
+    numeric_series = [int(val) for val in series if val.isnumeric()]
+    nonnumeric_series = [val for val in series if val.isnumeric() == False]
+    sorted_values = sorted(numeric_series)
+    ec_ranges = []
+    if len(numeric_series) > 0:
+        start = sorted_values[0]
+        end = sorted_values[0]
+        for value in sorted_values[1:]:
+            if value == end + 1:
+                end = value
+            else:
+                if start == end:
+                    ec_ranges.append(start)
+                else:
+                    ec_ranges.append(f"{start}-{end}")
+                start = value
+                end = value
+        #add last range
+        if start == end:
+            ec_ranges.append(start)
+        else:
+            ec_ranges.append(f"{start}-{end}")
+    if len(nonnumeric_series) > 0:
+        ec_ranges += nonnumeric_series #append nonumeric final level ecs
+    return ec_ranges
+
 
 def main():
 
@@ -149,10 +176,31 @@ def main():
     sifts_chains = pd.read_csv(f"{args.sifts_ec_mapping}", sep = "\t", comment="#")
 
     sifts_chains_ec, sifts_chains_uniprot = process_sifts_ec_map(sifts_chains, ec_records_df)
-    sifts_pdb_ec = sifts_chains_ec.groupby("PDB").agg({"ec_list": set}).rename(columns = {"ec_list": "pdb_ec_list"}).reset_index()
+
+
+    sifts_chain_ec_display = sifts_chains_ec[["PDB", "CHAIN", "ec_list"]].copy()
+    sifts_chain_ec_display["ec_list"] = sifts_chain_ec_display["ec_list"].str.replace(",,", ",").str.split(",")
+    sifts_chain_ec_display = sifts_chain_ec_display.explode("ec_list")
+    sifts_chain_ec_display[["l1","l2","l3","l4"]] = sifts_chain_ec_display.ec_list.str.split(".", expand = True)
+    sifts_chain_ec_display[["l1","l2","l3","l4"]] = sifts_chain_ec_display[["l1","l2","l3","l4"]]
+    sifts_chain_ec_display = sifts_chain_ec_display.drop(columns = "ec_list")
+
+    sifts_chain_ec_display = sifts_chain_ec_display.groupby([col for col in sifts_chain_ec_display.columns if col != "l4"])["l4"].apply(lambda x: find_ec_ranges(x)).reset_index()
+    sifts_chain_ec_display["l4"] = sifts_chain_ec_display["l4"].apply(lambda x: ",".join([str(val) for val in x]))
+    sifts_chain_ec_display["display_ec_list"] = sifts_chain_ec_display["CHAIN"] + ":" + sifts_chain_ec_display["l1"] + "." + sifts_chain_ec_display["l2"] + "." + sifts_chain_ec_display["l3"] + "." + sifts_chain_ec_display["l4"]
+    sifts_chain_ec_display.drop(columns = ["l1","l2", "l3", "l4"], inplace = True)
+    sifts_chain_ec_display = sifts_chain_ec_display.groupby(["PDB", "CHAIN"]).agg({"display_ec_list": list}).reset_index()
+    sifts_chain_ec_display["display_ec_list"] = sifts_chain_ec_display["display_ec_list"].str.join("|")
+    sifts_chains_ec = sifts_chains_ec.merge(sifts_chain_ec_display, on = ["PDB", "CHAIN"] , how = "left", indicator = True)
+    assert(len(sifts_chains_ec.loc[sifts_chains_ec._merge != "both"]) == 0)
+    sifts_chains_ec.drop(columns = ["_merge"], inplace = True)
+
+    sifts_pdb_ec = sifts_chains_ec.copy()
+    sifts_pdb_ec = sifts_chains_ec.groupby("PDB").agg({"ec_list": set, "display_ec_list": list}).rename(columns = {"ec_list": "pdb_ec_list"}).reset_index()
     #group into a pdb level list of ECs to collect cognate ligands
     sifts_pdb_ec["pdb_ec_list"] = sifts_pdb_ec["pdb_ec_list"].apply(lambda x: [y for y in x if y != np.nan]).str.join(",")
     sifts_pdb_ec["pdb_ec_list"].apply(lambda x: ",".join(set(x.split(","))))
+    sifts_pdb_ec["display_ec_list"] = sifts_pdb_ec["display_ec_list"].str.join("|")
 
     contacts_ec = contacts.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
     contacts_ec["ec_list"] = contacts_ec["ec_list"].fillna("?")

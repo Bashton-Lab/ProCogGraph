@@ -119,23 +119,23 @@ def main():
     scop2_sf_domains["chainUniqueID"] = scop2_sf_domains["pdb_id"] + "_" + scop2_sf_domains["proteinStructAsymID"]
     scop2_fa_domains["chainUniqueID"] = scop2_fa_domains["pdb_id"] + "_" + scop2_fa_domains["proteinStructAsymID"]
 
-    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]], scop2_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list"]]]).drop_duplicates()
+    pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], scop2_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]], scop2_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "ec_list","display_ec_list"]]]).drop_duplicates()
     pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"ec_list": set}).reset_index()
     pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.join("|")
     pdb_nodes["pdb_keywords"] = pdb_nodes["pdb_keywords"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_title"] = pdb_nodes["pdb_title"].str.replace("\n", " ", regex = True)
     pdb_nodes["pdb_descriptor"] = pdb_nodes["pdb_descriptor"].str.replace("\n", " ", regex = True)
     pdb_nodes["ec_list"] = pdb_nodes["ec_list"].str.replace(",", "|") #maybe we can have the ec list on the entry node be all EC annotations for all protein entities - need to do a groupby agg and join for this
-    pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords", "ec_list" : "ecList:string[]"}, inplace = True)
+    pdb_nodes.rename(columns = {"pdb_id": "pdbEntry:ID(pdb-id)", "pdb_title": "title", "pdb_descriptor": "description", "pdb_keywords": "keywords", "ec_list" : "ecList:string[]","display_ec_list" : "displayECList:string[]"}, inplace = True)
     pdb_nodes.to_csv(f"pdb_entry_nodes.csv.gz", sep='\t', compression = "gzip", index = False)
 
-    cath_protein_entities = cath_domains[["chainUniqueID", "proteinStructAsymID",  "protein_entity_ec", "ec_list"]]
-    scop_protein_entities = scop_domains[["chainUniqueID", "proteinStructAsymID","protein_entity_ec", "ec_list"]]
-    pfam_protein_entities = pfam_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
-    superfamily_protein_entities = superfamily_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
-    gene3dsa_protein_entities = gene3dsa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
-    scop2_sf_protein_entities = scop2_sf_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
-    scop2_fa_protein_entities = scop2_fa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list"]]
+    cath_protein_entities = cath_domains[["chainUniqueID", "proteinStructAsymID",  "protein_entity_ec", "ec_list", "display_ec_list"]]
+    scop_protein_entities = scop_domains[["chainUniqueID", "proteinStructAsymID","protein_entity_ec", "ec_list","display_ec_list"]]
+    pfam_protein_entities = pfam_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list","display_ec_list"]]
+    superfamily_protein_entities = superfamily_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list","display_ec_list"]]
+    gene3dsa_protein_entities = gene3dsa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list","display_ec_list"]]
+    scop2_sf_protein_entities = scop2_sf_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list","display_ec_list"]]
+    scop2_fa_protein_entities = scop2_fa_domains[["chainUniqueID", "proteinStructAsymID", "protein_entity_ec", "ec_list","display_ec_list"]]
 
 
     protein_entities = pd.concat([cath_protein_entities, scop_protein_entities, pfam_protein_entities, superfamily_protein_entities, gene3dsa_protein_entities, scop2_sf_protein_entities, scop2_fa_protein_entities])
@@ -146,7 +146,7 @@ def main():
     protein_entities.loc[(protein_entities.protein_entity_ec.str.contains("-")), "partialEC"] = "True"
     protein_entities["partialEC"] = protein_entities["partialEC"].fillna("False")
     protein_entities["updatedEC"] = protein_entities["updatedEC"].fillna("False")
-    protein_entities.rename(columns = {"chainUniqueID": "pdbProteinChain:ID(pdbp-id)", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC", "proteinStructAsymID" : "chainID"}, inplace = True)
+    protein_entities.rename(columns = {"chainUniqueID": "pdbProteinChain:ID(pdbp-id)", "ec_list" : "ecList:string[]", "protein_entity_ec": "originalEC", "proteinStructAsymID" : "chainID","display_ec_list" : "displayECList:string[]"}, inplace = True)
     protein_entities.to_csv(f"pdb_protein_chain_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     protein_ec_rels = protein_entities[["pdbProteinChain:ID(pdbp-id)","ecList:string[]"]].copy()
