@@ -196,11 +196,11 @@ def main():
     sifts_chains_ec.drop(columns = ["_merge"], inplace = True)
 
     sifts_pdb_ec = sifts_chains_ec.copy()
-    sifts_pdb_ec = sifts_chains_ec.groupby("PDB").agg({"ec_list": set, "display_ec_list": list}).rename(columns = {"ec_list": "pdb_ec_list"}).reset_index()
+    sifts_pdb_ec = sifts_chains_ec.groupby("PDB").agg({"ec_list": set, "display_ec_list": list}).rename(columns = {"ec_list": "pdb_ec_list", "display_ec_list": "display_pdb_ec_list"}).reset_index()
     #group into a pdb level list of ECs to collect cognate ligands
     sifts_pdb_ec["pdb_ec_list"] = sifts_pdb_ec["pdb_ec_list"].apply(lambda x: [y for y in x if y != np.nan]).str.join(",")
     sifts_pdb_ec["pdb_ec_list"].apply(lambda x: ",".join(set(x.split(","))))
-    sifts_pdb_ec["display_ec_list"] = sifts_pdb_ec["display_ec_list"].str.join("|")
+    sifts_pdb_ec["display_pdb_ec_list"] = sifts_pdb_ec["display_pdb_ec_list"].str.join("|")
 
     contacts_ec = contacts.merge(sifts_chains_ec, left_on = ["pdb_id", "auth_chain_id"], right_on = ["PDB", "CHAIN"], how = "left")
     contacts_ec["ec_list"] = contacts_ec["ec_list"].fillna("?")
