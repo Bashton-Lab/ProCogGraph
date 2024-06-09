@@ -166,18 +166,19 @@ def main():
     scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop2_fa_domains_nodes = scop2_fa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from']].drop_duplicates()
+    scop2_fa_domains_nodes = scop2_fa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
     scop2_fa_domains_nodes["type"] = "SCOP2-FA"
     scop2_fa_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_fa_domains_nodes["xref_db_acc"].astype("str")
     scop2_fa_domains_nodes[":LABEL"] = scop2_fa_domains_nodes["type"] + "|domain"
     scop2_fa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2-fa-domain-id)", "xref_db_acc": "FA-DOMID", 'domain_type': "domainSource"}, inplace = True)
     scop2_fa_domains_nodes.to_csv(f"scop2_fa_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop2_sf_domains_nodes = scop2_sf_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from']].drop_duplicates()
+    scop2_sf_domains_nodes = scop2_sf_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
     scop2_sf_domains_nodes["type"] = "SCOP2-SF"
     scop2_sf_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_sf_domains_nodes["xref_db_acc"].astype("str")
     scop2_sf_domains_nodes[":LABEL"] = scop2_sf_domains_nodes["type"] + "|domain"
-    scop2_sf_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2-sf-domain-id)", "xref_db_acc": "SF-DOMID", 'domain_type': "domainSource"}, inplace = True)
+    scop2_sf_domains_nodes["SCOPCLA"] = scop2_sf_domains_nodes["SCOPCLA"].str.replace(";", "|")
+    scop2_sf_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2-sf-domain-id)", "xref_db_acc": "SF-DOMID", 'domain_type': "domainSource", "SCOPCLA": "SCOPCLA:string[]"}, inplace = True)
     scop2_sf_domains_nodes.to_csv(f"scop2_sf_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
     _, _ ,scop_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
@@ -556,8 +557,13 @@ def main():
                                     "pdbe_graph_version": ["0.1"],
                                     "pdbe_graph_scripts_version": ["0.1"],
                                     "pdbe_graph_data_version": ["0.1"],
-                                    "input_params": ["-"],})
+                                    "input_params": ["-"],
+                                    "num_entries": [pdb_nodes["pdbEntry:ID(pdb-id)"].nunique()],
+                                    "num_bound_molecules": [bound_entities["uniqueID:ID(be-id)"].nunique()],
+                                    "num_bound_descriptors": [bound_entities_descriptors["uniqueID:ID(bd-id)"].nunique()],
+                                    "num_cognate_ligands": [cognate_ligands_nodes["uniqueID:ID(bio-id)"].nunique()],})
     #THE PROCOGGRAPH NODE CAN CONTAIN SOME PRECOMPUTED STATS TO SPEED UP PROCOGDASH ? 
+    #maybe add the number of pdb entries in each of the databases.
 
     procoggraph_node.to_csv(f"procoggraph_node.csv.gz", compression = "gzip", sep = "\t", index = False)
 
