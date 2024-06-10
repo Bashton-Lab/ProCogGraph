@@ -273,7 +273,7 @@ def main():
     gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", "cath_homologous_superfamily_name", 'domain_type', "derived_from", "interpro_name"]].drop_duplicates()
     gene3dsa_domains_nodes["type"] = "Gene3D"
     gene3dsa_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + gene3dsa_domains_nodes["xref_db_acc"]
-    gene3dsa_domains_nodes["url"] = gene3dsa_domains_nodes["type"] + "|domain"
+    gene3dsa_domains_nodes[":LABEL"] = gene3dsa_domains_nodes["type"] + "|domain"
     gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(g3dsa-domain-id)", "xref_db_acc": "gene3dAccession", "cath_homologous_superfamily_name": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
     gene3dsa_domains_nodes.to_csv(f"gene3d_domains_nodes.csv.gz", compression = "gzip", sep = "\t", index = False)
 
