@@ -72,6 +72,7 @@ bin/neo4j-admin database import full \
 --relationships=IS_IN_PROTEIN_CHAIN=import/gene3d_protein_rels.csv.gz \
 --relationships=IS_IN_PROTEIN_CHAIN=import/superfamily_protein_rels.csv.gz \
 --relationships=IS_IN_PROTEIN_CHAIN=import/scop2_fa_protein_rels.csv.gz \
+--relationships=IS_IN_PROTEIN_CHAIN=import/scop2_sf_protein_rels.csv.gz \
 --relationships=IS_IN_EC=import/protein_ec_rels.csv.gz \
 --nodes=procoggraph=import/procoggraph_node.csv.gz \
 --overwrite-destination graph.db ; \
