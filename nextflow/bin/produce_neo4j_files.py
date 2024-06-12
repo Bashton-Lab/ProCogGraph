@@ -110,15 +110,6 @@ def main():
     scop2_sf_domains = pd.read_csv(f"{args.scop2_sf_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
     scop2_fa_domains = pd.read_csv(f"{args.scop2_fa_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
 
-    #add unique ids for protein chains
-    cath_domains["chainUniqueID"] = cath_domains["pdb_id"] + "_" + cath_domains["proteinStructAsymID"]
-    scop_domains["chainUniqueID"] = scop_domains["pdb_id"] + "_" + scop_domains["proteinStructAsymID"]
-    pfam_domains["chainUniqueID"] = pfam_domains["pdb_id"] + "_" + pfam_domains["proteinStructAsymID"]
-    superfamily_domains["chainUniqueID"] = superfamily_domains["pdb_id"] + "_" + superfamily_domains["proteinStructAsymID"]
-    gene3dsa_domains["chainUniqueID"] = gene3dsa_domains["pdb_id"] + "_" + gene3dsa_domains["proteinStructAsymID"]
-    scop2_sf_domains["chainUniqueID"] = scop2_sf_domains["pdb_id"] + "_" + scop2_sf_domains["proteinStructAsymID"]
-    scop2_fa_domains["chainUniqueID"] = scop2_fa_domains["pdb_id"] + "_" + scop2_fa_domains["proteinStructAsymID"]
-
     pdb_nodes = pd.concat([cath_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], pfam_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], superfamily_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], gene3dsa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop2_sf_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]], scop2_fa_domains[["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords", "pdb_ec_list","display_pdb_ec_list"]]]).drop_duplicates()
     pdb_nodes = pdb_nodes.groupby(["pdb_id", "pdb_title", "pdb_descriptor", "pdb_keywords"]).agg({"pdb_ec_list": set, "display_pdb_ec_list": list}).reset_index()
     pdb_nodes["pdb_ec_list"] = pdb_nodes["pdb_ec_list"].str.join("|")

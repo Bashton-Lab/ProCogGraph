@@ -230,7 +230,7 @@ def main():
     bound_entities_to_score.to_pickle(f"bound_entities_to_score.pkl")
 
     # now that we have contacts_ec_uniprot, make a display EC list that aggregates all low level EC annotations into a range.
-    
+    contacts_ec_uniprot["chainUniqueID"] = contacts_ec_uniprot["pdb_id"] + "_" + contacts_ec_uniprot["proteinStructAsymID"]
 
     #split the domain information into separate database specific dataframes for annotation
     cath_contacts = contacts_ec_uniprot.loc[contacts_ec_uniprot.xref_db == "CATH"].copy()
