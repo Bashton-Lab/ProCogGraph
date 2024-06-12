@@ -371,8 +371,8 @@ def process_manifest_row(row, cutoff):
             log = f"{pdb_id},125,no_ligand_domain_contacts"
             return log
         #subset of the contacts dataframe is used for visualisation of the contacts downstream - save this here.
-        contacts_poly_merged_filtered[["domain_accession", "bgn", "end", "contact", "auth_seq_range", "end_auth_asym_id"]].to_csv(f"{args.pdb_id}_pymol_contacts.csv")
-        
+        contacts_poly_merged_filtered[["domain_accession", "bgn", "end", "contact", "auth_seq_range", "end_auth_asym_id", "xref_db"]].to_csv(f"{args.pdb_id}_pymol_contacts.csv")
+
         contacts_poly_merged_filtered = contacts_poly_merged_filtered.drop(columns = ["bgn", "end", "contact", "distance", "interacting_entities", "type"])
         contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
         contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
