@@ -358,20 +358,22 @@ def process_manifest_row(row, cutoff):
         contacts_filtered["contact_counts"] = contacts_filtered["contact"].str.len()
         contacts_filtered["hbond_counts"] = contacts_filtered["contact"].apply(lambda x: len([contact for contact in x if contact == "hbond"]))
         contacts_filtered["covalent_counts"] = contacts_filtered["contact"].apply(lambda x: len([contact for contact in x if contact == "covalent"]))
-        contacts_filtered_filtered = contacts_filtered.drop(columns = ["bgn", "end", "contact", "distance", "interacting_entities", "type"])
-        contacts_poly_merged = contacts_filtered_filtered.merge(protein_entity_df_assembly_domain, left_on = "end_auth_asym_id", right_on = "assembly_chain_id_protein", how = "inner")
+        contacts_poly_merged = contacts_filtered.merge(protein_entity_df_assembly_domain, left_on = "end_auth_asym_id", right_on = "assembly_chain_id_protein", how = "inner")
         if len(contacts_poly_merged) == 0:
             #for example, ligand interacts with DNA only in structure - see 2fjx
             log = f"{pdb_id},124,no_ligand_protein_contacts"
             return log
-        
+
         contacts_poly_merged["domain_accession"] = contacts_poly_merged["pdb_id"] + ":" + contacts_poly_merged["assembly_chain_id_protein"] + ":" + contacts_poly_merged["xref_db_acc"] #db accession is specifc to the symmetry also.
         contacts_poly_merged_filtered = contacts_poly_merged.loc[contacts_poly_merged.apply(lambda x: x.end_auth_seq_id in x.auth_seq_range, axis = 1)].copy()
         if len(contacts_poly_merged_filtered) == 0:
             #for example - see 1y82
             log = f"{pdb_id},125,no_ligand_domain_contacts"
             return log
+        #subset of the contacts dataframe is used for visualisation of the contacts downstream - save this here.
+        contacts_poly_merged_filtered[["domain_accession", "bgn", "end", "contact", "auth_seq_range", "end_auth_asym_id"]].to_csv(f"{args.pdb_id}_pymol_contacts.csv")
         
+        contacts_poly_merged_filtered = contacts_poly_merged_filtered.drop(columns = ["bgn", "end", "contact", "distance", "interacting_entities", "type"])
         contacts_poly_merged_filtered["seq_range_chain"] = contacts_poly_merged_filtered["seq_range_chain"].apply(lambda x: "|".join([str(y) for y in x]))
         contacts_poly_merged_filtered["auth_seq_range"] = contacts_poly_merged_filtered["auth_seq_range"].apply(lambda x: "|".join([str(y) for y in x]))
         contacts_poly_merged_filtered_grouped = contacts_poly_merged_filtered.groupby([col for col in contacts_poly_merged_filtered.columns if col not in ["contact_counts", "hbond_counts", "covalent_counts", "end_auth_seq_id"]], dropna = False).agg({"contact_counts": "sum", "hbond_counts": "sum", "covalent_counts": "sum", "end_auth_seq_id": set}).reset_index() #dropna = False for when things like xref_db_version are nan
@@ -464,8 +466,4 @@ if __name__ == "__main__":
     main()
 
 
-##extract the symmetry info
-##filter to get assembly id 1
-## join the ssymetry info to the ligands where necessary 
-
-#split to sym col in contacts ???
+##or we mint out the selections as a text file for each part e.g. domain ranges to highlight, ligand residues to highlight, and the contacts to highlight
