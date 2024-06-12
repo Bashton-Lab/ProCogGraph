@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from pymol import cmd
 import pandas as pd
 import argparse
