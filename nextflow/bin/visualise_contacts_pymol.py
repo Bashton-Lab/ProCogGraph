@@ -67,3 +67,5 @@ def main():
         
 if __name__ == "__main__":
     main()
+
+#can use bound_entity_pdb_residues potentially to idnetify these in pymol
