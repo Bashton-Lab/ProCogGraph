@@ -391,7 +391,7 @@ def process_manifest_row(row, cutoff):
         bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged.groupby(["pdb_id", "pdb_descriptor", "pdb_title", "pdb_keywords", "uniqueID", "xref_db", "xref_db_acc", "xref_db_version", "domain_accession", "domain_type", "derived_from", "descriptor", "description", "hetCode", "type", "bound_ligand_struct_asym_id", "ligand_entity_id_numerical", "bound_entity_pdb_residues", "assembly_chain_id_ligand", "assembly_chain_id_protein", "bound_molecule_display_id", "proteinStructAsymID", "auth_chain_id"], dropna=False).agg(
                 {"bound_ligand_residue_interactions": set, "domain_residue_interactions": set, "domain_contact_counts": "sum", "domain_hbond_counts": "sum", "domain_covalent_counts": "sum"}).reset_index()
 
-        bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_contact_counts >= args.domain_contact_cutoff]
+        bound_entity_info_arp_exploded_merged_aggregated = bound_entity_info_arp_exploded_merged_aggregated.loc[bound_entity_info_arp_exploded_merged_aggregated.domain_residue_interactions.str.len() >= args.domain_contact_cutoff]
         if len(bound_entity_info_arp_exploded_merged_aggregated) == 0:
             #if no domain interactions above the cutoff are found e.g. 5i63
             log = f"{pdb_id},127,no_domains_over_contact_cutoff"
