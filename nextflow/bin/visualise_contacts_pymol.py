@@ -29,9 +29,9 @@ def visualise_contacts(contacts_df, domain_df):
         cmd.hide("labels", obj_name)
         cmd.pseudoatom(f"{obj_name}_label", f"{atom1} + {atom2}", label=",".join(contact.contact))
         cmd.color("blue",f"{obj_name}") ##TODO - ALTER THIS COLOUR ACCORDING TO CONTACT TYPE ? 
-        colour_list = ["blue", "red", "yellow", "pink", "black" , "orange"]
-        colour_list = colour_list * math.ceil(len(colour_list)/domain_df.domain_accession.nunique())
-    for i,domain in domain_df.iterrows():
+    colour_list = ["blue", "red", "yellow", "pink", "black" , "orange"]
+    colour_list = colour_list * math.ceil(len(colour_list)/domain_df.domain_accession.nunique())
+    for i,domain in domain_df.reset_index(drop = True).iterrows():
         domain_name = domain["domain_accession"]
         cmd.select(f"{domain_name}", domain["selections"])
         cmd.color(colour_list[i], f"{domain_name}")
@@ -51,7 +51,7 @@ def main():
     contacts["end"] = contacts["end"].apply(eval)
     contacts["contact"] = contacts["contact"].apply(eval)
     contacts["auth_seq_range"] = contacts["auth_seq_range"].apply(eval)
-    contacts["auth_seq_range"] = contacts["auth_seq_range"].apply(lambda x: "+".join([str(y)+"*" for y in x]))
+    contacts["auth_seq_range"] = contacts["auth_seq_range"].apply(lambda x: "+".join([str(y).strip() for y in x])) #sometimes there is a space following last value in a multi-residue range
 
     contacts["atom1"] = contacts.apply(lambda x: f"/{struct_name}//{x['bgn'].get('auth_asym_id')}/{x['bgn'].get('auth_seq_id')}/{x['bgn'].get('auth_atom_id')}", axis = 1)
     contacts["atom2"] = contacts.apply(lambda x: f"/{struct_name}//{x['end'].get('auth_asym_id')}/{x['end'].get('auth_seq_id')}/{x['end'].get('auth_atom_id')}", axis = 1)
@@ -63,7 +63,9 @@ def main():
         visualise_contacts(contact_group, domains)
         cmd.save(f"{args.output_prefix}_{struct_name}_{group}.pse")
         cmd.delete("all")
-    print(cmd.get_color_indices())
+    
+    for ligand in contacts[["uniqueID", "bound_entity_pdb_residues"]].drop_duplicates():
+        print(ligand)
         
 if __name__ == "__main__":
     main()
