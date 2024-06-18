@@ -30,7 +30,7 @@ def visualise_contacts(contacts_df, domain_df):
         cmd.pseudoatom(f"{obj_name}_label", f"{atom1} + {atom2}", label=",".join(contact.contact))
         cmd.color("blue",f"{obj_name}") ##TODO - ALTER THIS COLOUR ACCORDING TO CONTACT TYPE ? 
     colour_list = ["blue", "red", "yellow", "pink", "black" , "orange"]
-    colour_list = colour_list * math.ceil(len(colour_list)/domain_df.domain_accession.nunique())
+    colour_list = colour_list * math.ceil(domain_df.domain_accession.nunique()/len(colour_list))
     for i,domain in domain_df.reset_index(drop = True).iterrows():
         domain_name = domain["domain_accession"]
         cmd.select(f"{domain_name}", domain["selections"])

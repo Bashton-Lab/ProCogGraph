@@ -22,6 +22,7 @@ def main():
                         help = "path to gene3dsa domain ownership file")
     parser.add_argument('--scores_file', type=str, help='The scores file')
     parser.add_argument('--score_cutoff', type=float, default = 0.40, help='The score cutoff for cognate ligands')
+    parser.add_argument('--cognate_ligands', type=str, help='The cognate ligands file')
     args = parser.parse_args()
 
     scores = pd.read_pickle(args.scores_file)
