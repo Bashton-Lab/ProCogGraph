@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--output_prefix', type=str, default = 'contacts', help='The output pse file')
     args = parser.parse_args()
 
-    contacts = pd.read_csv(args.contacts_file)
+    contacts = pd.read_csv(args.contacts_file, compression = "gzip")
     #struct name is assigned basename of pdb file
     struct_name = Path(re.sub(r".gz$", "", args.structure_file)).stem
     contacts["bgn"] = contacts["bgn"].apply(eval)

@@ -28,6 +28,28 @@ from contextlib import redirect_stderr
 from utils import pdbe_sanitise_smiles
 from rdkit.Chem.Draw import MolsMatrixToGridImage
 
+def neutralize_atoms(mol):
+    """
+    Neutralizing Molecules
+    Author: Noel O’Boyle (Vincent Scalfani adapted code for RDKit)
+    Source: https://baoilleach.blogspot.com/2019/12/no-charge-simple-approach-to.html
+    Index ID#: RDKitCB_33
+    Summary: Neutralize charged molecules by atom.
+    See https://www.rdkit.org/docs/Cookbook.html for more details.
+    """
+    pattern = Chem.MolFromSmarts("[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
+    at_matches = mol.GetSubstructMatches(pattern)
+    at_matches_list = [y[0] for y in at_matches]
+    if len(at_matches_list) > 0:
+        for at_idx in at_matches_list:
+            atom = mol.GetAtomWithIdx(at_idx)
+            chg = atom.GetFormalCharge()
+            hcount = atom.GetTotalNumHs()
+            atom.SetFormalCharge(0)
+            atom.SetNumExplicitHs(hcount - chg)
+            atom.UpdatePropertyCache()
+    return mol
+
 def parity_score_smiles(row, threshold): #, 
     ec = row.entry
     pdb_ligand_id = row.pdb_ligand_id
@@ -48,6 +70,7 @@ def parity_score_smiles(row, threshold): #,
             try:
                 #repeat canonicalisation to ensure best possible parity score
                 ligand_rdkit, ligand_sanitisation = pdbe_sanitise_smiles(smiles, return_mol = True, return_sanitisation=True)
+                ligand_rdkit = neutralize_atoms(ligand_rdkit) #neutralise the ligand in the same way the cognate ligand is during preproprocessing
             except Exception as e:
                 scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
                 return scores_dict

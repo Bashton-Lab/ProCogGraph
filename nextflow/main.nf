@@ -10,7 +10,7 @@ process PROCESS_MMCIF {
     output:
         path("combined_arpeggio_manifest.csv"), emit:updated_manifest
         path("process_mmcif_log.txt"), emit: log
-        path("*_bound_entity_info.pkl")
+        path("*_bound_entity_info.pkl"), emit: bound_entity_info
         path("bio_h_cif_*.csv"), emit: arpeggio_batch
     script:
     """
@@ -28,11 +28,12 @@ process RUN_ARPEGGIO {
         path arpeggio_batch
 
     output:
-        path("*_bio-h.json")
+        path("*_bio-h.json.gz")
 
     script:
     """
     ${workflow.projectDir}/bin/run_arpeggio.sh ${arpeggio_batch}
+    gzip *.json
     """
 
 }
