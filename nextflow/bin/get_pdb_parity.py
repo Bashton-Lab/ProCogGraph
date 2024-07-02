@@ -164,6 +164,7 @@ if not os.path.exists(pickle_filename):
         pre_calculated["cache"] = True
         to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
     else:
+        pre_calcualted = pd.DataFrame()
         to_calculate = all_pairs_df
     
     print(f"Pre-calculated: {len(pre_calculated)}")
