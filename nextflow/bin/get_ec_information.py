@@ -329,6 +329,18 @@ def parse_brenda_json_generic_reaction(reaction_list):
             ligand_names.extend(item.get("products"))
     return set(ligand_names)
 
+def select_cofactor(cofactor_set):
+    if len(cofactor_set) == 1:
+            return next(iter(cofactor_set))
+    cofactor_set.discard("N")
+    cofactor_subgroups = {'Coenzyme', 'Prosthetic Group', 'Siderophore'}
+    intersection = cofactor_set & cofactor_subgroups
+    
+    if len(intersection) == 1:
+        return next(iter(intersection))
+
+    return "/".join(sorted(cofactor_set))
+
 def main():    
     """
     This script is designed to take the enzyme.dat file from EXPASY, and extract the EC numbers, 
@@ -685,8 +697,7 @@ def main():
                                            kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db", "compound_reaction"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]],
-                                           brenda_ligand_df_merged_mol_merged[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]]]) #brenda_ligand_df_merged_mol_merged[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
         cognate_ligands_df = cognate_ligands_df.reset_index()
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
@@ -709,18 +720,24 @@ def main():
         chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
 
         chebi_cofactors = chebi_relations.loc[(chebi_relations.TYPE == "has_role") & (chebi_relations.INIT_ID.isin([23357,23354,26348,26672])), ["TYPE", "INIT_ID", "FINAL_ID"]]
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "cofactor"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "coenzyme"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "prosthetic group"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "siderophore"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "Cofactor"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "Coenzyme"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "Prosthetic Group"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "Siderophore"
         chebi_cofactors.drop(columns = ["INIT_ID"], inplace = True)
         chebi_cofactors.rename(columns = {"TYPE": "isCofactor"}, inplace = True)
         
-        cognate_ligands_df["chebi_match"] = cognate_ligands_df.ligand_db.str.extract("CHEBI:([0-9]+)").astype("float")
+
+        chebi_matches = cognate_ligands_df.ligand_db.str.extractall("CHEBI:([0-9]+)").astype("float")
+        chebi_matches_grouped = chebi_matches.groupby(level=0)[0].apply(list)
+        chebi_matches_grouped.rename("chebi_match", inplace = True)
+        cognate_ligands_df = cognate_ligands_df.merge(chebi_matches_grouped, left_index = True, right_index = True, how = "left")
+        cognate_ligands_df = cognate_ligands_df.explode("chebi_match")
         cognate_ligands_df = cognate_ligands_df.merge(chebi_cofactors, how = "left", left_on = "chebi_match", right_on = "FINAL_ID")
         cognate_ligands_df["isCofactor"] = cognate_ligands_df["isCofactor"].fillna("N")
         cognate_ligands_df.drop(columns = ["chebi_match", "FINAL_ID"], inplace = True)
-
+        cognate_ligands_df = cognate_ligands_df.groupby([col for col in cognate_ligands_df if col != "isCofactor"]).agg({"isCofactor":set}).reset_index()
+        cognate_ligands_df["isCofactor"] = cognate_ligands_df["isCofactor"].apply(lambda x: select_cofactor(x))
         cognate_ligands_df.to_pickle(f"cognate_ligands_df.pkl")
     else:
         cognate_ligands_df = pd.read_pickle(f"cognate_ligands_df.pkl")
