@@ -153,10 +153,5 @@ RETURN ssf.description as ssf_desc, ssf_domcount, bl.name as cognate_ligand, bl.
 
 
 WITH ["Y"] as cognate_options
-MATCH (d:superfamilyDomain {domain: domain_id})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand)
-WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH cognate_options,parity_score_cutoff, d.superfamilyAccession as ssf, d.description as ssf_desc,collect(DISTINCT(bl.uniqueID)) as bl_uniqueids 
-MATCH (d:superfamilyDomain {superfamilyAccession : ssf}) WITH cognate_options, parity_score_cutoff, bl_uniqueids, ssf, COUNT(DISTINCT(d.domain)) as ssf_domcount , ssf_desc 
-OPTIONAL MATCH (sd:superfamilyDomain {superfamilyAccession : ssf})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) 
-WHERE bl.uniqueID in bl_uniqueids AND sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options 
-RETURN ssf_desc, ssf_domcount, bl.name as cognate_ligand, bl.uniqueID as bl_uniqueID, COUNT(DISTINCT(sd.domain)) * 1.0 /ssf_domcount as perc_ssf_bind_ligand, COUNT(DISTINCT(sd.domain)) as ssf_bind_ligand , ssf
+MATCH (d:superfamilyDomain {domain: domain_id})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH cognate_options,parity_score_cutoff, d.superfamilyAccession as ssf, d.description as ssf_desc,collect(DISTINCT(bl.uniqueID)) as bl_uniqueids MATCH (d:superfamilyDomain {superfamilyAccession : ssf}) WITH cognate_options, parity_score_cutoff, bl_uniqueids, ssf, COUNT(DISTINCT(d.domain)) as ssf_domcount , ssf_desc OPTIONAL MATCH (sd:superfamilyDomain {superfamilyAccession : ssf})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE bl.uniqueID in bl_uniqueids AND sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options RETURN ssf_desc, ssf_domcount, bl.name as cognate_ligand, bl.uniqueID as bl_uniqueID, COUNT(DISTINCT(sd.domain)) * 1.0 /ssf_domcount as perc_ssf_bind_ligand, COUNT(DISTINCT(sd.domain)) as ssf_bind_ligand , ssf
 
