@@ -62,10 +62,44 @@ def main():
     scop_merged_subset.to_csv("scop_cognate_ligands.csv.gz", compression = "gzip")
     
     pfam_domains = pd.read_csv(f"{args.pfam_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    pfam_domains["pdb_ec_list"] = pfam_domains["pdb_ec_list"].str.split(",")
+    pfam_exploded = pfam_domains.explode("pdb_ec_list")
+    pfam_merged = pfam_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "inner")
+    pfam_merged_coglig = pfam_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
+    pfam_merged_subset = pfam_merged_coglig[core_cols + pfam_cols]
+    pfam_merged_subset.to_csv("pfam_cognate_ligands.csv.gz", compression = "gzip")
+
     superfamily_domains =pd.read_csv(f"{args.superfamily_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    superfamily_domains["pdb_ec_list"] = superfamily_domains["pdb_ec_list"].str.split(",")
+    superfamily_exploded = superfamily_domains.explode("pdb_ec_list")
+    superfamily_merged = superfamily_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "inner")
+    superfamily_merged_coglig = superfamily_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
+    superfamily_merged_subset = superfamily_merged_coglig[core_cols + superfamily_cols]
+    superfamily_merged_subset.to_csv("superfamily_cognate_ligands.csv.gz", compression = "gzip")
+
     gene3dsa_domains = pd.read_csv(f"{args.gene3dsa_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str", "cath_architecture": "str", "cath_class": "str", "cath_topology": "str", "cath_homologous_superfamily": "str"}, sep = "\t")
+    gene3dsa_domains["pdb_ec_list"] = gene3dsa_domains["pdb_ec_list"].str.split(",")
+    gene3dsa_exploded = gene3dsa_domains.explode("pdb_ec_list")
+    gene3dsa_merged = gene3dsa_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "inner")
+    gene3dsa_merged_coglig = gene3dsa_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
+    gene3dsa_merged_subset = gene3dsa_merged_coglig[core_cols + gene3dsa_cols]
+    gene3dsa_merged_subset.to_csv("gene3dsa_cognate_ligands.csv.gz", compression = "gzip")
+
     scop2_sf_domains = pd.read_csv(f"{args.scop2_sf_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    scop2_sf_domains["pdb_ec_list"] = scop2_sf_domains["pdb_ec_list"].str.split(",")
+    scop2_sf_exploded = scop2_sf_domains.explode("pdb_ec_list")
+    scop2_sf_merged = scop2_sf_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "inner")
+    scop2_sf_merged_coglig = scop2_sf_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
+    scop2_sf_merged_subset = scop2_sf_merged_coglig[core_cols + scop2_sf_cols]
+    scop2_sf_merged_subset.to_csv("scop2_sf_cognate_ligands.csv.gz", compression = "gzip")
+
     scop2_fa_domains = pd.read_csv(f"{args.scop2_fa_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str"}, sep = "\t")
+    scop2_fa_domains["pdb_ec_list"] = scop2_fa_domains["pdb_ec_list"].str.split(",")
+    scop2_fa_exploded = scop2_fa_domains.explode("pdb_ec_list")
+    scop2_fa_merged = scop2_fa_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "inner")
+    scop2_fa_merged_coglig = scop2_fa_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
+    scop2_fa_merged_subset = scop2_fa_merged_coglig[core_cols + scop2_fa_cols]
+    scop2_fa_merged_subset.to_csv("scop2_fa_cognate_ligands.csv.gz", compression = "gzip")
     
 
     #find all bound ligands where domains are all from the same chain, as contigs and af structures are not multichain (yet!) - data to be used for domain interaction tools.
