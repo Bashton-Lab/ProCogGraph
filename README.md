@@ -62,9 +62,8 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 1. For both the Docker image and building from source, the first step is to download the latest database flat files from Zenodo [here](https://ZENODOIDHERE) and clone the ProCogGraph repository:
 
     ``` bash
-    mkdir 
-    wget https://zenodo.org/record/IDHERE -O /PATH/TO/DATABASE_FLAT_FILES
     git clone m-crown/ProCogGraph
+    wget https://zenodo.org/record/IDHERE -O /PATH/TO/DATABASE_FLAT_FILES
     ```
 
 #### Docker Image
@@ -154,10 +153,12 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     | ccd.cif | Chemical Component Dictionary Structures | [CCD](https://www.wwpdb.org/data/ccd) |
     | pubchem_substance_id_mapping.txt | PubChem substance ID mappings from PubChem search for KEGG data source. | [PubChem](https://www.ncbi.nlm.nih.gov/pcsubstance?term=%22KEGG%22%5BSourceName%5D%20AND%20hasnohold%5Bfilt%5D) |
 
-2. Clone this repository:
+2. Clone this repository and install dependencies:
 
     ``` bash
     git clone m-crown/ProCogGraph
+    cd ProCogGraph
+    conda env create -f nextflow/envs/environment.yml
     ```
 
 3. Preprocess RHEA reaction files:
@@ -215,7 +216,7 @@ The database can then be accessed by navigating to `http://localhost:7474` in a 
 Depending on your system memory, the Neo4j database memory settings may need to be adjusted. The following command can be run to get suggestions for your specific system (e.g. here with 8gb):
 
 ``` bash
-neo4j_docker % docker run -p7474:7474 -p7687:7687 \
+docker run -p7474:7474 -p7687:7687 \
 --volume=/PATH/TO/NEO4J_DOCKER_DIR/data:/data \
 --volume=/PATH/TO/NEO4J_DOCKER_DIR/logs:/logs \
 --volume=/PATH/TO/NEO4J_DOCKER_DIR/conf:/conf \
@@ -227,7 +228,7 @@ neo4j:latest bin/neo4j-admin server memory-recommendation --memory=8g --docker
 This will output a number of memory settings which can be added to the `docker run` command to adjust the memory settings for the Neo4j database. The overall command will look something like this:
 
 ``` bash
-neo4j_docker % docker run \
+docker run \
 -p7474:7474 -p7687:7687 \
 --volume=/PATH/TO/NEO4J_DOCKER_DIR/data:/data \
 --volume=/PATH/TO/NEO4J_DOCKER_DIR/logs:/logs \
