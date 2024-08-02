@@ -75,4 +75,4 @@ bin/neo4j-admin database import full \
 --relationships=IS_IN_PROTEIN_CHAIN=import/scop2_sf_protein_rels.tsv.gz \
 --relationships=IS_IN_EC=import/protein_ec_rels.tsv.gz \
 --nodes=procoggraph=import/procoggraph_node.tsv.gz \
---overwrite-destination graph.db
+--overwrite-destination neo4j
