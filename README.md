@@ -76,26 +76,27 @@ To setup the ProCogGraph database as a Docker image, follow these steps:
     docker pull neo4j:latest
     ```
 
-2. Prepare a database directory for persistant storage of data from the database:
+2. Change directory to the ProCogGraph repo and prepare a database directory for persistant storage of data from the database:
 
     ``` bash
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR/data
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR/logs
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR/conf
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR/plugins
-    mkdir /PATH/TO/NEO4J_DOCKER_DIR/import
+    cd /PATH/TO/PROCOGGRAPH_REPOSITORY
+    mkdir neo4j_docker
+    mkdir neo4j_docker/data
+    mkdir neo4j_docker/logs
+    mkdir neo4j_docker/conf
+    mkdir neo4j_docker/plugins
+    mkdir neo4j_docker/import
     ```
 
 3. Run the import command:
 
     ``` bash
-    docker run --volume=/PATH/TO/NEO4J_DOCKER_DIR/data:/data \                        
-    --volume=/PATH/TO/NEO4J_DOCKER_DIR/data/logs:/logs \
-    --volume=/PATH/TO/NEO4J_DOCKER_DIR/data/conf:/conf \
-    --volume=/PATH/TO/NEO4J_DOCKER_DIR/data/plugins:/plugins \
-    --volume=/PATH/TO/NEO4J_DOCKER_DIR/data/import:/var/lib/neo4j/import \
-    --volume=/PATH/TO/PROCOGGRAPH_REPOSITORY/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh \       
+    docker run --volume=neo4j_docker/data:/data \                        
+    --volume=neo4j_docker/data/logs:/logs \
+    --volume=neo4j_docker/data/conf:/conf \
+    --volume=neo4j_docker/data/plugins:/plugins \
+    --volume=neo4j_docker/data/import:/var/lib/neo4j/import \
+    --volume=nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh \       
     neo4j:latest /import_neo4j_data.sh
     ```
 
