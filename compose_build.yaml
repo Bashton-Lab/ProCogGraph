@@ -1,0 +1,21 @@
+services:
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/data:/data
+      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/logs:/logs
+      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/conf:/conf
+      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/plugins:/plugins
+      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/import:/var/lib/neo4j/import
+      - /Users/matthewcrown/GitHub/ProCogGraph/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
+    environment:
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_server_memory_heap_initial__size=3600m
+      - NEO4J_server_memory_heap_max__size=3600m
+      - NEO4J_server_memory_pagecache_size=2g
+      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+    entrypoint: ["/bin/bash", "/import_neo4j_data.sh"]
