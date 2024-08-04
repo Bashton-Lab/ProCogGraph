@@ -4,6 +4,7 @@ bin/neo4j-admin database import full \
 --array-delimiter="|" \
 --skip-bad-relationships \
 --delimiter="\t" \
+--nodes=_Neodash_Dashboard=import/dashboard.tsv.gz \
 --nodes=boundEntity=import/bound_entities.tsv.gz \
 --nodes=boundDescriptor=import/bound_descriptors.tsv.gz \
 --relationships=DESCRIBED_BY=import/be_bd_rels.tsv.gz \

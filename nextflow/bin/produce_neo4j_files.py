@@ -8,7 +8,7 @@ from Bio.ExPASy import Enzyme as EEnzyme
 from pathlib import Path
 import argparse
 from utils import process_ec_records, get_scop2_domains_info
-
+import json
 import xml.etree.ElementTree as ET
 import gzip
 
@@ -62,8 +62,25 @@ def main():
                         help='scop2 domains info file')
     parser.add_argument('--scop2_descriptions_file', type=str, 
                         help='scop2 descriptions file')
+    parser.add_argument('--dashboard', type=str,
+                        help='path to dashboard file json (from repository)')
 
     args = parser.parse_args()
+
+    
+
+    # load the dashboard json file
+    with open(args.dashboard, 'r') as file:
+        json_string = json.dumps(json.load(file))
+    
+    dashboard_df = pd.DataFrame({'content': [json_string]})
+    ##copied these from dashboard node created in usual way
+    dashboard_df["date"] = "2024-08-04T17:06:30.360000000Z" #using the date from the dashboard node creation 
+    dashboard_df["title"] = "ProCogGraph"
+    dashboard_df["user"] = "neo4j"
+    dashboard_df["version"] = "2.4"
+    dashboard_df["uuid"] = "b60cb90b-1d9f-4fd1-af03-4907804e5834"
+    dashboard_df.to_csv(f"dashboard.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
     ec_id_nodes = ec_records_df_grouped[["TRANSFER", "DE"]].rename(columns = {"TRANSFER" : "ecID:ID(ec-id)", "DE" : "description"}).drop_duplicates()
@@ -157,7 +174,11 @@ def main():
     scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
+    _, _ ,scop_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
+
     scop2_fa_domains_nodes = scop2_fa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
+    scop2_fa_domains_nodes["group"] = scop2_fa_domains_nodes["SCOPCLA"].str.extract("FA=(.*)") #use the first FA in the list as the group
+    scop2_fa_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
     scop2_fa_domains_nodes["type"] = "SCOP2-FA"
     scop2_fa_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_fa_domains_nodes["xref_db_acc"].astype("str")
     scop2_fa_domains_nodes[":LABEL"] = scop2_fa_domains_nodes["type"] + "|domain"
@@ -165,14 +186,14 @@ def main():
     scop2_fa_domains_nodes.to_csv(f"scop2_fa_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     scop2_sf_domains_nodes = scop2_sf_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
+    scop2_sf_domains_nodes["group"] = scop2_sf_domains_nodes["SCOPCLA"].str.extract("SF=(.*)") #use the first SF in the list as the group
+    scop2_sf_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
     scop2_sf_domains_nodes["type"] = "SCOP2-SF"
     scop2_sf_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_sf_domains_nodes["xref_db_acc"].astype("str")
     scop2_sf_domains_nodes[":LABEL"] = scop2_sf_domains_nodes["type"] + "|domain"
     scop2_sf_domains_nodes["SCOPCLA"] = scop2_sf_domains_nodes["SCOPCLA"].str.replace(";", "|")
     scop2_sf_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop2-sf-domain-id)", "xref_db_acc": "SF-DOMID", 'domain_type': "domainSource", "SCOPCLA": "SCOPCLA:string[]"}, inplace = True)
     scop2_sf_domains_nodes.to_csv(f"scop2_sf_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
-
-    _, _ ,scop_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
 
     scop2_sf_rels = scop2_sf_domains[["domain_accession", "SCOPCLA"]]
     scop2_sf_rels["SCOPCLA"] = scop2_sf_domains["SCOPCLA"].str.split(";")
@@ -247,28 +268,32 @@ def main():
     scop2_sf_domains_rels.rename(columns = {"domain_accession": ":START_ID(scop2-sf-domain-id)", "SF": ":END_ID(scop2-superfam-id)"}, inplace = True)
     scop2_sf_domains_rels.to_csv(f"scop2_sf_domains_rels.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
-    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", 'domain_type']].drop_duplicates()
+    cath_domains_nodes = cath_domains[["domain_accession", "assembly_chain_id_protein", "cath_domain", "cath_name", "cath_homologous_superfamily", "cath_homologous_superfamily_name", 'domain_type']].drop_duplicates()
     cath_domains_nodes["type"] = "CATH"
     cath_domains_nodes["url"] = "https://www.cathdb.info/version/latest/domain/" + cath_domains_nodes["cath_domain"] #we are assuming here as in all_contacts script that source for all cath domains is the mmcif record not xml (so it is always the domain specificity)
     cath_domains_nodes[":LABEL"] = cath_domains_nodes["type"] + "|domain"
-    cath_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "homologousSuperfamily", 'domain_type': "domainSource"}, inplace = True)
+    cath_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(cath-domain-id)", "cath_domain": "cathAccession", "cath_name": "name", "cath_homologous_superfamily": "group", "cath_homologous_superfamily_name": "group_description", 'domain_type': "domainSource"}, inplace = True)
     cath_domains_nodes.to_csv(f"cath_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     superfamily_domains_nodes = superfamily_domains[["domain_accession", "xref_db_acc", "assembly_chain_id_protein", 'domain_type', "domain_description", "derived_from", "interpro_name"]].drop_duplicates()
+    superfamily_domains_nodes["group"] = superfamily_domains_nodes["xref_db_acc"]
+    superfamily_domains_nodes["group_description"] = superfamily_domains_nodes["domain_description"]
     superfamily_domains_nodes["type"] = "Superfamily"
     superfamily_domains_nodes["url"] = "https://supfam.org/SUPERFAMILY/cgi-bin/scop.cgi?ipid=" + superfamily_domains_nodes["xref_db_acc"]
     superfamily_domains_nodes[":LABEL"] = superfamily_domains_nodes["type"] + "|domain"
     superfamily_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(superfamily-domain-id)", "xref_db_acc": "superfamilyAccession", "domain_description": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
     superfamily_domains_nodes.to_csv(f"superfamily_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
-    gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", "cath_homologous_superfamily_name", 'domain_type', "derived_from", "interpro_name"]].drop_duplicates()
+    gene3dsa_domains_nodes = gene3dsa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", "cath_homologous_superfamily_name", 'domain_type', "derived_from", "interpro_name", "cath_homologous_superfamily"]].drop_duplicates()
+    gene3dsa_domains_nodes["group"] = gene3dsa_domains_nodes["cath_homologous_superfamily"]
     gene3dsa_domains_nodes["type"] = "Gene3D"
     gene3dsa_domains_nodes["url"] = "https://www.cathdb.info/version/latest/superfamily/" + gene3dsa_domains_nodes["xref_db_acc"]
     gene3dsa_domains_nodes[":LABEL"] = gene3dsa_domains_nodes["type"] + "|domain"
-    gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(g3dsa-domain-id)", "xref_db_acc": "gene3dAccession", "cath_homologous_superfamily_name": "description", 'domain_type': "domainSource", "interpro_name": "interProName"}, inplace = True)
+    gene3dsa_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(g3dsa-domain-id)", "xref_db_acc": "gene3dAccession", "cath_homologous_superfamily_name": "description", 'domain_type': "domainSource", "interpro_name": "interProName", "cath_homologous_superfamily_name": "group_description"}, inplace = True)
     gene3dsa_domains_nodes.to_csv(f"gene3d_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     pfam_domains_nodes = pfam_domains[["assembly_chain_id_protein","domain_accession", 'pfam_accession', 'pfam_name', 'pfam_description', 'domain_type']].drop_duplicates()
+    pfam_domains_nodes[["group", "group_description"]] = pfam_domains_nodes[['pfam_accession', 'pfam_name']]
     pfam_domains_nodes["type"] = "Pfam"
     pfam_domains_nodes["url"] = "https://www.ebi.ac.uk/interpro/entry/pfam/" + pfam_domains_nodes["pfam_accession"]
     pfam_domains_nodes[":LABEL"] = pfam_domains_nodes["type"] + "|domain"
