@@ -62,25 +62,8 @@ def main():
                         help='scop2 domains info file')
     parser.add_argument('--scop2_descriptions_file', type=str, 
                         help='scop2 descriptions file')
-    parser.add_argument('--dashboard', type=str,
-                        help='path to dashboard file json (from repository)')
 
     args = parser.parse_args()
-
-    
-
-    # load the dashboard json file
-    with open(args.dashboard, 'r') as file:
-        json_string = json.dumps(json.load(file))
-    
-    dashboard_df = pd.DataFrame({'content': [json_string]})
-    ##copied these from dashboard node created in usual way
-    dashboard_df["date"] = "2024-08-04T17:06:30.360000000Z" #using the date from the dashboard node creation 
-    dashboard_df["title"] = "ProCogGraph"
-    dashboard_df["user"] = "neo4j"
-    dashboard_df["version"] = "2.4"
-    dashboard_df["uuid"] = "b60cb90b-1d9f-4fd1-af03-4907804e5834"
-    dashboard_df.to_csv(f"dashboard.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     ec_records_df_grouped = process_ec_records(args.enzyme_dat_file , args.enzyme_class_file)
     ec_id_nodes = ec_records_df_grouped[["TRANSFER", "DE"]].rename(columns = {"TRANSFER" : "ecID:ID(ec-id)", "DE" : "description"}).drop_duplicates()
