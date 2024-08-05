@@ -38,7 +38,7 @@ services:
       - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
       - NEO4J_AUTH=neo4j/procoggraph
-      
+
     entrypoint: ["/bin/bash", "/import_neo4j_data.sh"]
 "@
 $composeBuildContent | Out-File -FilePath "compose_build.yaml" -Encoding utf8
@@ -85,8 +85,6 @@ services:
       - standaloneDatabase=neo4j
       - standaloneDashboardName=ProCogGraph
       - standaloneDashboardDatabase=neo4j
-      - standalonePassword=procoggraph
-      - standaloneUser=neo4j
       - standaloneDashboardURL=http://localhost:8080/dashboard.json
     stdin_open: true
     tty: true

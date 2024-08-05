@@ -88,8 +88,6 @@ services:
       - standaloneDatabase=neo4j
       - standaloneDashboardName=ProCogGraph
       - standaloneDashboardDatabase=neo4j
-      - standalonePassword=procoggraph
-      - standaloneUser=neo4j
       - standaloneDashboardURL=http://localhost:8080/dashboard.json
     stdin_open: true
     tty: true
