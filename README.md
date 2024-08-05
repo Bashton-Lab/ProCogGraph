@@ -35,16 +35,18 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     cd ProCogGraph
     ```
 
-3. Run the setup script to download the latest flat files and create the necessary directories and Docker compose files if running on Linux:
+3. Run the setup script to download the latest flat files and create the necessary directories and Docker compose files if running on Linux/OSX:
 
     ``` bash
     ./setup_docker_linux.sh
     ```
 
-    or for Windows:
+    or for Windows (in Powershell with administrative access)
 
     ``` powershell
+    Set-ExecutionPolicy Unrestricted
     ./setup_docker_windows.ps1
+    Set-ExecutionPolicy Restricted
     ```
 
     This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
@@ -63,7 +65,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 
     After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [NeoDash Docker](http://localhost:5005/). The compose-run.yml file contains environment variables specifying memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are set to the recommended values for an 8GB memory system.
 
-6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [NeoDash Docker](localhost:5005). NOTE: Currently after loading the dashboard, an error box will appear from Neodash saying "Unable to load dashboard 'http://localhost:8080/dashboard.json', graph not found: 'neo4j'". This is a known issue within Neodash and can be ignored. The dashboard will still load correctly.
+6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [NeoDash Docker](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
 
 ## Database Schema
 
