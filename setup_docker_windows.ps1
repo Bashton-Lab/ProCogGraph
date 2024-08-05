@@ -1,7 +1,7 @@
 # Create directories for Neo4j data persistence
 $directories = @("neo4j_docker/data", "neo4j_docker/logs", "neo4j_docker/conf", "neo4j_docker/plugins", "neo4j_docker/import")
 foreach ($dir in $directories) {
-    New-Item -ItemType Directory -Force -Path $dir
+    $null = New-Item -ItemType Directory -Force -Path $dir
 }
 
 cd "neo4j_docker/import"
@@ -13,7 +13,7 @@ cd "neo4j_docker/import"
 
 # Unzip the database flat files into the import directory
 
-Expand-Archive -Path "../procoggraph_flat_files_v1-0.zip" -DestinationPath .
+Expand-Archive -Force -Path "procoggraph_flat_files_v1-0.zip" -DestinationPath .
 cd "../.."
 
 # Get the fully qualified paths for building the compose yaml file
@@ -25,7 +25,7 @@ $composeBuildContent = @"
 services:
   neo4j_build:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: neo4j_run
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -37,11 +37,8 @@ services:
       - ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import
       - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_server_memory_heap_initial__size=3600m
-      - NEO4J_server_memory_heap_max__size=3600m
-      - NEO4J_server_memory_pagecache_size=2g
-      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+      - NEO4J_AUTH=neo4j/procoggraph
+      
     entrypoint: ["/bin/bash", "/import_neo4j_data.sh"]
 "@
 $composeBuildContent | Out-File -FilePath "compose_build.yaml" -Encoding utf8
@@ -51,7 +48,7 @@ $composeRunContent = @"
 services:
   neo4j_run:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: neo4j_run
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -64,19 +61,15 @@ services:
       - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
       - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_server_memory_heap_initial__size=4600m
-      - NEO4J_server_memory_heap_max__size=4600m
-      - NEO4J_server_memory_pagecache_size=3g
-      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
-
+      - NEO4J_AUTH=neo4j/procoggraph
   nginx:
     image: nginx:latest
     container_name: nginx
     ports:
       - "8080:80"
     volumes:
-      - ${PROCOGGRAPH_REPOSITORY}/procogdash/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ${PROCOGGRAPH_REPOSITORY}/procogdash/web:/usr/share/nginx/html:ro
+      - ${PROCOGGRAPH_REPOSITORY}/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${PROCOGGRAPH_REPOSITORY}/procogdash:/usr/share/nginx/html:ro
 
   neodash:
     image: neo4jlabs/neodash
@@ -90,10 +83,14 @@ services:
       - standaloneHost=localhost
       - standalonePort=7687
       - standaloneDatabase=neo4j
-      - standaloneDashboardName=http://localhost:8080/dashboard.json
+      - standaloneDashboardName=ProCogGraph
+      - standaloneDashboardDatabase=neo4j
+      - standalonePassword=procoggraph
+      - standaloneUser=neo4j
+      - standaloneDashboardURL=http://localhost:8080/dashboard.json
     stdin_open: true
     tty: true
 "@
 $composeRunContent | Out-File -FilePath "compose_run.yaml" -Encoding utf8
 
-Write-Output "Successfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'."
+Write-Output "`nSuccessfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'`n."

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -eu
 
 # Make the directories required for running and persisting data in the neo4j database.
 mkdir -p neo4j_docker/data
@@ -27,7 +28,7 @@ cat <<EOF > compose_build.yaml
 services:
   neo4j_build:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: neo4j_build
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -39,11 +40,8 @@ services:
       - ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import
       - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_server_memory_heap_initial__size=3600m
-      - NEO4J_server_memory_heap_max__size=3600m
-      - NEO4J_server_memory_pagecache_size=2g
-      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+      - NEO4J_AUTH=neo4j/procoggraph
+
     entrypoint: ["/bin/bash", "/import_neo4j_data.sh"]
 EOF
 
@@ -52,7 +50,7 @@ cat <<EOF > compose_run.yaml
 services:
   neo4j_run:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: neo4j_run
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -65,10 +63,7 @@ services:
       - /Users/matthewcrown/GitHub/ProCogGraph/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
       - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_server_memory_heap_initial__size=4600m
-      - NEO4J_server_memory_heap_max__size=4600m
-      - NEO4J_server_memory_pagecache_size=3g
-      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+      - NEO4J_AUTH=neo4j/procoggraph
 
   nginx:
     image: nginx:latest
@@ -76,8 +71,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash/web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash/web:/usr/share/nginx/html:ro
+      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash:/usr/share/nginx/html:ro
 
   neodash:
     image: neo4jlabs/neodash
@@ -91,9 +86,13 @@ services:
       - standaloneHost=localhost
       - standalonePort=7687
       - standaloneDatabase=neo4j
-      - standaloneDashboardName=http://localhost:8080/dashboard.json
+      - standaloneDashboardName=ProCogGraph
+      - standaloneDashboardDatabase=neo4j
+      - standalonePassword=procoggraph
+      - standaloneUser=neo4j
+      - standaloneDashboardURL=http://localhost:8080/dashboard.json
     stdin_open: true
     tty: true
 EOF
 
-echo "Successfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'."
+echo "\nSuccessfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'.\n"
