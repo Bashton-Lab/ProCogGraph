@@ -28,6 +28,28 @@ from contextlib import redirect_stderr
 from utils import pdbe_sanitise_smiles
 from rdkit.Chem.Draw import MolsMatrixToGridImage
 
+def neutralize_atoms(mol):
+    """
+    Neutralizing Molecules
+    Author: Noel O’Boyle (Vincent Scalfani adapted code for RDKit)
+    Source: https://baoilleach.blogspot.com/2019/12/no-charge-simple-approach-to.html
+    Index ID#: RDKitCB_33
+    Summary: Neutralize charged molecules by atom.
+    See https://www.rdkit.org/docs/Cookbook.html for more details.
+    """
+    pattern = Chem.MolFromSmarts("[+1!h0!$([*]~[-1,-2,-3,-4]),-1!$([*]~[+1,+2,+3,+4])]")
+    at_matches = mol.GetSubstructMatches(pattern)
+    at_matches_list = [y[0] for y in at_matches]
+    if len(at_matches_list) > 0:
+        for at_idx in at_matches_list:
+            atom = mol.GetAtomWithIdx(at_idx)
+            chg = atom.GetFormalCharge()
+            hcount = atom.GetTotalNumHs()
+            atom.SetFormalCharge(0)
+            atom.SetNumExplicitHs(hcount - chg)
+            atom.UpdatePropertyCache()
+    return mol
+
 def parity_score_smiles(row, threshold): #, 
     ec = row.entry
     pdb_ligand_id = row.pdb_ligand_id
@@ -48,6 +70,7 @@ def parity_score_smiles(row, threshold): #,
             try:
                 #repeat canonicalisation to ensure best possible parity score
                 ligand_rdkit, ligand_sanitisation = pdbe_sanitise_smiles(smiles, return_mol = True, return_sanitisation=True)
+                ligand_rdkit = neutralize_atoms(ligand_rdkit) #neutralise the ligand in the same way the cognate ligand is during preproprocessing
             except Exception as e:
                 scores_dict = {"ec" : ec, "pdb_ligand" : pdb_ligand_id, "pdb_ligand_name": bl_name, "pdb_ligand_description": ligand_description, "pdb_ligand_smiles": smiles, "cognate_ligand": cognate_ligand_id, "cognate_ligand_smiles": None, "score" : 0, "error" : f"PDB Ligand error: {str(e)}", "pdbl_subparity": 0, "bl_subparity": 0, "parity_match": None, "parity_smarts": None, "threshold": threshold}
                 return scores_dict
@@ -134,15 +157,16 @@ if not os.path.exists(pickle_filename):
     if args.cache:
         cache_df = pd.read_pickle(f"{args.cache}")
         cache_df = cache_df.drop_duplicates(subset = ["pdb_ligand_smiles", "cognate_ligand_smiles"]) #double in case not done in new cache results below (left over from first run)
+        all_pairs_df2 = all_pairs_df.merge(cache_df, left_on = ["smiles", "canonical_smiles"], right_on = ["pdb_ligand_smiles", "cognate_ligand_smiles"], how = "left", validate = "many_to_one", indicator = True)
+        pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['entry', 'pdb_ligand_id', 'bl_name', 'ligand_description', 'uniqueID', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts', 'pdb_ligand_smiles', 'cognate_ligand_smiles', 'threshold']].reset_index(drop = True)
+        pre_calculated.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
+        pre_calculated["ec"] = pre_calculated.ec.str.join(",")
+        pre_calculated["cache"] = True
+        to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
     else:
-        cache_df = None
-
-    all_pairs_df2 = all_pairs_df.merge(cache_df, left_on = ["smiles", "canonical_smiles"], right_on = ["pdb_ligand_smiles", "cognate_ligand_smiles"], how = "left", validate = "many_to_one", indicator = True)
-    pre_calculated = all_pairs_df2.loc[all_pairs_df2._merge == "both", ['entry', 'pdb_ligand_id', 'bl_name', 'ligand_description', 'uniqueID', 'score', 'error', 'pdbl_subparity', 'bl_subparity', 'parity_match', 'parity_smarts', 'pdb_ligand_smiles', 'cognate_ligand_smiles', 'threshold']].reset_index(drop = True)
-    pre_calculated.rename(columns = {"entry":"ec", "ligand_description": "pdb_ligand_description", "uniqueID": "cognate_ligand", "pdb_ligand_id": "pdb_ligand", "bl_name": "pdb_ligand_name"}, inplace = True)
-    pre_calculated["ec"] = pre_calculated.ec.str.join(",")
-    pre_calculated["cache"] = True
-    to_calculate = all_pairs_df2.loc[all_pairs_df2._merge == "left_only"]
+        pre_calculated = pd.DataFrame()
+        to_calculate = all_pairs_df
+    
     print(f"Pre-calculated: {len(pre_calculated)}")
     print(f"To calculate: {len(to_calculate)}")
     results = []

@@ -13,3 +13,10 @@ __pycache__/utils.cpython-310.pyc
 glycosmos_glycans_wurcs.csv
 chebi_structures.csv
 nextflow/bin/__pycache__/utils.cpython-310.pyc
+/neo4j_docker
+compose_run.yaml
+compose_build.yaml
+compose_run.yaml
+compose_build.yaml
+compose_build.yaml
+compose_run.yaml

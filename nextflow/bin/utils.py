@@ -340,7 +340,7 @@ def parse_cddf(file_path, domain_list):
 
 def build_cath_dataframe(parsed_data):
     combine_keys = ["DOMAIN", "PDBID", "VERSION", "VERDATE", "NAME", "SOURCE", "CATHCODE", "CLASS", "ARCH", "TOPOL", "HOMOL", "DLENGTH", "DSEQH", "DSEQS", "NSEGMENTS"]
-    cath_df_columns = {"DOMAIN": "cath_domain" , "VERSION": "cath_db_version", "VERDATE": "cath_db_verdate", "NAME":"cath_name", "SOURCE": "cath_source", "CATHCODE": "cath_code", "CLASS": "cath_class_name", "ARCH":"cath_architecture_name", "TOPOL": "cath_topology__name", "HOMOL": "cath_homologous_superfamily__name", "DLENGTH": "cath_domain_length", "DSEQH":"cath_domain_seq_header", "DSEQS": "cath_domain_seqs", "NSEGMENTS": "cath_num_segments", "SEGMENTS": "cath_segments_dict"}
+    cath_df_columns = {"DOMAIN": "cath_domain" , "VERSION": "cath_db_version", "VERDATE": "cath_db_verdate", "NAME":"cath_name", "SOURCE": "cath_source", "CATHCODE": "cath_code", "CLASS": "cath_class_name", "ARCH":"cath_architecture_name", "TOPOL": "cath_topology_name", "HOMOL": "cath_homologous_superfamily_name", "DLENGTH": "cath_domain_length", "DSEQH":"cath_domain_seq_header", "DSEQS": "cath_domain_seqs", "NSEGMENTS": "cath_num_segments", "SEGMENTS": "cath_segments_dict"}
     dfs = []
     for entry in parsed_data:
         df_dict = {}
@@ -362,3 +362,41 @@ def build_cath_dataframe(parsed_data):
     dfs_combined["cath_topology"] = dfs_combined.cath_code.str.extract(topology_regex, expand = True)
     dfs_combined["cath_homologous_superfamily"] = dfs_combined["cath_code"]
     return dfs_combined
+
+def build_g3dsa_dataframe(cath_names, cath_domain_list): #unlike cath, g3dsa annotations are at superfamily level (also works for xml cath annotations from sifts which are at homolsuperfam level)
+    topology_regex = r'^(\d+\.\d+\.\d+)\.'
+    architecture_regex = r'^(\d+\.\d+)\.'
+    class_regex = r'^(\d+)\.'
+    domain_list = []
+    for homologous_superfamily in cath_domain_list:
+        homologous_superfamily_name = cath_names.loc[cath_names.cath_code == homologous_superfamily, "name"].values[0]
+        topology = re.search(topology_regex, homologous_superfamily).group(1)
+        topology_name = cath_names.loc[cath_names.cath_code == topology, "name"].values[0]
+        architecture = re.search(architecture_regex, homologous_superfamily).group(1)
+        architecture_name = cath_names.loc[cath_names.cath_code == architecture, "name"].values[0]
+        class_ = re.search(class_regex, homologous_superfamily).group(1)
+        class_name = cath_names.loc[cath_names.cath_code == class_, "name"].values[0]
+        domain = {"cath_domain": homologous_superfamily, "cath_name" : homologous_superfamily_name, "cath_code": homologous_superfamily, "cath_homologous_superfamily": homologous_superfamily, "cath_homologous_superfamily_name": homologous_superfamily_name, "cath_topology": topology, "cath_topology_name": topology_name,  "cath_architecture": architecture, "cath_architecture_name": architecture_name, "cath_class": class_, "cath_class_name" : class_name}
+        domain_list.append(domain)
+    domain_df = pd.DataFrame(domain_list)
+    return domain_df
+
+def get_scop2_domains_info(domain_info_file, descriptions_file):
+    scop_domains_info = pd.read_csv(domain_info_file, sep = " ", comment = "#", header = None, names = ["FA-DOMID", "FA-PDBID","FA-PDBREG","FA-UNIID","FA-UNIREG","SF-DOMID","SF-PDBID","SF-PDBREG","SF-UNIID","SF-UNIREG","SCOPCLA"])
+    scop_fa_domains_info = scop_domains_info[["FA-DOMID", "SCOPCLA"]].groupby("FA-DOMID").agg({"SCOPCLA": list}).reset_index()
+    scop_fa_domains_info["SCOPCLA"] = scop_fa_domains_info["SCOPCLA"].str.join(";")
+
+    scop_sf_domains_info = scop_domains_info[["SF-DOMID", "SCOPCLA"]]
+    scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.extract("(.*),FA=.*$", expand = True) #remove the family level from sueprfamily level domains
+    scop_sf_domains_info = scop_sf_domains_info.groupby("SF-DOMID").agg({"SCOPCLA": list}).reset_index()
+    scop_sf_domains_info["SCOPCLA"] = scop_sf_domains_info["SCOPCLA"].str.join(";")
+    with open(descriptions_file) as file:
+        rows = []
+        for row in file:
+            if not row.startswith("#"):
+                pattern = re.compile(r"(\d+) (.+)")
+                matches = pattern.match(row)
+                rows.append([matches.group(1), matches.group(2)])
+    scop_descriptions = pd.DataFrame(rows, columns = ["NODE_ID", "NODE_NAME"])
+
+    return scop_sf_domains_info, scop_fa_domains_info, scop_descriptions

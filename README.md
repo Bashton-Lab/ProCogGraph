@@ -1,200 +1,236 @@
 # ProCogGraph
-Graph based ligand-domain interaction database for exploring and mining domain-cognate ligand interactions. Powered by PDBe-graph and Neo4j.
 
-### why represent each bound molecule and its constituent entities?
+![ProCogGraph Logo](images/PROCOGGRAPH%20full%20logo%20v1%20small.png)
 
-110l_bm1 shows how the consitituent entities of a bound molecule can have different contact counts to the same domain. 
+A graph based cognate ligand-domain interaction database for exploring and mining domain-cognate ligand interactions.
 
-## To Do
+## Table of Contents
 
-| Task | Status | Priority |
-| ---- | ------ | -------- |
-| Write pipline to annotated CDS from metagenomic libraries with cognate ligand binding profiles | in progress | 1 |
-| Obtain biological ligand names from database source | complete (kegg name for all compound IDs, glycans take the GlyTouCan ID for now) | 2 |
-| Find new way to combine duplicate biological ligands from different databases | complete (removed RHEA which is predominantly redundant in the biological ligands file, and use kegg compoun ids to agg) | 3 |
-| Add new biological ligands to database | not started | 5 |
-| Write script to process PDB files into database | not started | 4 |
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Database Schema](#database-schema)
+- [Dashboard](#dashboard)
+- [Custom Queries](#custom-queries)
+- [Database Information](#database-information)
+  - [Cognate Ligands](#cognate-ligands)
+  - [Domains](#domains)
+- [License](#license)
 
-## PDBe Graph Data
+## Features
 
-ProCogGraph utilises PDBe graph data to obtain the following information:
+ProCogGraph is a graph database which maps domains - cognate ligand interactions in enzyme structures in the PDBe. The database builds upon principles originally described by Bashton et al. in the PROCOGNATE database, and expands upon this database by expanding the domain databases used, including a wider range of cognate ligands, and updating the domain-ligand interaction mode and ligand similarity scoring methods.
 
-* Protein chains: EC number annotation
-* Protein chains: SCOP domain annotation
-* Protein chains: CATH domain annotation
-* Protein chains: InterPro domain annotation
-* Bound Molecules: Component entities
+To learn more, check out the ProCogGraph preprint on bioRxiv [here](LINKHEREWHENSUBMITTED).
 
-## Biological Ligands
+## Quick Start
 
-### Sources
+ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. To get started, the easiest method, described below, is to run ProCogGraph in a Docker container - for installation instructions for the database on bare metal, and for running the Nextflow pipeline see the [installation](docs/installation.md) guide.
 
-In ProCogGraph, we collect biological ligands from a variety of database sources including:
+1. Download and install Docker from the [Docker website](https://www.docker.com/get-started)
 
-* [PubChem](https://pubchem.ncbi.nlm.nih.gov/)
-* [KEGG](https://www.genome.jp/kegg/)
-* [ChEBI](https://www.ebi.ac.uk/chebi/)
-* [Rhea](https://www.rhea-db.org/) *removed in current version*
-* [GlyTouCan](https://glytoucan.org/)
+2. Clone the ProCogGraph repository:
 
-Potential databases which will be included in future versions include:
+    ``` bash
+    git clone m-crown/ProCogGraph
+    cd ProCogGraph
+    ```
 
-* [PDB Ligand Expo](https://ligand-expo.rcsb.org/ld-download.html)
-* [UniProt](https://www.uniprot.org/)
-* [Reactome](https://reactome.org/)
-* [MetaCyc](https://metacyc.org/)
-* [LIPID MAPS](https://www.lipidmaps.org/)
-* [HMDB](http://www.hmdb.ca/)
-* [BindingDB](https://www.bindingdb.org/bind/index.jsp)
-* [PDB](https://www.rcsb.org/)
-* [DrugBank](https://www.drugbank.ca/)
-* [ChEMBL](https://www.ebi.ac.uk/chembl/)
+3. Run the setup script to download the latest flat files and create the necessary directories and Docker compose files if running on Linux/OSX:
 
-### Obtaining Biological Ligands
+    ``` bash
+    ./setup_docker_linux.sh
+    ```
 
-The biological ligands are obtained from the databases listed above using the following steps:
+    or for Windows (in Powershell with administrative access)
 
-1. Process the enzyme.data from ExPasY to obtain the up to data EC numbers list.
-2. Search for KEGG enzyme record matching EC number. If found, extract the EC substrate codes, EC product codes, EC dbxrefs and reactions IDs.
-3. For each reaction ID, search for reaction record and extract the substrate codes and product codes.
-4. Combine the compound codes (from EC record and reaction record) to obtain a set of compoound IDs for each EC.
-5. Search for compound ID records from KEGG and where possible obtain a SMILES string.
-6. Search for compound ID records in ChEBI and obtain SMILES string where possible.
-7. Search for compound ID records in PubChem (by CID) and obtain SMILES string where possible.
-8. Search for glycan IDs in GlyTouCan and obtain SMILES string where possible.
-9. Search for EC records in Rhea and obtain reaction SMILES string where possible. Split into component SMILES strings.
-10. Combine into a single biological ligands dataframe.
+    ``` powershell
+    Set-ExecutionPolicy Unrestricted
+    ./setup_docker_windows.ps1
+    Set-ExecutionPolicy Restricted
+    ```
 
-### Naming Biological Ligands in the ProCogGraph Database
+    This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files on Linux/MACOS, and two powershell files on windows, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
 
-Each biological ligand is assigned a unique identifier in the ProCogGraph database. This identifier is a combination of the database source and the database identifier. For example, the biological ligand with the PubChem CID 2244 is assigned the identifier `PubChem:2244`. Every database contains its own naming scheme for biological ligands and these are retained in the ProCogGraph database. For example, the biological ligand with the KEGG ID C00022 is assigned the identifier `KEGG:C00022`. The biological ligand with the ChEBI ID 15377 is assigned the identifier `ChEBI:15377`. The biological ligand with the Rhea ID 15377 is assigned the identifier `Rhea:15377`. The biological ligand with the GlyTouCan ID G00026MO is assigned the identifier `GlyTouCan:G00026MO`.
+4. Run the build command:
+    Linux/MACOS:
 
-## Defining Biological Ligand Similarity
+    ``` bash
+    docker compose -f docker-compose-build.yml up
+    ```
 
-### Existing methods of biological ligand similarity
+    Windows:
 
-In PROCOGNATE biological ligand similarity is defined as ... EXPLAIN HERE
+    ``` powershell
+    ./run_build.ps1
+    ```
 
-Subsequently, the PARITY method was developed in 2018 by the Thornton group. EXPLAIN HERE
+5. Run the database:
+    Linux/MACOS:
 
-### ProCogGraph method of biological ligand similarity
+    ``` bash
+    docker compose -f docker-compose-run.yml up
+    ```
 
-In ProCogGraph, we define biological ligand similarity using the PARITY method. Various cutoffs for biological similarity are defined for this score in the literature: 2018 paper uses 0.7, subsequent 2020 paper uses as low as 0.3.
+    Windows:
 
-To determine the appropriate cutoff score for ProCogGraph, a receiver operating characteristic (ROC) curve was generated and the score threshold determined using Youden's J statistic. The ROC curve was generated using the following steps:
+    ``` powershell
+    ./run_services_.ps1
+    ```
 
-1. A manually curated set of "cognate" ligands were identified which were already bound to a PDB protein chain.
-2. These were scored against their corresponding cognate ligands using the PARITY score. These constitute the positive examples in the ROC curve.
-3. PDB ligands were then randomly matched to biological ligands, and scored using the PARITY score. These constitute the negative examples in the ROC curve.
-4. The ROC curve was generated using the scikit-learn python package.
-5. The score threshold was determined using Youden's J statistic.
+    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). On linux, the compose-run.yml file can be modified (or the `run_services.ps1` on Windows) to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file (or add as environment parameters in the `run_servcies.ps1` file on Windows):
 
-The distribution of positive and negative scores is shown in the histogram below:
+    ``` yaml
+      - NEO4J_server_memory_heap_initial__size=3600m
+      - NEO4J_server_memory_heap_max__size=3600m
+      - NEO4J_server_memory_pagecache_size=2g
+      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+    ```
 
-![Score Distribution]()
+6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [localhost:5005](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
 
-The ROC curve is shown below:
+7. To stop the database, run the following command:
 
-![ROC Curve]()
+    Linux/MACOS:
 
-The score threshold was determined to be 0.55 (Youden's index = 0.92).
+    ``` bash
+    docker compose -f docker-compose-run.yml down
+    ```
 
-Potential other avenues for scoring to be explored: the Tanimoto similarity between the Morgan fingerprints of the ligands.
+    Windows:
 
-## Domain Ownership
-
-### Existing methods of domain ownership
-
-In PROCOGNATE domain ownership is defined as ...
-
-domain which is most likely to be responsible for the binding of a given ligand. We define this as the domain which has the highest similarity to the ligand. We define similarity as the Tanimoto similarity between the ligand and the domain's cognate ligands. The cognate ligands are defined as the ligands which are bound by the domain's protein chains. The Tanimoto similarity is calculated using the Morgan fingerprint of the ligand and the Morgan fingerprints of the cognate ligands. The Morgan fingerprints are calculated using the RDKit python package.
-
-### ProCogGraph method of domain ownership
-
-Since the original PROCOGNATE database, several tools have been developed, and are integrated into PDBe-graph, which allow a rich description of contacts - primarily, Arpeggio.
-
-In ProCogGraph, domain contact counts are enumerated based on annotations from Arpeggio in PDBe-graph.
-
-. The domain which has the highest number of contacts with the ligand is defined as the domain which is most likely to be responsible for the binding of the ligand.
-
-## Accessing the Database
-
-The ProCogGraph database is available to access at [ProCogGraph](procoggraph.com)
-
-## Creating the Database from source
-
-The ProCogGraph database is created using Neo4J. The database is created using the following steps:
-
-1. Download the latest version of [Neo4J Desktop](https://neo4j.com/download/)
-2. Copy the Neo4j files from the `neo4j` folder into the `import` folder in the Neo4J Database.
-3. Run the admin-import tool:
-```
-bin/neo4j-admin database import full --array-delimiter="|" --skip-bad-relationships \
---delimiter="\t" \
---nodes=boundEntity=import/bound_entities.csv.gz \
---nodes=boundDescriptor=import/bound_descriptors.csv.gz \
---relationships=DESCRIBED_BY=import/be_bd_rels.csv.gz \
---nodes=cognateLigand=import/cognate_ligand_nodes.csv.gz \
---relationships=HAS_SIMILARITY=import/bound_entity_parity_score_rels.csv.gz \
---nodes=ecID=import/ec_id_nodes.csv.gz \
---relationships=IS_IN_EC=import/cognate_ligands_ec.csv.gz \
---nodes=ecClass=import/ec_nodes_class.csv.gz \
---relationships=IS_IN_CLASS=import/ec_class_subclass_rel.csv.gz \
---nodes=ecSubClass=import/ec_nodes_subclass.csv.gz \
---relationships=IS_IN_SUBCLASS=import/ec_subclass_subsubclass_rel.csv.gz \
---nodes=ecSubSubClass=import/ec_nodes_subsubclass.csv.gz \
---relationships=IS_IN_SUBSUBCLASS=import/ec_subsubclass_id_rel.csv.gz \
---nodes=cathDomain=import/cath_domains_nodes.csv.gz \
---nodes=scopDomain=import/scop_domains_nodes.csv.gz \
---nodes=interproDomain=import/interpro_domain_nodes.csv.gz \
---relationships=IS_IN_SCOP_FAMILY=import/scop_domain_family_rels.csv.gz \
---nodes=scopFamily=import/scop_family_nodes.csv.gz \
---relationships=IS_IN_SCOP_SUPERFAMILY=import/scop_family_superfam_rels.csv.gz \
---nodes=scopSuperfamily=import/scop_superfamily_nodes.csv.gz \
---relationships=IS_IN_SCOP_FOLD=import/scop_superfam_fold_rels.csv.gz \
---nodes=scopFold=import/scop_fold_nodes.csv.gz \
---relationships=IS_IN_SCOP_CLASS=import/scop_fold_class_rels.csv.gz \
---nodes=IS_IN_SCOP_CLASS=import/scop_class_nodes.csv.gz \
---nodes=cathClass=import/cath_class_nodes.csv.gz \
---relationships=IS_IN_CATH_CLASS=import/cath_class_architecture_rels.csv.gz \
---nodes=cathArchitecture=import/cath_architecture_nodes.csv.gz \
---relationships=IS_IN_CATH_ARCHITECTURE=import/cath_architecture_topology_rels.csv.gz \
---nodes=cathTopology=import/cath_topology_nodes.csv.gz \
---relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_homology_rels.csv.gz \
---nodes=cathHomology=import/cath_homology_nodes.csv.gz \
---relationships=IS_IN_CATH_HOMOLOGY=import/cath_homology_domain_rels.csv.gz \
---relationships=INTERACTS_WITH_LIGAND=import/scop_domain_ligand_interactions.csv.gz \
---relationships=INTERACTS_WITH_LIGAND=import/cath_domain_ligand_interactions.csv.gz \
---relationships=INTERACTS_WITH_LIGAND=import/interpro_domain_ligand_interactions.csv.gz \
---nodes=proteinChain=import/pdb_protein_chain_nodes.csv.gz \
---nodes=entry=import/pdb_entry_nodes.csv.gz \
---relationships=IS_IN_PDB=import/be_pdb_rels.csv.gz \
---relationships=IS_IN_PDB=import/pdb_protein_rels.csv.gz \
---relationships=IS_IN_PROTEIN_CHAIN=import/cath_protein_rels.csv.gz \
---relationships=IS_IN_PROTEIN_CHAIN=import/scop_protein_rels.csv.gz \
---relationships=IS_IN_PROTEIN_CHAIN=import/interpro_protein_rels.csv.gz \
---relationships=IS_IN_EC=import/protein_ec_rels.csv.gz \
---overwrite-destination neo4j
-```
-This creates the database.
-
-4. The database can then be started and accessed using the Neo4J Desktop application.
+    ``` powershell
+    ./stop_services.ps1
+    ```
 
 ## Database Schema
 
-## Citations
+The image below shows the schema of the ProCogGraph database, which is built using Neo4j. The database is built around the following key nodes:
 
-``` python
+![ProCogGraph Schema](images/ProCogGraphSchema_schema.png)
 
-python3 preprocess_rhea.py --rhea_ec_mapping biological_ligands/data_files/rhea2ec.tsv --rhea_reaction_directions biological_ligands/data_files/rhea-directions.tsv --rd_dir rd/ --outdir . --chebi_names biological_ligands/data_files/chebi_names.tsv.gz
+- Entry: A PDB structure, which contains one or more protein chains and bound entities.
 
-python3 extract_pdbe_info.py --neo4j_user neo4j --neo4j_password 'yTJutYQ$$d%!9h' --outdir pdbe_graph_info2 --enzyme_dat_file ../biological_ligands/enzyme.dat --pdbe_graph_yaml pdbe_graph_queries.yaml --glycoct_cache pdbe_graph_info2/glycoct_cache.pkl --smiles_cache pdbe_graph_info2/smiles_cache.pkl --csdb_linear_cache pdbe_graph_info2/csdb_linear_cache.pkl
+- Domain: An annotated sequence of a protein chain, which is classified into a domain database.
 
-python3 get_ec_information.py --ec_dat enzyme.dat --pubchem pubchem_substance_id_mapping.txt --chebi ChEBI_Results.tsv --rhea_mapping rhea-directions.tsv --rhea_reactions rhea-reaction-smiles.tsv --rhea2ec rhea2ec.tsv --outdir biological_ligands
+- Bound Entity: A small molecule or oligosaccharide which interacts with a domain.
 
-python3 snakemake_ligands_df.py --pdb_ligands_file /raid/MattC/repos/CognateLigandProject/pdbe_graph_files/pdbe_graph_info2/bound_entities_to_score.pkl --cognate_ligands /raid/MattC/repos/CognateLigandProject/biological_ligands/outdir_update/biological_ligands_df.pkl --outdir bound_entities_parity_rhea2 --chunk_size 10 --threads 75 --snakefile parity.smk
+- Cognate Ligand: Represents a ligand whcih is part of an enzyme reaction, and is mapped to one or more EC numbers.
 
-python3 assign_domain_ownership.py --cath_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/cath_pdb_residue_interactions_distinct_bl_ec.csv.gz --cath_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/cath_pdb_residue_interactions_distinct_sugar_ec.csv.gz  --scop_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/scop_pdb_residue_interactions_distinct_bl_ec.csv.gz --scop_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/scop_pdb_residue_interactions_distinct_sugar_ec.csv.gz --interpro_bl_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/interpro_pdb_residue_interactions_distinct_bl_ec.csv.gz --interpro_sugar_residue_interactions_file ../pdbe_graph_files/pdbe_graph_info2/interpro_pdb_residue_interactions_distinct_sugar_ec.csv.gz --outdir domain_ownership100 --scop_domains_info_file dir.cla.scop.1_75.txt --scop_descriptions_file dir.des.scop.1_75.txt
+## Dashboard
 
-python3 produce_neo4j_files.py --enzyme_dat_file ../biological_ligands/enzyme.dat --enzyme_class_file ../biological_ligands/enzclass.txt --outdir neo4j_files_out --biological_ligands ../biological_ligands/outdir_update/biological_ligands_df.pkl --cath_domain_ownership ../domain_ownership/domain_ownership100/cath_combined_domain_ownership.csv --scop_domain_ownership ../domain_ownership/domain_ownership100/scop_combined_domain_ownership.csv --interpro_domain_ownership ../domain_ownership/domain_ownership100/interpro_combined_domain_ownership.csv --bound_ligand_descriptors ../pdbe_graph_files/pdbe_graph_info2/bound_ligands_to_score.pkl --bound_molecules_sugars_smiles ../pdbe_graph_files/pdbe_graph_info2/bound_molecules_sugars_smiles.pkl --parity_calcs ../parity_calcs/bound_entities_parity_rhea2/all_parity_calcs.pkl --interpro_xml ../interpro.xml.gz
+*NOTE: A visual bug is currently affecting the Dashboard. When navigating through the cognate ligand page, reports from this page will remain visible when navigating to other pages. This is a known issue and is being addressed with the Neodash authors see [this issue](https://github.com/neo4j-labs/neodash/issues/936).*
+
+The dashboard contains five key visualisation modes: PDB, Cognate Ligand, PDB Ligand, Domain and EC. The homepage provides summary statistics for the number of structures and ligands represented in the current version of the graph, as well as the number of cognate ligand matches for the currently specified cutoff.
+
+From the search page, global and visualisation specific settings can be specified:
+
+| Parameter | Description | Options |
+| ---- | ---- | ---- |
+| Cutoff | The minimum similarity score for a cognate ligand match to be considered. | 0.0 - 1.0 |
+| Domain Database | The domain database to be searched against. | CATH, Gene3D, Pfam, SCOP, SUPERFAMILY, SCOP2-SF , SCOP2-FA |
+| Cognate Ligand Filter | The type of cognate ligand matches to be considered. | All , Best , Any (see below) |
+
+When filtering cognate ligand matches in the database, users can select All, Best or Any. These parameters are described below:
+
+- All: all bound entities for a PDB are displayed in the interaction table, regardless of whether they have a mapping to a cognate ligand.
+- Any: all cognate ligand matches for a bound entity which are above the scoring threshold are presented.
+- Best: only cognate ligands with the highest score for a given bound entity are shown.
+
+It should be noted that even when set to “Best”, a bound entity may have matches to multiple cognate ligands with the same maximum score. ProCogGraph is designed to serve as an information source, and so does not make an effort to select a particular best match as the “Best” best match, instead leaving this up to the user.
+
+
+
+### PDB Search Mode
+
+To search for a structure, the PDB search box is used, and a PDB ID can be matched from any partial searches via a dropdown list. A clickable link is then presented next to the PDB search box, which takes you to the PDB visualisation mode (see image above). The PDB exploration page results are described in the table and image below:
+
+![PDB Search Results](images/procoggraph_dashboard_pdb_view_formatted.png)
+
+| Section | Ref | Description |
+| ---- | ---- | ---- |
+| Summary Report | A | A summary of the PDB structure, including the number of chains, ligands, and domains present. |
+| PDB Ligand Table | B | A table of bound entities present in the structure and their cognate ligand mappings (if applicable). |
+| Domain Interaction Table | C | A table of domain-bound entity interactions, the interaction mode and the number of residues involved. |
+| Domain Interaction Visualisation | D | An embedded iframe visualisation of the interacting residues between bound entities and domain residues in the structure,  using PDBe-Molstar. Residues from the currently focussed domain are highlighted in blue, and other domain residues highlighted in purple |
+| PARITY Score Visualisation | D | PARITY score between cognate ligands and bound entities can also be viewed, showing both the MCS match and the atom matches, making up the PARITY score - visualised with RDKit JS. |
+
+For each domain listed in the PDB structure page, breakout links are accessible to a domain summary page (domains can also be searched for directly from the search page using the domain search box). This page includes links to the external domain annotation. The report also summarises interactions for a domain at a “group” level which varies depending on the domain database being examined, for example, in the CATH/Gene3D/SCOP/SUPERFAMILY, the group level is Superfamily, and for Pfam, it is the family level. 
+
+The domain combinatorial interactions table lists the contexts in which a domain interacts with a ligand i.e, the other domains involved in the interaction and their interaction modes.
+
+### Cognate/Bound Entity Search Mode
+
+Cognate and PDB ligands can be viewed in detail through breakout from the PDB structure page view. Both pages contain a similar set of results tables including an RDKit.js visualisation of the ligand structure, a summary report detailing the cognate ligand database cross-references or the number of times a PDB ligand has been observed in the database, and the domain interactions that are observed for a ligand. Additionally, PDB ligands contain link tables to cognate ligand mappings. As with domains, PDB and cognate ligands can also be searched for directly from the search page, either by hetcode or name for PDBligands, or database ID (format DB:ID) or name for cognate ligand.
+
+### EC Search Mode
+
+When searching for an EC number, results are aggregated and links presented to relevent structures, cognate and PDB ligands, together with a summary of domains known to interact wit ligands In this reaction. In addition the reactions associated with the EC number within the RHEA database are visualised using RDKit-js, allowing for dynamic generation based on the reaction smiles strings associated with the EC nodes in the graph.
+Every result presented in ProCogDash is generated using a Cypher query, which are contained within the neodash dashboard, and which is stored as a node within the database, allowing it to be versioned and distributed alongside the database itself. In addition to this, all queries are also made available within the repository as a single YAML file, where each query contains additional comments describing the underlying process.
+
+## Custom Queries
+
+Custom queries can be executed using the Cypher query language in the Neo4j browser (`http://localhost:7474` when using a local instance of the database). For example, to match all domains belonging to protein chains with the EC ID 3.2.1.1 and an exclusive interaction mode, the following query can be executed:
+
+``` cypher
+MATCH (pc)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity) WHERE "3.2.1.1" in pc.ecList and int.interactionMode = "exclusive"
+RETURN *
 ```
+
+## Database Information
+
+### Cognate Ligands
+
+#### Sources
+
+Cognate ligands in ProCogGraph are aggregated from the following sources:
+
+- KEGG
+- ChEBI
+- RHEA
+- PubChem
+- GlyTouCan
+
+SMILES representations are obtained for each ligand, and each cognate ligand is mapped to one or more EC IDs. Cognate ligands are processed using the RDKit library in Python, with structures neutralised and re-canonicalised to reduce the number of duplicate structures. A total of XXX cognate ligands are currently represented in the database.
+
+#### Similarity
+
+ProCogGraph defines cognate ligand similarity using the PARITY method, which uses a permissive maximum common substructure and measures the number of matching atoms between ligands. The score ranges from 0-1 with 1 representing identical ligands and 0 representing no similarity.
+
+A threshold value for defining a cognate ligand match is set at 0.40, based on the mean 95th percentile score for 5 sets of 2000 randomly paired ligands. Bound entity - cognate ligand pairs with a score below the threshold are not included in the database.
+
+### Domains
+
+#### Domain Annotation Sources
+
+ProCogGraph uses domain annotations from SIFTS to describe domains. The following domain databases are included:
+
+- CATH
+
+- Gene3D
+
+- Pfam
+
+- SCOP
+
+- SUPERFAMILY
+
+- SCOP2 (Split into SCOP2-Superfamily and SCOP2-Family)
+
+Interactions between domains and ligands are considered indepdently for each domain database included. The dashboard allows users to select a specific domain database to search against.
+
+#### Interaction Modes
+
+In ProCogGraph, domain ownership is represented in three different ways based on domain contact percentage (as determined using PDBe-Arpeggio), depending on the number of interaction domains (single, dual and multi-domain interactions):
+
+| # Domains | Contact % | Type | Description |
+| ---- | ---- | ---- | ---- |
+| 1 | 100% | Exclusive | A single domain contacts the ligand. |
+| 2+ | 90+% | Dominant | Two or more domains interact, and this domain dominates in terms of contact % |
+| 2+ | <10% | Minor | Two or more domains interact, and this domain only plays a minor role in the interaction interface |
+| 2+ | 10-90% Contacts | Major | Two + domains interact, and this domain is the only domain with more than 10% contacts (i.e. other domains are all minor) |
+| 2+ | 50-90% Contacts | Major Partner | Two or more domains interact, and there is more than 1 non-minor domains. This domain contributes more than half of the total contacts measured for all domains. |
+| 2+ | 10-50% Contacts | Partner | Two or more domains interact, and there is more than 1 non-minor domains. This domain has a non-minor contribution, but provides less than 50% of the total contacts measured for all domains. |
+
+## License
+
+ProCogGraph is licensed under the MIT License.
