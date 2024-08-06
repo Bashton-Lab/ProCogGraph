@@ -49,21 +49,35 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Set-ExecutionPolicy Restricted
     ```
 
-    This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
+    This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files on Linux/MACOS, and two powershell files on windows, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
 
 4. Run the build command:
+    Linux/MACOS:
 
     ``` bash
     docker compose -f docker-compose-build.yml up
     ```
 
+    Windows:
+
+    ``` powershell
+    ./run_build.ps1
+    ```
+
 5. Run the database:
+    Linux/MACOS:
 
     ``` bash
     docker compose -f docker-compose-run.yml up
     ```
 
-    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). The compose-run.yml file can be modified to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file:
+    Windows:
+
+    ``` powershell
+    ./run_services_.ps1
+    ```
+
+    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). On linux, the compose-run.yml file can be modified (or the `run_services.ps1` on Windows) to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file (or add as environment parameters in the `run_servcies.ps1` file on Windows):
 
     ``` yaml
       - NEO4J_server_memory_heap_initial__size=3600m
@@ -78,7 +92,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 
 The image below shows the schema of the ProCogGraph database, which is built using Neo4j. The database is built around the following key nodes:
 
-![ProCogGraph Schema](images/ProCogGraphSchemaLatest_schema.png)
+![ProCogGraph Schema](images/ProCogGraphSchema_schema.png)
 
 - Entry: A PDB structure, which contains one or more protein chains and bound entities.
 
@@ -89,6 +103,8 @@ The image below shows the schema of the ProCogGraph database, which is built usi
 - Cognate Ligand: Represents a ligand whcih is part of an enzyme reaction, and is mapped to one or more EC numbers.
 
 ## Dashboard
+
+*NOTE: A visual bug is currently affecting the Dashboard. When navigating through the cognate ligand page, reports from this page will remain visible when navigating to other pages. This is a known issue and is being addressed with the Neodash authors see [this issue](https://github.com/neo4j-labs/neodash/issues/936).*
 
 The dashboard contains five key visualisation modes: PDB, Cognate Ligand, PDB Ligand, Domain and EC. The homepage provides summary statistics for the number of structures and ligands represented in the current version of the graph, as well as the number of cognate ligand matches for the currently specified cutoff.
 
@@ -108,6 +124,8 @@ When filtering cognate ligand matches in the database, users can select All, Bes
 
 It should be noted that even when set to “Best”, a bound entity may have matches to multiple cognate ligands with the same maximum score. ProCogGraph is designed to serve as an information source, and so does not make an effort to select a particular best match as the “Best” best match, instead leaving this up to the user.
 
+
+
 ### PDB Search Mode
 
 To search for a structure, the PDB search box is used, and a PDB ID can be matched from any partial searches via a dropdown list. A clickable link is then presented next to the PDB search box, which takes you to the PDB visualisation mode (see image above). The PDB exploration page results are described in the table and image below:
@@ -117,17 +135,14 @@ To search for a structure, the PDB search box is used, and a PDB ID can be match
 | Section | Ref | Description |
 | ---- | ---- | ---- |
 | Summary Report | A | A summary of the PDB structure, including the number of chains, ligands, and domains present. |
-| Domain Interaction Table | B | A table of interactions between domains and bound entities in the structure. |
-| PDB Ligand Table | C | A table of bound entities present in the structure. |
+| PDB Ligand Table | B | A table of bound entities present in the structure and their cognate ligand mappings (if applicable). |
+| Domain Interaction Table | C | A table of domain-bound entity interactions, the interaction mode and the number of residues involved. |
 | Domain Interaction Visualisation | D | An embedded iframe visualisation of the interacting residues between bound entities and domain residues in the structure,  using PDBe-Molstar. Residues from the currently focussed domain are highlighted in blue, and other domain residues highlighted in purple |
-| PARITY Score Visualisation | E | PARITY score between cognate ligands and bound entities can also be viewed, showing both the MCS match and the atom matches, making up the PARITY score - visualised with RDKit JS. |
+| PARITY Score Visualisation | D | PARITY score between cognate ligands and bound entities can also be viewed, showing both the MCS match and the atom matches, making up the PARITY score - visualised with RDKit JS. |
 
-The iframe visualisations are loaded an Nginx server running in the distributed Docker compose.
+For each domain listed in the PDB structure page, breakout links are accessible to a domain summary page (domains can also be searched for directly from the search page using the domain search box). This page includes links to the external domain annotation. The report also summarises interactions for a domain at a “group” level which varies depending on the domain database being examined, for example, in the CATH/Gene3D/SCOP/SUPERFAMILY, the group level is Superfamily, and for Pfam, it is the family level. 
 
-For each domain listed in the PDB structure page, breakout links are accessible to a domain summary page (domains can also be searched for directly from the search page using the domain search box). This page includes a summary report of the number of ligands the domain is known to interact with, together with links to the external domain annotation. The report also summarises interactions for a domain at a “group” level which varies depending on the domain database being examined, for example, in the CATH/Gene3D/SCOP/SUPERFAMILY, the group level is Superfamily, and for Pfam, it is the family level. Summaries are presented on the following:
-Group interactions table: lists all cognate ligands a group level are known to interact with in the database, together with the number of domains that interact with the ligand.
-Domain Contexts: This query lists the contexts in which a domain interacts with a ligand i.e, the other domains involved in the interaction and their interaction modes.
-Domain Cognate Ligand breakdowns: table lists the cognate ligands the specific domain searched for interacts with, and the percentage of the overall group the domain belongs to which also interact with the ligand. This is useful for identify if the cognate ligand a domain binds to reflects typical superfamily activity or is an outlier.
+The domain combinatorial interactions table lists the contexts in which a domain interacts with a ligand i.e, the other domains involved in the interaction and their interaction modes.
 
 ### Cognate/Bound Entity Search Mode
 
@@ -140,11 +155,11 @@ Every result presented in ProCogDash is generated using a Cypher query, which ar
 
 ## Custom Queries
 
-Custom queries can be executed using the Cypher query language in the Neo4j browser (`http://localhost:7474` when using a local instance of the database). For example, to EXAMPLE QUERY HERE, the following query can be executed:
+Custom queries can be executed using the Cypher query language in the Neo4j browser (`http://localhost:7474` when using a local instance of the database). For example, to match all domains belonging to protein chains with the EC ID 3.2.1.1 and an exclusive interaction mode, the following query can be executed:
 
 ``` cypher
-MATCH EXAMPLE QUERY HERE
-RETURN EXAMPLE
+MATCH (pc)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity) WHERE "3.2.1.1" in pc.ecList and int.interactionMode = "exclusive"
+RETURN *
 ```
 
 ## Database Information
@@ -166,8 +181,6 @@ SMILES representations are obtained for each ligand, and each cognate ligand is 
 #### Similarity
 
 ProCogGraph defines cognate ligand similarity using the PARITY method, which uses a permissive maximum common substructure and measures the number of matching atoms between ligands. The score ranges from 0-1 with 1 representing identical ligands and 0 representing no similarity.
-
-EXAMPLE HERE?
 
 A threshold value for defining a cognate ligand match is set at 0.40, based on the mean 95th percentile score for 5 sets of 2000 randomly paired ligands. Bound entity - cognate ligand pairs with a score below the threshold are not included in the database.
 
