@@ -11,9 +11,8 @@ mkdir -p neo4j_docker/import
 cd neo4j_docker/import
 
 # Download the zenodo database flat zip.
-# ZENODO_ID="IDHERE"
-# ZENODO_URL="https://zenodo.org/record/${ZENODO_ID}"
-# wget "${ZENODO_URL}"
+ZENODO_URL="https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1"
+wget "${ZENODO_URL}"
 
 # Unzip the database flat files into the import directory, to be used by the import script.
 unzip procoggraph_flat_files_v1-0.zip
@@ -93,4 +92,4 @@ services:
     tty: true
 EOF
 
-echo "\nSuccessfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'.\n"
+echo -e "\nSuccessfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'.\n"
