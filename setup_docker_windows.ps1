@@ -14,79 +14,24 @@ Invoke-WebRequest -Uri $ZENODO_URL -OutFile "procoggraph_flat_files_v1-0.zip"
 Expand-Archive -Force -Path "procoggraph_flat_files_v1-0.zip" -DestinationPath .
 cd "../.."
 
-# Get the fully qualified paths for building the compose yaml file
+# Get the fully qualified paths for building the docker run commands
 $NEO4J_DOCKER_DIR = (Get-Location).Path + "\neo4j_docker"
 $PROCOGGRAPH_REPOSITORY = Get-Location
 
-# Create the docker-compose build YAML file
-$composeBuildContent = @"
-services:
-  neo4j_build:
-    image: neo4j:latest
-    container_name: neo4j_run
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    volumes:
-      - ${NEO4J_DOCKER_DIR}/data:/data
-      - ${NEO4J_DOCKER_DIR}/logs:/logs
-      - ${NEO4J_DOCKER_DIR}/conf:/conf
-      - ${NEO4J_DOCKER_DIR}/plugins:/plugins
-      - ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import
-      - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
-    environment:
-      - NEO4J_AUTH=neo4j/procoggraph
-
-    entrypoint: ["/bin/bash", "/import_neo4j_data.sh"]
+# Create the PowerShell script for the build command
+$buildScriptContent = @"
+docker run --name neo4j_build -p 7474:7474 -p 7687:7687 -v ${NEO4J_DOCKER_DIR}/data:/data -v ${NEO4J_DOCKER_DIR}/logs:/logs -v ${NEO4J_DOCKER_DIR}/conf:/conf -v ${NEO4J_DOCKER_DIR}/plugins:/plugins -v ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import -v ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh -e NEO4J_AUTH=neo4j/procoggraph neo4j:latest /import_neo4j_data.sh
 "@
-$composeBuildContent | Out-File -FilePath "compose_build.yaml" -Encoding utf8
+$buildScriptContent | Out-File -FilePath "run_build.ps1" -Encoding utf8
 
-# Create the docker-compose run YAML file
-$composeRunContent = @"
-services:
-  neo4j_run:
-    image: neo4j:latest
-    container_name: neo4j_run
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    volumes:
-      - ${NEO4J_DOCKER_DIR}/data:/data
-      - ${NEO4J_DOCKER_DIR}/logs:/logs
-      - ${NEO4J_DOCKER_DIR}/conf:/conf
-      - ${NEO4J_DOCKER_DIR}/plugins:/plugins
-      - ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import
-      - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
-    environment:
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_AUTH=neo4j/procoggraph
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - "8080:80"
-    volumes:
-      - ${PROCOGGRAPH_REPOSITORY}/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ${PROCOGGRAPH_REPOSITORY}/procogdash:/usr/share/nginx/html:ro
+# Create the PowerShell script for the run commands
+$runScriptContent = @"
+docker run -d --name neo4j_run -p 7474:7474 -p 7687:7687 -v ${NEO4J_DOCKER_DIR}/data:/data -v ${NEO4J_DOCKER_DIR}/logs:/logs -v ${NEO4J_DOCKER_DIR}/conf:/conf -v ${NEO4J_DOCKER_DIR}/plugins:/plugins -v ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import -v ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh -e NEO4J_PLUGINS=[""apoc""] -e NEO4J_AUTH=neo4j/procoggraph neo4j:latest
 
-  neodash:
-    image: neo4jlabs/neodash
-    container_name: neodash
-    ports:
-      - "5005:5005"
-    environment:
-      - ssoEnabled=false
-      - standalone=true
-      - standaloneProtocol=bolt
-      - standaloneHost=localhost
-      - standalonePort=7687
-      - standaloneDatabase=neo4j
-      - standaloneDashboardName=ProCogGraph
-      - standaloneDashboardDatabase=neo4j
-      - standaloneDashboardURL=http://localhost:8080/dashboard.json
-    stdin_open: true
-    tty: true
+docker run -d --name nginx -p 8080:80 -v ${PROCOGGRAPH_REPOSITORY}/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro -v ${PROCOGGRAPH_REPOSITORY}/procogdash:/usr/share/nginx/html:ro nginx:latest
+
+docker run -d --name neodash -p 5005:5005 -e ssoEnabled=false -e standalone=true -e standaloneProtocol=bolt -e standaloneHost=localhost -e standalonePort=7687 -e standaloneDatabase=neo4j -e standaloneDashboardName=ProCogGraph -e standaloneDashboardDatabase=neo4j -e standaloneDashboardURL=http://localhost:8080/dashboard.json neo4jlabs/neodash
 "@
-$composeRunContent | Out-File -FilePath "compose_run.yaml" -Encoding utf8
+$runScriptContent | Out-File -FilePath "run_services.ps1" -Encoding utf8
 
-Write-Output "`nSuccessfully downloaded database files and generated docker compose files. To get started, run 'docker compose -f compose_build.yaml up', then 'docker compose -f compose_run.yaml up'`n."
+Write-Output "`nSuccessfully downloaded database files and generated PowerShell scripts. To get started, run 'run_build.ps1', then 'run_services.ps1'`n."
