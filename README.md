@@ -88,6 +88,20 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 
 6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [localhost:5005](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
 
+7. To stop the database, run the following command:
+
+    Linux/MACOS:
+
+    ``` bash
+    docker compose -f docker-compose-run.yml down
+    ```
+
+    Windows:
+
+    ``` powershell
+    ./stop_services.ps1
+    ```
+
 ## Database Schema
 
 The image below shows the schema of the ProCogGraph database, which is built using Neo4j. The database is built around the following key nodes:
