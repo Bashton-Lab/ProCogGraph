@@ -1,12 +1,66 @@
-# Installation on Bare Metal
+# Installation
 
-ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. Installation instructions for running the database on bare metal, rather than Docker, are described below.
+## Docker
 
-1. Download the latest database flat files from Zenodo [here](https://ZENODOIDHERE) and clone the ProCogGraph repository:
+ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. To get started, the easiest method, described below, is to run ProCogGraph in a Docker container - for installation instructions for the database on bare metal, and for running the Nextflow pipeline see the [installation](docs/installation.md) guide.
+
+1. Download and install Docker from the [Docker website](https://www.docker.com/get-started)
+
+2. Clone the ProCogGraph repository:
 
     ``` bash
     git clone m-crown/ProCogGraph
-    wget https://zenodo.org/record/IDHERE -O /PATH/TO/DATABASE_FLAT_FILES
+    cd ProCogGraph
+    ```
+
+3. Run the setup script to download the latest flat files and create the necessary directories and Docker compose files if running on Linux/OSX:
+
+    ``` bash
+    ./setup_docker_linux.sh
+    ```
+
+    or for Windows (in Powershell with administrative access)
+
+    ``` powershell
+    Set-ExecutionPolicy Unrestricted
+    ./setup_docker_windows.ps1
+    Set-ExecutionPolicy Restricted
+    ```
+
+    This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
+
+4. Run the build command:
+
+    ``` bash
+    docker compose -f docker-compose-build.yml up
+    ```
+
+5. Run the database:
+
+    ``` bash
+    docker compose -f docker-compose-run.yml up
+    ```
+
+    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). The compose-run.yml file can be modified to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file:
+
+    ``` yaml
+      - NEO4J_server_memory_heap_initial__size=3600m
+      - NEO4J_server_memory_heap_max__size=3600m
+      - NEO4J_server_memory_pagecache_size=2g
+      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+    ```
+
+6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [localhost:5005](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
+
+## Neo4j
+
+Installation instructions for running the database on bare metal, rather than Docker, are described below.
+
+1. Download the latest database flat files from Zenodo [here](https://zenodo.org/records/13165852) and clone the ProCogGraph repository:
+
+    ``` bash
+    git clone m-crown/ProCogGraph
+    wget https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -O /PATH/TO/DATABASE_FLAT_FILES
     ```
 
 2. Download and install Neo4j community edition from the [Neo4j website](https://neo4j.com/download/). The database was built using Neo4j version 5.
@@ -25,21 +79,17 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
         ./import_neo4j_data.sh
     ```
 
-
-
-    NOTE: Running on Docker for Windows requires specific formatting of file paths for volume mappings. An example valid command is shown below:
+5. Start the Neo4j database:
 
     ``` bash
-    docker run --volume=C:/Users/Matt/ProCogGraph/neo4j_docker/data:/data `
-    --volume=C:/Users/Matt/ProCogGraph/neo4j_docker/logs:/logs `
-    --volume=C:/Users/Matt/ProCogGraph/neo4j_docker/conf:/conf `
-    --volume=C:/Users/Matt/ProCogGraph/neo4j_docker/plugins:/plugins `
-    --volume=C:/Users/Matt/ProCogGraph/neo4j_docker/import:/var/lib/neo4j/import `
-    --volume=C:/Users/Matt/ProCogGraph/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh `
-    neo4j:latest /import_neo4j_data.sh
+    bin/neo4j start
     ```
 
-### ProCogGraph Pipeline
+6. Access the database by navigating to `http://localhost:7474` in a web browser and update the default password (set to user `neo4j` and password `neo4j` by default). 
+
+7. Access ProCogDash via [NeoDash](http://neodash.graphapp.io/). The dashboard can be loaded into Neodash by expanding the menu option in the bottom left of the screen, clicking the `+` icon and importing the dashboard from a JSON file. Upload the file from the repository at `procogdash/dashboard.json`.
+
+## ProCogGraph Pipeline
 
 The ProCogGraph pipeline is built using Nextflow for workflow management. To run the pipeline, follow these steps:
 
@@ -108,14 +158,3 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     cd /PATH/TO/PROCOGGRAPH_REPOSITORY/nextflow
     nextflow run main.nf -resume -profile standard
     ```
-
-#### From Source
-
-If running ProCogGraph from source, the database can be started by running the following command:
-
-``` bash
-cd /PATH/TO/NEO4J_DATABASE/
-bin/neo4j start
-```
-
-The database can then be accessed by navigating to `http://localhost:7474` in a web browser or connecting to ProCogDash via [NeoDash](http://neodash.graphapp.io/).

@@ -63,9 +63,16 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     docker compose -f docker-compose-run.yml up
     ```
 
-    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [NeoDash Docker](http://localhost:5005/). The compose-run.yml file contains environment variables specifying memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are set to the recommended values for an 8GB memory system.
+    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). The compose-run.yml file can be modified to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file:
 
-6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [NeoDash Docker](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
+    ``` yaml
+      - NEO4J_server_memory_heap_initial__size=3600m
+      - NEO4J_server_memory_heap_max__size=3600m
+      - NEO4J_server_memory_pagecache_size=2g
+      - NEO4J_server_jvm_additional=-XX:+ExitOnOutOfMemoryError
+    ```
+
+6. Access the dashboard. The ProCogDash dashboard is built using NeoDash, a Neo4j plugin. The dashboard can be accessed by connecting to a running instance of the database in Docker at [localhost:5005](localhost:5005). The dashboard requires a username and password, which are set to `neo4j` and `procoggraph` by default.
 
 ## Database Schema
 
@@ -115,7 +122,7 @@ To search for a structure, the PDB search box is used, and a PDB ID can be match
 | Domain Interaction Visualisation | D | An embedded iframe visualisation of the interacting residues between bound entities and domain residues in the structure,  using PDBe-Molstar. Residues from the currently focussed domain are highlighted in blue, and other domain residues highlighted in purple |
 | PARITY Score Visualisation | E | PARITY score between cognate ligands and bound entities can also be viewed, showing both the MCS match and the atom matches, making up the PARITY score - visualised with RDKit JS. |
 
-The iframe visualisations are loaded from GitHub pages (https://m-crown.github.io/ProCogGraph/) if using the online version of the graph or from an Nginx server running in the distributed Docker image if running locally.
+The iframe visualisations are loaded an Nginx server running in the distributed Docker compose.
 
 For each domain listed in the PDB structure page, breakout links are accessible to a domain summary page (domains can also be searched for directly from the search page using the domain search box). This page includes a summary report of the number of ligands the domain is known to interact with, together with links to the external domain annotation. The report also summarises interactions for a domain at a “group” level which varies depending on the domain database being examined, for example, in the CATH/Gene3D/SCOP/SUPERFAMILY, the group level is Superfamily, and for Pfam, it is the family level. Summaries are presented on the following:
 Group interactions table: lists all cognate ligands a group level are known to interact with in the database, together with the number of domains that interact with the ligand.
