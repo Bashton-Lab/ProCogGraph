@@ -18,7 +18,7 @@
       "neodash_domain_group": "3.40.50.720",
       "neodash_domain_group_display": "1.10.8.10",
       "neodash_entry_pdbentry_1": "1b42",
-      "neodash_iframe_url": "http://localhost:8080/pdbe_molstar_viewer.html?data=%7B%22pdb_id%22%3A%221b42%22%2C%22bl_residues%22%3A%22600%22%2C%22all_interface%22%3A%5B%22A%3A22%22%2C%22A%3A180%22%2C%22A%3A204%22%2C%22A%3A233%22%5D%2C%22interface_chain%22%3A%22A%22%2C%22bl_chain%22%3A%22A%22%2C%22interface%22%3A%5B%2222%22%2C%22180%22%2C%22204%22%2C%22233%22%5D%7D",
+      "neodash_iframe_url": "http://localhost:8080/",
       "neodash_iframe_header": "Interface: 1b42:A:1b42A00 - bm2:M1A:600:A",
       "neodash_d_count": 2,
       "neodash_pdb_properties": {
@@ -37,16 +37,22 @@
       "neodash_bl_count": 1,
       "neodash_bd_count": 2,
       "neodash_boundentity_query": "SAH",
-      "neodash_be_instances": 1481,
+      "neodash_be_instances": {
+        "low": 1481,
+        "high": 0
+      },
       "neodash_bd_uniqueid": "23861",
       "neodash_pdb_ligand_properties": {
-        "name": "SAH",
-        "description": "S-ADENOSYL-L-HOMOCYSTEINE",
         "descriptor": "O=C(O)C(N)CCSCC3OC(n2cnc1c(ncnc12)N)C(O)C3O",
+        "description": "S-ADENOSYL-L-HOMOCYSTEINE",
+        "name": "SAH",
         "uniqueID": "23861"
       },
-      "neodash_pdb_instances": 1011,
-      "neodash_iframe_url_pdbligand": "http://localhost:8080/smiles_viewer.html?type=smiles&data=%7B%22smiles%22%3A%22O%3DC%28O%29C%28N%29CCSCC3OC%28n2cnc1c%28ncnc12%29N%29C%28O%29C3O%22%2C%22name%22%3A%22SAH%22%7D",
+      "neodash_pdb_instances": {
+        "low": 1011,
+        "high": 0
+      },
+      "neodash_iframe_url_pdbligand": "http://localhost:8080",
       "neodash_pdb_lig_domint_entries": [
         "1khh",
         "2ex4",
@@ -609,8 +615,8 @@
         "3.40.50.720:major_partner",
         "3.90.110.10:partner"
       ],
-      "neodash_pdb_lig_cognate_url": "http://localhost:8080/parity_viewer.html?data=%7B%22be_smiles%22%3A%22O%3DC%28O%29C%28N%29CCSCC3OC%28n2cnc1c%28ncnc12%29N%29C%28O%29C3O%22%2C%22bl_smiles%22%3A%22C%5BS%2B%5D%28CCC%28N%29C%28%3DO%29O%29CC1OC%28n2cnc3c%28N%29ncnc32%29C%28O%29C1O%22%2C%22parity%22%3A0.963%2C%22parity_pdb%22%3A%5B0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C11%2C12%2C22%2C24%2C25%2C23%2C13%2C14%2C15%2C16%2C17%2C18%2C19%2C20%2C21%5D%2C%22parity_smarts%22%3A%22%5B%237%5D-%26%21%40%5B%236%5D1%3A%26%40%5B%237%5D%3A%26%40%5B%236%5D%3A%26%40%5B%237%5D%3A%26%40%5B%236%5D2%3A%26%40%5B%236%5D%3A%26%401%3A%26%40%5B%237%5D%3A%26%40%5B%236%5D%3A%26%40%5B%237%5D%3A%26%402-%26%21%40%5B%236%5D1-%26%40%5B%238%5D-%26%40%5B%236%5D%28-%26%40%5B%236%5D%28-%26%40%5B%236%5D-%26%401-%26%21%40%5B%238%5D%29-%26%21%40%5B%238%5D%29-%26%21%40%5B%236%5D-%26%21%40%5B%2316%5D-%26%21%40%5B%236%5D-%26%21%40%5B%236%5D-%26%21%40%5B%236%5D%28-%26%21%40%5B%237%5D%29-%26%21%40%5B%236%5D%28%3D%26%21%40%5B%238%5D%29-%26%21%40%5B%238%5D%22%2C%22bl_name%22%3A%22S-Adenosyl-L-methionine%22%2C%22parity_bl%22%3A%5B18%2C17%2C19%2C20%2C21%2C22%2C16%2C15%2C14%2C13%2C12%2C11%2C10%2C25%2C23%2C24%2C26%2C9%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%5D%2C%22be_name%22%3A%22SAH%22%7D",
-      "neodash_iframe_url_pdb_ligand": "http://localhost:8080/smiles_viewer.html?type=smiles&data=%7B%22smiles%22%3A%22O%3DC%28O%29C%28N%29CCSCC3OC%28n2cnc1c%28ncnc12%29N%29C%28O%29C3O%22%2C%22name%22%3A%22SAH%22%7D",
+      "neodash_pdb_lig_cognate_url": "http://localhost:8080/",
+      "neodash_iframe_url_pdb_ligand": "http://localhost:8080",
       "neodash_cognate_ligand_name": "glucose",
       "neodash_enzyme_focus": "1.1.1.1",
       "neodash_enzymesubsubclass_desc": "With NAD(+) or NADP(+) as acceptor.",
@@ -621,7 +627,7 @@
       "neodash_enzymesubclass_id": "1.1.-.-",
       "neodash_enzymeclass_id": "1.-.-.-",
       "neodash_blsize": 41,
-      "neodash_ec_iframe_url": "http://localhost:8080/smiles_viewer.html?type=reaction&data=%5B%2210737%3A*C%28%5BH%5D%29%28%5BH%5D%29O.NC%28%3DO%29C1%3DCC%3DC%5BN%2B%5D%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29%3DC1%3E%3ENC%28%3DO%29C1%3DCN%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29C%3DCC1.%5B1*%5DC%28%5BH%5D%29%3DO.%5BH%2B%5D%22%2C%2210741%3A*C%28*%29O.NC%28%3DO%29C1%3DCC%3DC%5BN%2B%5D%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29%3DC1%3E%3ENC%28%3DO%29C1%3DCN%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29C%3DCC1.%5B1*%5DC%28%5B2*%5D%29%3DO.%5BH%2B%5D%22%2C%2225291%3ACCO.NC%28%3DO%29C1%3DCC%3DC%5BN%2B%5D%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29%3DC1%3E%3ENC%28%3DO%29C1%3DCN%28%5BC%40%40H%5D2O%5BC%40H%5D%28COP%28%3DO%29%28%5BO-%5D%29OP%28%3DO%29%28%5BO-%5D%29OC%5BC%40H%5D3O%5BC%40%40H%5D%28N4C%3DNC5%3DC4N%3DCN%3DC5N%29%5BC%40H%5D%28O%29%5BC%40%40H%5D3O%29%5BC%40%40H%5D%28O%29%5BC%40H%5D2O%29C%3DCC1.%5BH%2B%5D.%5BH%5DC%28C%29%3DO%22%5D",
+      "neodash_ec_iframe_url": "http://localhost:8080",
       "neodash_entry_pdbentry_2": "1b42",
       "neodash_entry_pdbentry_2_display": "1b42",
       "neodash_domain_group_1": "3.40.50.720",
@@ -629,7 +635,7 @@
       "neodash_domain_group_2": "1.10.10.10",
       "neodash_domain_group_2_display": "1.10.10.10",
       "neodash_biological_ligand_name": "ID:6890",
-      "neodash_iframe_url_cognate": "http://localhost:8080/smiles_viewer.html?type=smiles&data=%7B%22smiles%22%3A%22OCC1OC%28O%29C%28O%29C%28O%29C1O%22%2C%22name%22%3A%22G13027%22%7D",
+      "neodash_iframe_url_cognate": "http://localhost:8080",
       "neodash_bl_properties": {
         "ligandDB": [
           "POLYMER:12391",
@@ -1804,49 +1810,49 @@
             "actionsRules": [
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "__iframe_url",
                 "customization": "set variable",
                 "customizationValue": "iframe_url_pdbligand"
               },
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "__uniqueID",
                 "customization": "set variable",
                 "customizationValue": "bd_uniqueid"
               },
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "__properties",
                 "customization": "set variable",
                 "customizationValue": "pdb_ligand_properties"
               },
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "__be_instances",
                 "customization": "set variable",
                 "customizationValue": "be_instances"
               },
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "__pdb_instances",
                 "customization": "set variable",
                 "customizationValue": "pdb_instances"
               },
               {
                 "condition": "Click",
-                "field": "bd_name",
+                "field": "Bound Entity",
                 "value": "5/PDB Ligand Search",
                 "customization": "set page",
                 "customizationValue": ""
               },
               {
                 "condition": "Click",
-                "field": "",
+                "field": "Bound Entity",
                 "value": "__pdb_lig_cognate_url",
                 "customization": "set variable",
                 "customizationValue": "pdb_lig_cognate_url"
