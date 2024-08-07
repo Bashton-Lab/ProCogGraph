@@ -46,7 +46,6 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     ``` powershell
     Set-ExecutionPolicy Unrestricted
     ./setup_docker_windows.ps1
-    Set-ExecutionPolicy Restricted
     ```
 
     This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files on Linux/MACOS, and two powershell files on windows, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
@@ -74,6 +73,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Windows:
 
     ``` powershell
+    Set-ExecutionPolicy Unrestricted
     ./run_services_.ps1
     ```
 
@@ -99,7 +99,9 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Windows:
 
     ``` powershell
+    Set-ExecutionPolicy Unrestricted
     ./stop_services.ps1
+    Set-ExecutionPolicy Restricted
     ```
 
 ## Database Schema
@@ -184,11 +186,11 @@ RETURN *
 
 Cognate ligands in ProCogGraph are aggregated from the following sources:
 
-- KEGG
-- ChEBI
-- RHEA
-- PubChem
-- GlyTouCan
+- [KEGG](https://kegg.jp/)
+- [ChEBI](https://www.ebi.ac.uk/chebi/)
+- [RHEA](https://www.rhea-db.org/)
+- [PubChem](https://pubchem.ncbi.nlm.nih.gov/)
+- [GlyTouCan](https://glytoucan.org/)
 
 SMILES representations are obtained for each ligand, and each cognate ligand is mapped to one or more EC IDs. Cognate ligands are processed using the RDKit library in Python, with structures neutralised and re-canonicalised to reduce the number of duplicate structures. A total of XXX cognate ligands are currently represented in the database.
 
@@ -196,7 +198,7 @@ SMILES representations are obtained for each ligand, and each cognate ligand is 
 
 ProCogGraph defines cognate ligand similarity using the PARITY method, which uses a permissive maximum common substructure and measures the number of matching atoms between ligands. The score ranges from 0-1 with 1 representing identical ligands and 0 representing no similarity.
 
-A threshold value for defining a cognate ligand match is set at 0.40, based on the mean 95th percentile score for 5 sets of 2000 randomly paired ligands. Bound entity - cognate ligand pairs with a score below the threshold are not included in the database.
+A threshold value for defining a cognate ligand match is set at 0.40, based on the mean 95th percentile score for 5 sets of 2000 randomly paired ligands. Bound entity-cognate ligand pairs with a score below the threshold are not included in the database.
 
 ### Domains
 
@@ -204,19 +206,19 @@ A threshold value for defining a cognate ligand match is set at 0.40, based on t
 
 ProCogGraph uses domain annotations from SIFTS to describe domains. The following domain databases are included:
 
-- CATH
+- [CATH](https://www.cathdb.info/)
 
-- Gene3D
+- [Gene3D](http://gene3d.biochem.ucl.ac.uk/)
 
-- Pfam
+- [Pfam](https://www.ebi.ac.uk/interpro/entry/pfam/#table)
 
-- SCOP
+- [SCOP](https://scop.berkeley.edu/ver=1.75)
 
-- SUPERFAMILY
+- [SUPERFAMILY](https://supfam.org/SUPERFAMILY/)
 
-- SCOP2 (Split into SCOP2-Superfamily and SCOP2-Family)
+- [SCOP2](https://www.ebi.ac.uk/pdbe/scop) (Split into SCOP2-Superfamily and SCOP2-Family)
 
-Interactions between domains and ligands are considered indepdently for each domain database included. The dashboard allows users to select a specific domain database to search against.
+Interactions between domains and ligands are considered independently for each domain database included. The dashboard allows users to select a specific domain database to search against.
 
 #### Interaction Modes
 
