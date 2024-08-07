@@ -46,6 +46,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     ``` powershell
     Set-ExecutionPolicy Unrestricted
     ./setup_docker_windows.ps1
+    Set-ExecutionPolicy Restricted
     ```
 
     This script creates the necessary directories for setting up the database, downloads the latest flat files from Zenodo and produces two yaml files on Linux/MACOS, and two powershell files on windows, one to build the database (run first time only) and one to run the database (run each time you want to start the database).
@@ -77,7 +78,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     ./run_services_.ps1
     ```
 
-    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). On linux, the compose-run.yml file can be modified (or the `run_services.ps1` on Windows) to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file (or add as environment parameters in the `run_servcies.ps1` file on Windows):
+    After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). On linux, the compose-run.yml file can be modified (or the `run_services.ps1` on Windows) to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file (or add as environment parameters in the `run_services.ps1` file on Windows):
 
     ``` yaml
       - NEO4J_server_memory_heap_initial__size=3600m
@@ -139,8 +140,6 @@ When filtering cognate ligand matches in the database, users can select All, Bes
 - Best: only cognate ligands with the highest score for a given bound entity are shown.
 
 It should be noted that even when set to “Best”, a bound entity may have matches to multiple cognate ligands with the same maximum score. ProCogGraph is designed to serve as an information source, and so does not make an effort to select a particular best match as the “Best” best match, instead leaving this up to the user.
-
-
 
 ### PDB Search Mode
 
