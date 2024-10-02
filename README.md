@@ -31,7 +31,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 2. Clone the ProCogGraph repository:
 
     ``` bash
-    git clone m-crown/ProCogGraph
+    git clone Bashton-Lab/ProCogGraph
     cd ProCogGraph
     ```
 
