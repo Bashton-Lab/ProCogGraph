@@ -1,0 +1,38 @@
+#!/bin/bash
+
+bin/neo4j-admin database import full \
+--array-delimiter="|" \
+--skip-bad-relationships \
+--delimiter="\t" \
+--nodes=boundEntity=import/bound_entities.tsv.gz \
+--nodes=boundDescriptor=import/bound_descriptors.tsv.gz \
+--relationships=DESCRIBED_BY=import/be_bd_rels.tsv.gz \
+--nodes=cognateLigand=import/cognate_ligand_nodes.tsv.gz \
+--relationships=HAS_SIMILARITY=import/bound_entity_parity_score_rels.tsv.gz \
+--nodes=ecID=import/ec_id_nodes.tsv.gz \
+--relationships=IS_IN_EC=import/cognate_ligands_ec.tsv.gz \
+--nodes=ecClass=import/ec_nodes_class.tsv.gz \
+--relationships=IS_IN_CLASS=import/ec_class_subclass_rel.tsv.gz \
+--nodes=ecSubClass=import/ec_nodes_subclass.tsv.gz \
+--relationships=IS_IN_SUBCLASS=import/ec_subclass_subsubclass_rel.tsv.gz \
+--nodes=ecSubSubClass=import/ec_nodes_subsubclass.tsv.gz \
+--relationships=IS_IN_SUBSUBCLASS=import/ec_subsubclass_id_rel.tsv.gz \
+--nodes=cathDomain=import/cath_domains_nodes.tsv.gz \
+--nodes=cathClass=import/cath_class_nodes.tsv.gz \
+--relationships=IS_IN_CATH_CLASS=import/cath_class_architecture_rels.tsv.gz \
+--nodes=cathArchitecture=import/cath_architecture_nodes.tsv.gz \
+--relationships=IS_IN_CATH_ARCHITECTURE=import/cath_architecture_topology_rels.tsv.gz \
+--nodes=cathTopology=import/cath_topology_nodes.tsv.gz \
+--relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_homology_rels.tsv.gz \
+--nodes=cathHomologousSuperfamily=import/cath_homologous_superfamily_nodes.tsv.gz \
+--relationships=IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY=import/cath_homologous_superfamily_domain_rels.tsv.gz \
+--relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_domain_rels.tsv.gz \
+--relationships=INTERACTS_WITH_LIGAND=import/cath_domain_ligand_interactions.tsv.gz \
+--nodes=entry=import/pdb_entry_nodes.tsv.gz \
+--nodes=proteinChain=import/pdb_protein_chain_nodes.tsv.gz \
+--relationships=IS_IN_PDB=import/be_pdb_rels.tsv.gz \
+--relationships=IS_IN_PDB=import/pdb_protein_rels.tsv.gz \
+--relationships=IS_IN_PROTEIN_CHAIN=import/cath_protein_rels.tsv.gz \
+--relationships=IS_IN_EC=import/protein_ec_rels.tsv.gz \
+--nodes=procoggraph=import/procoggraph_node.tsv.gz \
+--overwrite-destination neo4j
