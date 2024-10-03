@@ -100,21 +100,6 @@ def main():
     scop2_fa_merged_coglig = scop2_fa_merged.merge(cogligs, left_on = ["cognate_ligand","pdb_ec_list"], right_on = ["cogliguid", "entry"], how = "left")
     scop2_fa_merged_subset = scop2_fa_merged_coglig[core_cols + scop2_fa_cols]
     scop2_fa_merged_subset.to_csv("scop2_fa_cognate_ligands.csv.gz", compression = "gzip")
-    
-
-    #find all bound ligands where domains are all from the same chain, as contigs and af structures are not multichain (yet!) - data to be used for domain interaction tools.
-    cath_assembly_chain_grouped = cath_domains.groupby('uniqueID')['chainUniqueID'].nunique().reset_index()
-    cath_assembly_chain_grouped_filtered = cath_assembly_chain_grouped[cath_assembly_chain_grouped['chainUniqueID'] == 1]['uniqueID']
-    cath_single_chain = cath_domains[cath_domains['uniqueID'].isin(cath_assembly_chain_grouped_filtered)].copy()
-    cath_single_chain_exploded = cath_single_chain.explode("pdb_ec_list")
-    cath_single_chain_merged = cath_single_chain_exploded.merge(scores_max, left_on = ["ligand_uniqueID", "ec_list"], right_on = ["pdb_ligand", "ec"], how = "left") #we use a left merge, and transfer pdb ligands. When there is a cognate match we are able to make this annotation, if not we can provide the pdb ligand. 
-    cath_merged_nonminor = cath_single_chain_merged.loc[cath_single_chain_merged.domain_ownership != "minor"].copy()
-    cath_merged_nonminor["combined_interaction"] = cath_merged_nonminor["cath_code"] + ":" + cath_merged_nonminor["domain_ownership"]
-    cath_merged_nonminor["cath_segments_dict"] = cath_merged_nonminor.cath_segments_dict.apply(eval)
-    cath_merged_nonminor["cath_min_start"] = cath_merged_nonminor["cath_segments_dict"].apply(lambda x: min([int(re.search(r"START=([-+\d]+)", y.get("SRANGE")).group(1)) for y in x]))
-    cath_merged_nonminor_subset = cath_merged_nonminor[["pdb_id", "uniqueID", "hetCode", "pdb_ligand", "cognate_ligand", "combined_interaction"]].groupby(["pdb_id", "uniqueID", "hetCode", "pdb_ligand", "cognate_ligand"]).agg({"combined_interaction":list}).reset_index()#.head(10).T[10:]#[[""]]
-    cath_merged_nonminor_subset["combined_interaction"] = cath_merged_nonminor_subset["combined_interaction"].str.join(";")
-    cath_merged_nonminor_subset.to_csv("cath_single_chain_domain_interactions.tsv.gz", index = False, sep = "\t")
 
 if __name__ == "__main__":
     main()
