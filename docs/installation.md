@@ -60,7 +60,8 @@ Installation instructions for running the database on bare metal, rather than Do
 
     ``` bash
     git clone bashton-lab/ProCogGraph
-    wget https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -O /PATH/TO/DATABASE_FLAT_FILES
+    curl https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -o /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
+    unzip /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
     ```
 
 2. Download and install Neo4j community edition from the [Neo4j website](https://neo4j.com/download/). The database was built using Neo4j version 5.
