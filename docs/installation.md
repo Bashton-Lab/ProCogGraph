@@ -9,7 +9,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 2. Clone the ProCogGraph repository:
 
     ``` bash
-    git clone m-crown/ProCogGraph
+    git clone bashton-lab/ProCogGraph
     cd ProCogGraph
     ```
 
@@ -32,13 +32,13 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
 4. Run the build command:
 
     ``` bash
-    docker compose -f docker-compose-build.yml up
+    docker compose -f compose-build.yml up
     ```
 
 5. Run the database:
 
     ``` bash
-    docker compose -f docker-compose-run.yml up
+    docker compose -f compose-run.yml up
     ```
 
     After running the Docker Compose script, three containers are started, one for the Neo4j database, one for the NeoDash dashboard and an Nginx server which serves the iframe visualisations available within the dashboard. The database can be accessed by navigating to `http://localhost:7474` in a web browser to access the neo4j browser tool or connecting to ProCogDash via [localhost:5005](http://localhost:5005/). The compose-run.yml file can be modified to specify memory allocation for the Neo4j database, which can be adjusted as necessary for your system. Currently, these are not set by the install script, and so will operate with the memory configured in docker. To adjust these parameters add the following lines to the environment section of the compose_run.yaml file:
@@ -59,7 +59,7 @@ Installation instructions for running the database on bare metal, rather than Do
 1. Download the latest database flat files from Zenodo [here](https://zenodo.org/records/13165852) and clone the ProCogGraph repository:
 
     ``` bash
-    git clone m-crown/ProCogGraph
+    git clone bashton-lab/ProCogGraph
     wget https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -O /PATH/TO/DATABASE_FLAT_FILES
     ```
 
