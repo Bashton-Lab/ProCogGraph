@@ -59,7 +59,7 @@ Installation instructions for running the database on bare metal, rather than Do
 1. Download the latest database flat files from Zenodo [here](https://zenodo.org/records/13165852) and clone the ProCogGraph repository:
 
     ``` bash
-    git clone bashton-lab/ProCogGraph
+    git clone Bashton-Lab/ProCogGraph
     curl https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -o /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
     unzip /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
     ```
