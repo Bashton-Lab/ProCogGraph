@@ -24,7 +24,7 @@ To learn more, check out the ProCogGraph preprint on bioRxiv [here](LINKHEREWHEN
 
 ## Quick Start
 
-ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. To get started, the easiest method, described below, is to run ProCogGraph in a Docker container - for installation instructions for the database on bare metal, and for running the Nextflow pipeline see the [installation](docs/installation.md) guide.
+ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. To get started, the easiest method, described below, is to run ProCogGraph in a Docker container - for installation instructions for the database on bare metal, and for running the Nextflow pipeline see the [installation](docs/installation.md) guide. NOTE: Currently, the NeoDash Docker image does not contain a build for arm based Mac devices. There is an [open issue](https://github.com/neo4j-labs/neodash/issues/754) in NeoDash related to this, and until it is fixed by the developers, ProCogGraph cannot be setup via Docker on arm-based Mac devices.   Therefore execution of Docker steps is limited to x86 Mac devices. ProCogGraph can still be installed directly on arm-based Mac devices by following the steps in the [installation](docs/installation.md) guide and using the web-hosted (by Neo4j) NeoDash web app.
 
 1. Download and install Docker from the [Docker website](https://www.docker.com/get-started)
 
@@ -55,7 +55,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Linux/MACOS:
 
     ``` bash
-    docker compose -f docker-compose-build.yml up
+    docker compose -f compose-build.yml up
     ```
 
     Windows:
@@ -68,7 +68,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Linux/MACOS:
 
     ``` bash
-    docker compose -f docker-compose-run.yml up
+    docker compose -f compose-run.yml up
     ```
 
     Windows:
@@ -94,7 +94,7 @@ ProCogGraph is both a pipeline for analysis of structures and a database of cogn
     Linux/MACOS:
 
     ``` bash
-    docker compose -f docker-compose-run.yml down
+    docker compose -f compose-run.yml down
     ```
 
     Windows:
