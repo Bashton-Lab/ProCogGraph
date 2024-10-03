@@ -12,7 +12,7 @@ cd neo4j_docker/import
 
 # Download the zenodo database flat zip.
 ZENODO_URL="https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1"
-wget "${ZENODO_URL}"
+curl "${ZENODO_URL}" -o procoggraph_flat_files_v1-0.zip
 
 # Unzip the database flat files into the import directory, to be used by the import script.
 unzip procoggraph_flat_files_v1-0.zip
@@ -54,12 +54,12 @@ services:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/data:/data
-      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/logs:/logs
-      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/conf:/conf
-      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/plugins:/plugins
-      - /Users/matthewcrown/GitHub/ProCogGraph/neo4j_docker/import:/var/lib/neo4j/import
-      - /Users/matthewcrown/GitHub/ProCogGraph/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
+      - ${NEO4J_DOCKER_DIR}/data:/data
+      - ${NEO4J_DOCKER_DIR}/logs:/logs
+      - ${NEO4J_DOCKER_DIR}/conf:/conf
+      - ${NEO4J_DOCKER_DIR}/plugins:/plugins
+      - ${NEO4J_DOCKER_DIR}/import:/var/lib/neo4j/import
+      - ${PROCOGGRAPH_REPOSITORY}/nextflow/bin/import_neo4j_data.sh:/import_neo4j_data.sh
     environment:
       - NEO4J_PLUGINS=["apoc"]
       - NEO4J_AUTH=neo4j/procoggraph
@@ -70,8 +70,8 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /Users/matthewcrown/GitHub/ProCogGraph/procogdash:/usr/share/nginx/html:ro
+      - ${PROCOGGRAPH_REPOSITORY}/procogdash/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${PROCOGGRAPH_REPOSITORY}/procogdash:/usr/share/nginx/html:ro
 
   neodash:
     image: neo4jlabs/neodash
