@@ -20,7 +20,21 @@ A graph based cognate ligand-domain interaction database for exploring and minin
 
 ProCogGraph is a graph database which maps domains - cognate ligand interactions in enzyme structures in the PDBe. The database builds upon principles originally described by Bashton et al. in the PROCOGNATE database, and expands upon this database by expanding the domain databases used, including a wider range of cognate ligands, and updating the domain-ligand interaction mode and ligand similarity scoring methods.
 
-To learn more, check out the ProCogGraph preprint on bioRxiv [here](LINKHEREWHENSUBMITTED).
+To learn more, check out the ProCogGraph preprint on bioRxiv [here](https://www.biorxiv.org/content/10.1101/2024.08.08.607191v1).
+
+## Demo Mode
+
+To facilitate understanding of the types of data available in ProCogGraph, a demo database is available to access online. This database can be accessed from the [NeoDash](http://neodash.graphapp.io/) web app. You will need to download the `dashboard_remote.json` file from the `procogdash` directory, or copy its contents, in order to use this mode. To access the  database, navigate to the [NeoDash](http://neodash.graphapp.io/) site and use the following parameters on the splash screen:
+
+- Protocol: `neo4j+s`
+- Hostname: `neo4j+s://4135bfe1.databases.neo4j.io`
+- Port: `7687`
+- Username: `neo4j`
+- Password: `hSIIDVT4T8KDFMHYuDSoxKovBSiKk5xlSSZhv8n4TfQ`
+
+Once connected, you can import the dashboard by clicking the expand menu icon in the bottom left of the screen, and selecting the `+` icon in the top right of this menu. Here, you have the option to import a dashboard, either by pasting the code from the `dashboard_remote.json` file or uploading it as a file. This will load the dashboard into the NeoDash web app, allowing you to explore the database.
+
+A video walkthrough of this process, and the features of the dashboard, is available [here](https://www.youtube.com/watch?v=qObmQNvKPnw).
 
 ## Quick Start
 
