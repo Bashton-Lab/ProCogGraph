@@ -104,8 +104,8 @@ def main():
 
     cath_domains = pd.read_csv(f"{args.cath_domain_ownership}", na_values = ["NaN", "None"], keep_default_na = False, dtype = {"bound_ligand_residue_interactions":"str", "bound_entity_pdb_residues": "str", "cath_architecture": "str", "cath_class": "str", "cath_topology": "str", "cath_homologous_superfamily": "str"}, sep = "\t")
 
-    cath_domains_for_demo = cath_domains.pdb_id.sample(n = 1000, random_state = 42)
-
+    cath_domains_for_demo = cath_domains.pdb_id.sample(n = 2000, random_state = 42).values.tolist()
+    cath_domains_for_demo = cath_domains_for_demo + ["1knd", "1bh5", "2jbs", "1buc", "2vno", "4qo8", "4bv6", "4fdc"] #add paper structures manually
     cath_domains = cath_domains.loc[cath_domains.pdb_id.isin(cath_domains_for_demo)]
 
 

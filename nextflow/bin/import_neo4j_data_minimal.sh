@@ -26,7 +26,6 @@ bin/neo4j-admin database import full \
 --relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_homology_rels.tsv.gz \
 --nodes=cathHomologousSuperfamily=import/cath_homologous_superfamily_nodes.tsv.gz \
 --relationships=IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY=import/cath_homologous_superfamily_domain_rels.tsv.gz \
---relationships=IS_IN_CATH_TOPOLOGY=import/cath_topology_domain_rels.tsv.gz \
 --relationships=INTERACTS_WITH_LIGAND=import/cath_domain_ligand_interactions.tsv.gz \
 --nodes=entry=import/pdb_entry_nodes.tsv.gz \
 --nodes=proteinChain=import/pdb_protein_chain_nodes.tsv.gz \

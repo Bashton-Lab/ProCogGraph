@@ -36,6 +36,8 @@ Once connected, you can import the dashboard by clicking the expand menu icon in
 
 A video walkthrough of this process, and the features of the dashboard, is available [here](https://www.youtube.com/watch?v=qObmQNvKPnw).
 
+Additionally, should the free hosted version of the demo database be unavailable, the dump file for this database is available in this repo (`neo4j_demo.dump`), and can be imported into a local or cloud instance of Neo4j following the instructions available at the [Neo4j website](https://neo4j.com).
+
 ## Quick Start
 
 ProCogGraph is both a pipeline for analysis of structures and a database of cognate ligand-domain mappings. To get started, the easiest method, described below, is to run ProCogGraph in a Docker container - for installation instructions for the database on bare metal, and for running the Nextflow pipeline see the [installation](docs/installation.md) guide. As part of the installation process, the latest flat files are downloaded from Zenodo. These files are currently 175.9 MB, and so the download may take some time depending on your internet connection. The total size of the database once built is approximately 4GB - ensure you have sufficient disk space available before beginning the install.
