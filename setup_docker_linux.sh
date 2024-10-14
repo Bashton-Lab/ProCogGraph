@@ -11,11 +11,11 @@ mkdir -p neo4j_docker/import
 cd neo4j_docker/import
 
 # Download the zenodo database flat zip.
-ZENODO_URL="https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1"
-curl "${ZENODO_URL}" -o procoggraph_flat_files_v1-0.zip
+ZENODO_URL="https://zenodo.org/records/13929716/files/procoggraph_flat_files_v1-0-1.zip?download=1"
+curl "${ZENODO_URL}" -o procoggraph_flat_files_v1-0-1.zip
 
 # Unzip the database flat files into the import directory, to be used by the import script.
-unzip procoggraph_flat_files_v1-0.zip
+unzip procoggraph_flat_files_v1-0-1.zip
 cd ../../
 
 # Specify fully qualified paths for building the compose yaml file (required for running docker volumes).

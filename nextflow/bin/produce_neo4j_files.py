@@ -150,11 +150,11 @@ def main():
     protein_ec_rels.rename(columns = {"pdbProteinChain:ID(pdbp-id)": ":START_ID(pdbp-id)", "ecList:string[]": ":END_ID(ec-id)"}, inplace = True)
     protein_ec_rels.to_csv(f"protein_ec_rels.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
-    scop_domains_nodes = scop_domains[["domain_accession", "assembly_chain_id_protein", "scop_id", "dm_description", "sccs", "domain_sunid", 'domain_type']].drop_duplicates()
+    scop_domains_nodes = scop_domains[["domain_accession", "assembly_chain_id_protein", "scop_id", "dm_description", "sccs", "domain_sunid", 'domain_type', "sf_id", "sf_description"]].drop_duplicates()
     scop_domains_nodes["type"] = "SCOP"
     scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
     scop_domains_nodes[":LABEL"] = scop_domains_nodes["type"] + "|domain"
-    scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource"}, inplace = True)
+    scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource", "sf_id": "group", "sf_description": "group_description"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     _, _ ,scop_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
