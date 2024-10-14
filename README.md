@@ -11,6 +11,7 @@ A graph based cognate ligand-domain interaction database for exploring and minin
 - [Database Schema](#database-schema)
 - [Dashboard](#dashboard)
 - [Custom Queries](#custom-queries)
+- [Tutorial](#tutorial)
 - [Database Information](#database-information)
   - [Cognate Ligands](#cognate-ligands)
   - [Domains](#domains)
