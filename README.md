@@ -194,6 +194,9 @@ Custom queries can be executed using the Cypher query language in the Neo4j brow
 MATCH (pc)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity) WHERE "3.2.1.1" in pc.ecList and int.interactionMode = "exclusive"
 RETURN *
 ```
+## Tutorial
+
+A [tutorial](docs/tutorial.md) with a walkthrough of some of these features is available in the [docs](docs/) directory.
 
 ## Database Information
 
