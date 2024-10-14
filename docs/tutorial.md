@@ -1,6 +1,6 @@
 # ProCogGraph Tutorial
 
-By following this tutorial, you should be able to familiarise yourself with the way of navigating the ProCogGraph NeoDash interface, and explore its main features. The tutorial makes use of the search tab, the second tab in the interface; here there are various boxes which can be used to search for different entities within the graph. In each case when a match is found matching hits are displayed to the right of the search box, pressing on these blue links will then take you to other tabs in the interface.
+By following this tutorial, you should be able to familiarise yourself with the way of navigating the ProCogGraph NeoDash interface, and explore its main features. The tutorial makes use of the search tab, the second tab in the interface, here there are various boxes which can be used to search for different entities within the graph. In each case when a match is found matching hits are displayed to the right of the search box, pressing on these blue links will then take you to other tabs in the interface.
 
 1. First, we need to log-on to ProCogGraph, point a web browser at: 
    [http://procoggraphprod.uksouth.cloudapp.azure.com:5005/](http://procoggraphprod.uksouth.cloudapp.azure.com:5005/)
