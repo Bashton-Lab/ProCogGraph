@@ -87,7 +87,7 @@
         {
           "id": "33fab934-95f4-4083-9e10-bd30ecc3318e",
           "title": "Domain Results",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nCALL apoc.case([\n      $neodash_domain_type = \"SCOP\", 'MATCH (d: scopDomain)-[:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]->(ssf:scopSuperfamily {scopSuperfamily: neodash_domain_group}) RETURN ssf.scopSuperfamily + \" (\" + ssf.description + \")\" as ssf_desc, \"Superfamily\" as group_level, ssf.description as ssf_id',\n      $neodash_domain_type = \"CATH\", 'MATCH (d: cathDomain)-[:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ch:cathHomologousSuperfamily {cathHomologousSuperfamily: neodash_domain_group}) RETURN ch.cathHomologousSuperfamily + \" (\" + ch.description + \")\" as ssf_desc, \"Superfamily\" as group_level, ch.cathHomologousSuperfamily as ssf_id',\n      $neodash_domain_type = \"Pfam\", 'MATCH (d:pfamDomain {group: neodash_domain_group}) RETURN d.group_description  as ssf_desc, \"Family\" as group_level, d.group as ssf_id',\n      $neodash_domain_type = \"Superfamily\", 'MATCH (d: superfamilyDomain {group:neodash_domain_group}) RETURN d.superfamilyAccession + \" (\" + d.description + \")\" as ssf_desc, \"Superfamily\" as group_level, d.superfamilyAccession as ssf_id',\n      $neodash_domain_type = \"Gene3D\", 'MATCH (d:gene3dDomain {group:neodash_domain_group}) RETURN d.group_description as ssf_desc, cognate_ligand_count, \"Superfamily\" as group_level, d.gene3dAccession as ssf_id',\n      $neodash_domain_type = \"SCOP2-SF\", 'MATCH (d:scop2SfDomain {group: neodash_domain_group}) RETURN ssf.scop2Superfamily + \" (\" + ssf.description + \")\" as ssf_desc, ssf.description as description, d.domain as domain, d.url as url, \"Superfamily\" as group_level, ssf.scop2Superfamily as ssf_id',\n      $neodash_domain_type = \"SCOP2-FA\", 'MATCH (d:scop2FaDomain {group: neodash_domain_group}) RETURN ssf.scop2Family + \" (\" + ssf.description + \")\" as ssf_desc,  ssf.description as description, \"Family\" as group_level, ssf.scop2Family as ssf_id'],\n'RETURN NULL', {cognate_options:cognate_options, neodash_domain_group:$neodash_domain_group}) YIELD value \nWITH value.ssf_desc as Superfamily, value.group_level as group_level, value.ssf_id as ssf_id\nRETURN DISTINCT ssf_id as Accession, Superfamily as __superfamily_desc, group_level as __group_level, ssf_id as __ssf_id \nLIMIT 1000",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nCALL apoc.case([\n      $neodash_domain_type = \"SCOP\", 'MATCH (d: scopDomain)-[:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]->(ssf:scopSuperfamily {scopSuperfamily: neodash_domain_group}) RETURN ssf.scopSuperfamily + \" (\" + ssf.description + \")\" as ssf_desc, \"Superfamily\" as group_level, ssf.description as ssf_id',\n      $neodash_domain_type = \"CATH\", 'MATCH (d: cathDomain)-[:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ch:cathHomologousSuperfamily {cathHomologousSuperfamily: neodash_domain_group}) RETURN ch.cathHomologousSuperfamily + \" (\" + ch.description + \")\" as ssf_desc, \"Superfamily\" as group_level, ch.cathHomologousSuperfamily as ssf_id',\n      $neodash_domain_type = \"Pfam\", 'MATCH (d:pfamDomain {group: neodash_domain_group}) RETURN d.group_description  as ssf_desc, \"Family\" as group_level, d.group as ssf_id',\n      $neodash_domain_type = \"Superfamily\", 'MATCH (d: superfamilyDomain {group:neodash_domain_group}) RETURN d.superfamilyAccession + \" (\" + d.description + \")\" as ssf_desc, \"Superfamily\" as group_level, d.superfamilyAccession as ssf_id',\n      $neodash_domain_type = \"Gene3D\", 'MATCH (d:gene3dDomain {group:neodash_domain_group}) RETURN d.group_description as ssf_desc, cognate_ligand_count, \"Superfamily\" as group_level, d.gene3dAccession as ssf_id',\n      $neodash_domain_type = \"SCOP2-SF\", 'MATCH (d:scop2SfDomain {group: neodash_domain_group}) RETURN d.scop2Superfamily + \" (\" + d.description + \")\" as ssf_desc, d.description as description, \"Superfamily\" as group_level, d.scop2Superfamily as ssf_id',\n      $neodash_domain_type = \"SCOP2-FA\", 'MATCH (d:scop2FaDomain {group: neodash_domain_group}) RETURN d.scop2Family + \" (\" + d.description + \")\" as ssf_desc,  d.description as description, \"Family\" as group_level, d.scop2Family as ssf_id'],\n'RETURN NULL', {cognate_options:cognate_options, neodash_domain_group:$neodash_domain_group}) YIELD value \nWITH value.ssf_desc as Superfamily, value.group_level as group_level, value.ssf_id as ssf_id\nRETURN DISTINCT ssf_id as Accession, Superfamily as __superfamily_desc, group_level as __group_level, ssf_id as __ssf_id \nLIMIT 1000",
           "width": 4,
           "height": 2,
           "x": 4,
@@ -449,7 +449,7 @@
         {
           "id": "675dc5a8-ee7e-4058-a359-fa325a9dda75",
           "title": "PDB Results",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH $neodash_entry_pdbentry AS searchString, cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE toUpper(a.pdbEntry) CONTAINS toUpper(searchString)\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH $neodash_entry_pdbentry AS searchString, cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE toUpper(a.pdbEntry) CONTAINS toUpper(searchString)\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 2,
           "x": 4,
@@ -527,6 +527,13 @@
                 "value": "__bd_count",
                 "customization": "set variable",
                 "customizationValue": "bd_count"
+              },
+              {
+                "condition": "Click",
+                "field": "",
+                "value": "__d_domain",
+                "customization": "set variable",
+                "customizationValue": "d_domain"
               }
             ],
             "fullscreenEnabled": true
@@ -671,7 +678,7 @@
         {
           "id": "8d02a5b7-729d-488c-9f10-972225bc273e",
           "title": "`$neodash_pdb_properties['pdbEntry']` Structure Summary",
-          "query": "**Title**: `$neodash_pdb_properties[\"title\"]`  \n**Description**: `$neodash_pdb_properties[\"description\"]`  \n**Keywords**: `$neodash_pdb_properties[\"keywords\"]`  \n**View structure:** [PDBe](https://www.ebi.ac.uk/pdbe/entry/pdb/`$neodash_pdb_properties[\"pdbEntry\"]`)  \n**Num Domains:** $neodash_d_count $neodash_domain_type domain(s)  \n**Num Bound Entities:** $neodash_be_count ($neodash_bd_count unique)  \n**Num Cognate Ligands:** $neodash_bl_count ($neodash_parity_score_cutoff cutoff)  \n&nbsp;  \nThe PDB structure has the following assigned EC class(es):  \n$neodash_pdb_ecs",
+          "query": "**Title**: `$neodash_pdb_properties[\"title\"]`  \n**Description**: `$neodash_pdb_properties[\"description\"]`  \n**Keywords**: `$neodash_pdb_properties[\"keywords\"]`  \n**View structure:** [PDBe](https://www.ebi.ac.uk/pdbe/entry/pdb/`$neodash_pdb_properties[\"pdbEntry\"]`)  \n**Num Domains:** $neodash_d_count $neodash_domain_type domain(s):  \n$neodash_d_domain  \n**Num Bound Entities:** $neodash_be_count ($neodash_bd_count unique)  \n**Num Cognate Ligands:** $neodash_bl_count ($neodash_parity_score_cutoff cutoff)  \n&nbsp;  \nThe PDB structure has the following assigned EC class(es):  \n$neodash_pdb_ecs",
           "width": 9,
           "height": 4,
           "x": 0,
@@ -983,7 +990,7 @@
         {
           "id": "dfaa924e-560e-4691-b77f-2645433bb207",
           "title": "$neodash_group_level $neodash_domain_superfamily_id Report",
-          "query": "The domain summaries listed here provide information for $neodash_domain_desc ($neodash_domain_superfamily_id) at $neodash_parity_score_cutoff PARITY score cutoff.  \n&nbsp;  \nThe following tables breakdown the cognate ligands domains within the $neodash_group_level interact with - see Group Interactions table. Click on a cognate ligand in this table to see a list of PDBs containing the domain and cognate ligand.  \nthe context of the interactions that occur (Domain Context table).  \n&nbsp;  \nOften, the number of cognate ligands for a combinatorial interaction will exceed the table size. To view the full set of results, download the table with the button in the bottom right corner.",
+          "query": "The domain summaries listed here provide information for **`$neodash_domain_desc`** ($neodash_domain_superfamily_id) at $neodash_parity_score_cutoff PARITY score cutoff.  \n&nbsp;  \nThe following tables breakdown the cognate ligands domains within the $neodash_group_level interact with - see Group Interactions table. Click on a cognate ligand in this table to see a list of PDBs containing the domain and cognate ligand.  \nthe context of the interactions that occur (Domain Context table).  \n&nbsp;  \nOften, the number of cognate ligands for a combinatorial interaction will exceed the table size. To view the full set of results, download the table with the button in the bottom right corner.",
           "width": 7,
           "height": 4,
           "x": 3,
@@ -998,7 +1005,7 @@
         {
           "id": "54a41ff2-c380-4f91-96a8-0ccecef93966",
           "title": "$neodash_group_level Interactions",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nCALL apoc.case([\n  $neodash_domain_type = \"Pfam\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:pfamDomain {group: neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scopDomain)-[rel:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]-(ssf:scopSuperfamily {scopSuperfamily: neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count', \n  $neodash_domain_type= \"CATH\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:cathDomain)-[rel:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ssf:cathHomologousSuperfamily {cathHomologousSuperfamily : neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"Superfamily\", 'MATCH (d:superfamilyDomain {group: neodash_domain_group})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"Gene3D\", 'MATCH (d:gene3dDomain {group: neodash_domain_group})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP2-SF\", 'MATCH (ssf:scop2Superfamily {scop2Superfamily: neodash_domain_group}<-[:IS_IN_SCOP2_SUPERFAMILY]-(d:scop2sfDomain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.scop2Superfamily as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP2-FA\", 'MATCH (ssf:scop2Family {scop2Family: neodash_domain_group})<-[:IS_IN_SCOP2_FAMILY]-(d:scop2faDomain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.scop2Family as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count'],\n'RETURN NULL', {neodash_domain_type: $neodash_domain_type, parity_cutoff: $neodash_parity_score_cutoff, cognate_options: cognate_options, neodash_domain_group: $neodash_domain_group}) YIELD value\nWITH value.CognateLigandName[0] as `Cognate Ligand Name`, value.CognateLigandUID as CognateLigandUID, value.ssf_desc as Superfamily, value.domain_count as __domains\nRETURN `Cognate Ligand Name`, __domains,  CognateLigandUID as __buniqueid ORDER BY __domains DESC",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nCALL apoc.case([\n  $neodash_domain_type = \"Pfam\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:pfamDomain {group: neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scopDomain)-[rel:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]-(ssf:scopSuperfamily {scopSuperfamily: neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count', \n  $neodash_domain_type= \"CATH\", 'MATCH (bl:cognateLigand)<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:cathDomain)-[rel:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ssf:cathHomologousSuperfamily {cathHomologousSuperfamily : neodash_domain_group}) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"Superfamily\", 'MATCH (d:superfamilyDomain {group: neodash_domain_group})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"Gene3D\", 'MATCH (d:gene3dDomain {group: neodash_domain_group})-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, d.description as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP2-SF\", 'MATCH (ssf:scop2Superfamily {scop2Superfamily: neodash_domain_group})<-[:IS_IN_SCOP2_SUPERFAMILY]-(d:scop2sfDomain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.scop2Superfamily as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count',\n  $neodash_domain_type = \"SCOP2-FA\", 'MATCH (ssf:scop2Family {scop2Family: neodash_domain_group})<-[:IS_IN_SCOP2_FAMILY]-(d:scop2faDomain)-[int:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[sim:HAS_SIMILARITY]->(bl:cognateLigand) WHERE sim.parityScore >= toFloat(parity_cutoff) AND sim.bestCognate in cognate_options RETURN DISTINCT bl.name as CognateLigandName, bl.uniqueID as CognateLigandUID, ssf.scop2Family as ssf_desc, SIZE(COLLECT(DISTINCT(d.domain))) as domain_count'],\n'RETURN NULL', {neodash_domain_type: $neodash_domain_type, parity_cutoff: $neodash_parity_score_cutoff, cognate_options: cognate_options, neodash_domain_group: $neodash_domain_group}) YIELD value\nWITH value.CognateLigandName[0] as `Cognate Ligand Name`, value.CognateLigandUID as CognateLigandUID, value.ssf_desc as Superfamily, value.domain_count as __domains\nRETURN `Cognate Ligand Name`, __domains,  CognateLigandUID as __buniqueid ORDER BY __domains DESC",
           "width": 7,
           "height": 4,
           "x": 10,
@@ -1033,7 +1040,7 @@
         {
           "id": "8e27ca41-f7ae-4451-b349-d1d3d63a1674",
           "title": "CogLig PDBs",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nCALL apoc.case([\n  $neodash_domain_type = \"Pfam\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:pfamDomain {pfamAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options', \n  $neodash_domain_type = \"SCOP\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scopDomain)-[rel:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]-(ssf:scopSuperfamily {description : ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',  \n  $neodash_domain_type = \"CATH\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:cathDomain)-[rel:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ssf:cathHomologousSuperfamily {cathHomologousSuperfamily : ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"Gene3D\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:gene3dDomain {gene3dAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"Superfamily\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:superfamilyDomain {superfamilyAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"SCOP2-FA\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scop2faDomain)-[:IS_IN_SCOP2_FAMILY]->(ssf:scop2Family {scop2Family: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"SCOP2-SF\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scop2sfDomain)-[:IS_IN_SCOP2_SUPERFAMILY]->(ssf:scop2Superfamily {scop2Superfamily: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]-(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options'], \n'RETURN NULL as pdbEntry', {parity_score_cutoff: $neodash_parity_score_cutoff, ssf_desc: $neodash_domain_superfamily_id, cognate_ligand_id: $neodash_superfamily_cognate_ligand, cognate_options: cognate_options}) YIELD value\nWITH value.a as a, value.cognate_options as cognate_options\nMATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain {type : $neodash_domain_type})-[:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`,\"http://localhost:8080\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count ORDER BY `PDB ID` ASC",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nCALL apoc.case([\n  $neodash_domain_type = \"Pfam\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:pfamDomain {pfamAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options', \n  $neodash_domain_type = \"SCOP\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scopDomain)-[rel:IS_IN_SCOP_FAMILY]->(sf:scopFamily)-[:IS_IN_SCOP_SUPERFAMILY]-(ssf:scopSuperfamily {description : ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',  \n  $neodash_domain_type = \"CATH\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:cathDomain)-[rel:IS_IN_CATH_HOMOLOGOUS_SUPERFAMILY]->(ssf:cathHomologousSuperfamily {cathHomologousSuperfamily : ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"Gene3D\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:gene3dDomain {gene3dAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"Superfamily\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:superfamilyDomain {superfamilyAccession: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"SCOP2-FA\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scop2faDomain)-[:IS_IN_SCOP2_FAMILY]->(ssf:scop2Family {scop2Family: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options',\n  $neodash_domain_type = \"SCOP2-SF\", 'MATCH (b:cognateLigand {uniqueID: cognate_ligand_id})<-[sim:HAS_SIMILARITY]-(bl:boundEntity)<-[int:INTERACTS_WITH_LIGAND]-(d:scop2sfDomain)-[:IS_IN_SCOP2_SUPERFAMILY]->(ssf:scop2Superfamily {scop2Superfamily: ssf_desc}) WHERE sim.parityScore >= toFloat(parity_score_cutoff) AND sim.bestCognate in cognate_options WITH d, cognate_options MATCH (d)-[:IS_IN_PROTEIN_CHAIN]-(pc:proteinChain)-[:IS_IN_PDB]->(a:entry) RETURN DISTINCT a as a, cognate_options as cognate_options'], \n'RETURN NULL as pdbEntry', {parity_score_cutoff: $neodash_parity_score_cutoff, ssf_desc: $neodash_domain_superfamily_id, cognate_ligand_id: $neodash_superfamily_cognate_ligand, cognate_options: cognate_options}) YIELD value\nWITH value.a as a, value.cognate_options as cognate_options\nMATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain {type : $neodash_domain_type})-[:INTERACTS_WITH_LIGAND]->(be:boundEntity)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 4,
           "x": 17,
@@ -1105,6 +1112,13 @@
                 "value": "__iframe_header",
                 "customization": "set variable",
                 "customizationValue": "iframe_header"
+              },
+              {
+                "condition": "Click",
+                "field": "",
+                "value": "__d_domain",
+                "customization": "set variable",
+                "customizationValue": "d_domain"
               }
             ],
             "compact": true,
@@ -1148,7 +1162,7 @@
         {
           "id": "f05d3f5e-1266-45b1-bbc8-740b64e2a160",
           "title": "Interaction PDBs",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 6,
           "x": 17,
@@ -1226,9 +1240,17 @@
                 "value": "__bd_count",
                 "customization": "set variable",
                 "customizationValue": "bd_count"
+              },
+              {
+                "condition": "Click",
+                "field": "",
+                "value": "__d_domain",
+                "customization": "set variable",
+                "customizationValue": "d_domain"
               }
             ],
-            "noDataMessage": "Select a Combinatorial Interaction to list PDBs containing the interaction"
+            "noDataMessage": "Select a Combinatorial Interaction to list PDBs containing the interaction",
+            "fullscreenEnabled": true
           }
         }
       ]
@@ -1266,7 +1288,7 @@
         {
           "id": "3e0a189c-ddbe-4008-a21f-637e48b1616c",
           "title": "PDBs with CogLig",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nMATCH (bl:cognateLigand {uniqueID: toString($neodash_bl_query_unique_id)})<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[:INTERACTS_WITH_LIGAND]-(d:domain)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry)\nWHERE d.type = $neodash_domain_type AND sim.parityScore >= toFloat($neodash_parity_score_cutoff) AND sim.bestCognate in cognate_options\nWITH a, cognate_options\nLIMIT 1000\nMATCH (a)<-[:IS_IN_PDB]-(be:boundEntity)\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`,\"http://localhost:8080/procogdash/web/default.html\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nMATCH (bl:cognateLigand {uniqueID: toString($neodash_bl_query_unique_id)})<-[sim:HAS_SIMILARITY]-(be:boundEntity)<-[:INTERACTS_WITH_LIGAND]-(d:domain)-[:IS_IN_PROTEIN_CHAIN]->(pc:proteinChain)-[:IS_IN_PDB]->(a:entry)\nWHERE d.type = $neodash_domain_type AND sim.parityScore >= toFloat($neodash_parity_score_cutoff) AND sim.bestCognate in cognate_options\nWITH a, cognate_options\nLIMIT 1000\nMATCH (a)<-[:IS_IN_PDB]-(be:boundEntity)\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[:IS_IN_PROTEIN_CHAIN]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 4,
           "x": 6,
@@ -1515,7 +1537,7 @@
         {
           "id": "0949729c-239a-45f0-adb2-d46b49dcd673",
           "title": "Interaction PDBs",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_coglig_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_coglig_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 4,
           "x": 18,
@@ -1586,11 +1608,19 @@
                 "value": "__be_count",
                 "customization": "set variable",
                 "customizationValue": "be_count"
+              },
+              {
+                "condition": "Click",
+                "field": "",
+                "value": "__d_domain",
+                "customization": "set variable",
+                "customizationValue": "d_domain"
               }
             ],
             "compact": true,
             "noDataMessage": "Select a Combinatorial Interaction to see PDBs containing the interaction",
-            "wrapContent": true
+            "wrapContent": true,
+            "fullscreenEnabled": true
           },
           "schema": [],
           "database": "neo4j"
@@ -1603,7 +1633,7 @@
         {
           "id": "22e37cdd-39f7-4122-a2ef-4a5d59f551da",
           "title": "Interaction PDBs",
-          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_pdb_lig_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
+          "query": "CALL apoc.when($neodash_max_cognate = \"Best\", 'RETURN [\"Y\"] as cognate_options', 'RETURN [\"Y\", \"N\"] as cognate_options') YIELD value WITH value.cognate_options as cognate_options\nWITH cognate_options\nMATCH (be:boundEntity)-[:IS_IN_PDB]->(a:entry)\nWHERE a.pdbEntry in $neodash_pdb_lig_domint_entries\nOPTIONAL MATCH (a)<-[:IS_IN_PDB]-(pc:proteinChain)<-[]-(d:domain)\nWHERE d.type = $neodash_domain_type\nWITH *\nOPTIONAL MATCH (be)-[b:HAS_SIMILARITY]->(bl:cognateLigand)\nWHERE b.parityScore >= toFloat($neodash_parity_score_cutoff) AND b.bestCognate in cognate_options\nWITH count(distinct(d)) as d_count, count(distinct(be)) as be_count, a,count(distinct(bl)) as bl_count, count(distinct(be.ligandUniqueID)) as bd_count, apoc.text.join(collect(distinct(\"[\" + d.group + \": \" + d.group_description) + \"](\"+ d.url + \")\"), \"  \\n\") as d_domain, a.displayPDBECList as display_ec_list\nRETURN a.pdbEntry as `PDB ID`, \"http://localhost:8080/\" as __iframe, \"Viewer: Select a parity score or domain interaction to start\" as __iframe_header, d_domain as __d_domain, properties(a) as __pdb_properties, apoc.text.join([item in display_ec_list | \"* \" + item], \"  \\n\") as __ecs, bl_count as __bl_count, d_count as __d_count, be_count as __be_count, bd_count as __bd_count",
           "width": 4,
           "height": 5,
           "x": 20,
@@ -1675,6 +1705,13 @@
                 "value": "__bl_count",
                 "customization": "set variable",
                 "customizationValue": "bl_count"
+              },
+              {
+                "condition": "Click",
+                "field": "",
+                "value": "__d_domain",
+                "customization": "set variable",
+                "customizationValue": "d_domain"
               }
             ],
             "compact": true,
@@ -2287,106 +2324,30 @@
           "type": "graph",
           "selection": {
             "boundEntity": "(label)",
+            "cognateLigand": "name",
             "entry": "title",
             "domain": "name",
-            "cathDomain": "name",
-            "CATH": "assemblyChainID",
-            "cognateLigand": "name"
+            "SCOP": "name",
+            "scopDomain": "name",
+            "scopFamily": "(label)",
+            "scopSuperfamily": "(label)"
           },
           "settings": {},
           "schema": [
             [
-              "boundEntity",
-              "hetCode",
-              "boundLigandResidues",
+              "scopFamily",
+              "SCCS",
               "description",
-              "boundLigandStructChain",
-              "boundLigandChain",
-              "type",
-              "ecList",
-              "displayID",
-              "ligandUniqueID",
-              "uniqueID",
-              "boundMoleculeID"
+              "scopFamily"
             ],
             [
-              "IS_IN_PDB"
+              "IS_IN_SCOP_SUPERFAMILY"
             ],
             [
-              "entry",
-              "pdbECList",
-              "keywords",
-              "displayPDBECList",
-              "pdbEntry",
-              "title"
-            ],
-            [
-              "domain",
-              "domainSource",
-              "cathAccession",
-              "assemblyChainID",
-              "domain",
-              "name",
-              "type",
-              "group_description",
-              "url",
-              "group"
-            ],
-            [
-              "cathDomain",
-              "domainSource",
-              "cathAccession",
-              "assemblyChainID",
-              "domain",
-              "name",
-              "type",
-              "group_description",
-              "url",
-              "group"
-            ],
-            [
-              "CATH",
-              "domainSource",
-              "cathAccession",
-              "assemblyChainID",
-              "domain",
-              "name",
-              "type",
-              "group_description",
-              "url",
-              "group"
-            ],
-            [
-              "INTERACTS_WITH_LIGAND",
-              "ligandInterface",
-              "interactionMode",
-              "assembly_chain_id_protein",
-              "domainCovalentCounts",
-              "allProteinInterface",
-              "domainHbondPerc",
-              "domainContactPerc",
-              "domainContactCounts",
-              "domainHbondCounts",
-              "proteinInterface"
-            ],
-            [
-              "cognateLigand",
-              "ligandDB",
-              "compoundReactionIDs",
-              "isCofactor",
-              "name",
-              "canonicalSMILES",
-              "uniqueID"
-            ],
-            [
-              "HAS_SIMILARITY",
-              "parityScore",
-              "parityMatchPDB",
-              "subParityScore",
-              "paritySMARTS",
-              "ecList",
-              "parityMatchCognate",
-              "bestCognate"
+              "scopSuperfamily",
+              "scopSuperfamily",
+              "SCCS",
+              "description"
             ]
           ],
           "database": "neo4j"
