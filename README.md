@@ -7,6 +7,7 @@ A graph based cognate ligand-domain interaction database for exploring and minin
 ## Table of Contents
 
 - [Features](#features)
+- [Cloud Instance](#Cloud-Instance)
 - [Quick Start](#quick-start)
 - [Database Schema](#database-schema)
 - [Dashboard](#dashboard)
@@ -22,6 +23,10 @@ A graph based cognate ligand-domain interaction database for exploring and minin
 ProCogGraph is a graph database which maps domains - cognate ligand interactions in enzyme structures in the PDBe. The database builds upon principles originally described by Bashton et al. in the PROCOGNATE database, and expands upon this database by expanding the domain databases used, including a wider range of cognate ligands, and updating the domain-ligand interaction mode and ligand similarity scoring methods.
 
 To learn more, check out the ProCogGraph preprint on bioRxiv [here](https://www.biorxiv.org/content/10.1101/2024.08.08.607191v1).
+
+## Cloud Instance
+
+ProCogGraph is currently hosted at [http://procoggraphprod.uksouth.cloudapp.azure.com:5005/](http://procoggraphprod.uksouth.cloudapp.azure.com:5005/) (use password: `procoggraph`) althought we can't gurenty the longevity of this instnace long term. Which is why we created the demo mode and end user based installation options.
 
 ## Demo Mode
 
