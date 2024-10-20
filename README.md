@@ -26,7 +26,7 @@ To learn more, check out the ProCogGraph preprint on bioRxiv [here](https://www.
 
 ## Cloud Instance
 
-ProCogGraph is currently hosted at [http://procoggraphprod.uksouth.cloudapp.azure.com:5005/](http://procoggraphprod.uksouth.cloudapp.azure.com:5005/) (use password: `procoggraph`) althought we can't gurenty the longevity of this instnace long term. Which is why we created the demo mode and end user based installation options.
+ProCogGraph is currently hosted at [http://procoggraphprod.uksouth.cloudapp.azure.com:5005/](http://procoggraphprod.uksouth.cloudapp.azure.com:5005/) (use password: `procoggraph`) although we can't guarantee the longevity of this instance long term. Which is why we created the demo mode and end user based installation options.
 
 ## Demo Mode
 
