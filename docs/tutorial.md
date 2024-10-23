@@ -51,7 +51,7 @@ By following this tutorial, you should be able to familiarise yourself with the 
 
 5. What cognate ligands are here, and which are missing? (Lee cognate Ligand column in PDB Ligand Table)
 
-6. Which domains and residues in them share the binding of this ligand? 
+6. Which domains and residues in them share the binding of these ligands? 
 
 HINT: *Here you want to press on the blue box, with a percentage, in the Contact % column in the CATH Domain Interactions table in the PDB view, this will display the interaction between this domain and the ligand in the Interface view to the right. Note that residues from the domain in question are blue, those from other domains are purple. And that interacting residues for this domain are listed*.
 
