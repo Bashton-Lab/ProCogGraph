@@ -23,7 +23,7 @@ By following this tutorial, you should be able to familiarise yourself with the 
 
 **Question 2**: Look up PDB `2SCU` (*use Search tab and entre the value into PDB Search box, press on blue 1ldm in PDB results box to the left to be taken to the second tab*).
 
-- 1. What is this enzyme?
+1. What is this enzyme?
 
 2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme Query (in Search tab), and KEGG. 
 
