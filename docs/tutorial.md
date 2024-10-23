@@ -11,45 +11,43 @@ By following this tutorial, you should be able to familiarise yourself with the 
 
 1. What is this enzyme?
 
-2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme
+2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme Query (in Search tab), and KEGG. 
 
-3. Query (in Search tab), and KEGG. 
+3. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
 
-4. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
+4. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
 
-5. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
+5. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
 
-6. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
-
-7. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
+6. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
 
 **Question 2**: Look up PDB `2SCU` (*use Search tab and entre the value into PDB Search box, press on blue 1ldm in PDB results box to the left to be taken to the second tab*).
 
-- What is this enzyme?
+- 1. What is this enzyme?
 
-- What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme
+2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme Query (in Search tab), and KEGG. 
 
-- Query (in Search tab), and KEGG.
+3. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
 
-- What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
+4. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
 
-- What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
+5. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
 
-- What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
-
-- Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
+6. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
 
 **Question 3**: Look up PDB `1DLJ`
 
-- What is this enzyme?
+1. What is this enzyme?
 
-- What is this enzymes EC number? (See Summary box). Look this up in the Enzyme Query (in Search tab), and KEGG. 
+2. What is this enzymes EC number? (See Summary box).
 
-- What is bound to this enzyme in the PDB? (See PDB Ligand Table)
+3. Look this up in the Enzyme Query (in Search tab), and KEGG.
 
-- What cognate ligands are here, and which are missing? (Lee cognate Ligand column in PDB Ligand Table)
+4. What is bound to this enzyme in the PDB? (See PDB Ligand Table)
 
-- Which domains and residues in them share the binding of this ligand? 
+5. What cognate ligands are here, and which are missing? (Lee cognate Ligand column in PDB Ligand Table)
+
+6. Which domains and residues in them share the binding of this ligand? 
 
 HINT: *Here you want to press on the blue box, with a percentage, in the Contact % column in the CATH Domain Interactions table in the PDB view, this will display the interaction between this domain and the ligand in the Interface view to the right. Note that residues from the domain in question are blue, those from other domains are purple. And that interacting residues for this domain are listed*.
 
