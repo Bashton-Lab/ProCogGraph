@@ -11,29 +11,33 @@ By following this tutorial, you should be able to familiarise yourself with the 
 
 1. What is this enzyme?
 
-2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme Query (in Search tab), and KEGG. 
+2. What is this enzymes EC number? (*See Summary box*).
 
-3. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
+3. Look this up in the Enzyme Query (in Search tab), and KEGG. 
 
-4. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
+4. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
 
-5. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
+5. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
 
-6. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
+6. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
+
+7. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
 
 **Question 2**: Look up PDB `2SCU` (*use Search tab and entre the value into PDB Search box, press on blue 1ldm in PDB results box to the left to be taken to the second tab*).
 
 1. What is this enzyme?
 
-2. What is this enzymes EC number? (*See Summary box*). Look this up in the Enzyme Query (in Search tab), and KEGG. 
+2. What is this enzymes EC number? (*See Summary box*).
 
-3. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
+3. Look this up in the Enzyme Query (in Search tab), and KEGG. 
 
-4. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
+4. What is bound to this enzyme in the PDB? (*See PDB Ligand Table*)
 
-5. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
+5. What cognate ligands are here, and which are missing? (*See cognate Ligand column in PDB Ligand Table*)
 
-6. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
+6. What is bound in their place? (*See the Het Code column, Het codes are the native PDB ligand codes*)
+
+7. Press the Score button in the PDB Ligand table to visualise the atoms in the match, which have changed?
 
 **Question 3**: Look up PDB `1DLJ`
 
