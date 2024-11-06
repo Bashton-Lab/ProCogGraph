@@ -154,14 +154,14 @@ def main():
     scop_domains_nodes["type"] = "SCOP"
     scop_domains_nodes["url"] = "https://scop.berkeley.edu/sunid=" + scop_domains_nodes["domain_sunid"].astype("str") + "&ver=1.75"
     scop_domains_nodes[":LABEL"] = scop_domains_nodes["type"] + "|domain"
-    scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "SCCS", "domain_sunid": "domainSUNID", 'domain_type': "domainSource", "sf_id": "group", "sf_description": "group_description"}, inplace = True)
+    scop_domains_nodes.rename(columns = {"assembly_chain_id_protein": "assemblyChainID", "domain_accession": "domain:ID(scop-domain-id)", "scop_id": "scopAccession", "dm_description": "name", "sccs": "group", "domain_sunid": "domainSUNID", 'domain_type': "domainSource", "sf_description": "group_description"}, inplace = True)
     scop_domains_nodes.to_csv(f"scop_domains_nodes.tsv.gz", compression = "gzip", sep = "\t", index = False)
 
     _, _ ,scop_descriptions = get_scop2_domains_info(args.scop2_domains_info_file, args.scop2_descriptions_file)
 
     scop2_fa_domains_nodes = scop2_fa_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
     scop2_fa_domains_nodes["group"] = scop2_fa_domains_nodes["SCOPCLA"].str.extract("FA=(.*)") #use the first FA in the list as the group
-    scop2_fa_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
+    scop2_fa_domains_nodes = scop2_fa_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
     scop2_fa_domains_nodes["type"] = "SCOP2-FA"
     scop2_fa_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_fa_domains_nodes["xref_db_acc"].astype("str")
     scop2_fa_domains_nodes[":LABEL"] = scop2_fa_domains_nodes["type"] + "|domain"
@@ -170,7 +170,7 @@ def main():
 
     scop2_sf_domains_nodes = scop2_sf_domains[["domain_accession", "assembly_chain_id_protein", "xref_db_acc", 'domain_type', 'derived_from', 'SCOPCLA']].drop_duplicates()
     scop2_sf_domains_nodes["group"] = scop2_sf_domains_nodes["SCOPCLA"].str.extract("SF=(.*)") #use the first SF in the list as the group
-    scop2_sf_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
+    scop2_sf_domains_nodes = scop2_sf_domains_nodes.merge(scop_descriptions[["NODE_ID", "NODE_NAME"]], how = "left", left_on = "group", right_on = "NODE_ID").rename(columns = {"NODE_NAME": "group_description"}).drop(columns = ["NODE_ID"])
     scop2_sf_domains_nodes["type"] = "SCOP2-SF"
     scop2_sf_domains_nodes["url"] = "https://www.ebi.ac.uk/pdbe/scop/term/" + scop2_sf_domains_nodes["xref_db_acc"].astype("str")
     scop2_sf_domains_nodes[":LABEL"] = scop2_sf_domains_nodes["type"] + "|domain"
