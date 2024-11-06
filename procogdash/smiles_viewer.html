@@ -125,7 +125,7 @@
               titleDiv = document.createElement('div');
               titleDiv.setAttribute( "class", "col d-flex justify-content-center" );
               titleDiv.id = reactionId + "_title";
-              titleDiv.innerHTML = index + ". RHEA:"+reactionId;
+              titleDiv.innerHTML = `${index}. <a href="https://www.rhea-db.org/rhea/${reactionId}" target="_blank">RHEA:${reactionId}</a>`;
               reactionContainer.appendChild(titleDiv);
               let i = 1
               console.log(i);
