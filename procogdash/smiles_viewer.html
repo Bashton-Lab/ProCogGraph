@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" name="viewport" content="width=device-width, initial-scale=1">
+    <title>RDKit Viewer</title>
+    <!-- Load the RDKit JS file -->
+    <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
+    <script>
+      var dataArray;
+      function generateSVG(data_array, mol_smiles_key = "bl_smiles", mol_name_key = "" , mol_atoms_key = "parity_bl", mol_smarts_key, dest_id = "cognate_ligand_output") {
+        // Check if RDKitModule is defined
+        console.log(data_array)
+        if (window.RDKitModule) {
+          var dest = document.getElementById(dest_id);
+          // Convert the SMILES string to a molecule object
+          var mol_smiles = data_array[mol_smiles_key];
+          var mol = window.RDKitModule.get_mol(data_array[mol_smiles_key]);
+          var mdetails = {};
+          
+          if (data_array[mol_atoms_key] && data_array[mol_atoms_key].length > 0) {
+            mdetails['atoms']=data_array[mol_atoms_key];
+            } else if (data_array[mol_smarts_key]) {
+              var qmol = window.RDKitModule.get_qmol(data_array[mol_smarts_key]);
+              mdetails = JSON.parse(mol.get_substruct_match(qmol));
+            } else {
+            mdetails = {};
+            };
+          mdetails['legend'] = data_array[mol_name_key]; // Assuming 'name' is a key in your JSON dictionary
+          // Generate the SVG representation of the molecule
+          var svg = mol.get_svg_with_highlights(JSON.stringify(mdetails));
+          // Create a new <div> element to hold the SVG
+          var svgDiv = document.createElement('div');
+          svgDiv.id = 'drawing' + data_array[mol_name_key];
+          svgDiv.innerHTML = svg;
+          dest.replaceChildren(svgDiv);
+          console.log("succes");
+        } else {
+          console.log("RDKitModule is not defined.");
+        };
+      };
+      function minimalSVG(data_array, mol_smiles_key = "bl_smiles", mol_name_key = "" , mol_atoms_key = "parity_bl", mol_smarts_key, dest_id = "cognate_ligand_output") {
+        if (window.RDKitModule) {
+          var dest = document.getElementById(dest_id);
+          // Convert the SMILES string to a molecule object
+          var mol_smiles = data_array[mol_smiles_key];
+          var mol = window.RDKitModule.get_mol(data_array[mol_smiles_key]);
+          var svg = mol.get_svg();
+          // Create a new <div> element to hold the SVG
+          var svgDiv = document.createElement('div');
+          svgDiv.id = 'drawing' + data_array[mol_name_key];
+          svgDiv.innerHTML = svg;
+          dest.replaceChildren(svgDiv);
+          console.log("succes");
+        } else {
+          console.log("RDKitModule is not defined.");
+        };
+      };
+      function generateText(data_array, parity_key, dest_id = "parity_score") {
+        // Check if RDKitModule is defined
+        if (window.RDKitModule) {
+          console.log("in the gen func")
+          var dest = document.getElementById(dest_id);
+          var parity_score = data_array[parity_key];
+          // Generate the SVG representation of the molecule
+          var txtDiv = document.createElement('div');
+          txtDiv.id = 'text_div';
+          txtDiv.innerHTML = "Parity Score: " + parity_score;
+          console.log(txtDiv.textContent);
+          dest.replaceChildren(txtDiv);
+        } else {
+          console.log("RDKitModule is not defined.");
+        };
+      };
+      function generateSignSVG(type) {
+        if (type === "plus") {
+          //source iconmonstr.com plus-thin-svg and arrow-right-thin-svg
+          sign = `
+          <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd"><path d="M11 11v-11h1v11h11v1h-11v11h-1v-11h-11v-1h11z"/></svg>`;} else if (type === "arrow") {
+          sign =`
+          <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd"><path d="M21.883 12l-7.527 6.235.644.765 9-7.521-9-7.479-.645.764 7.529 6.236h-21.884v1h21.883z"/></svg>`};
+        return sign;}
+
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const jsonData = urlParams.get('data');
+      type = urlParams.get('type');
+      console.log(type);
+      // Check if jsonData is not null or empty
+      if (jsonData) {
+          console.log("Data parameter found in the URL.");
+          console.log(jsonData);
+          console.log(type);
+          // Decode the URL encoded json data
+          const decodedjsonData = decodeURIComponent(jsonData);
+          dataArray = JSON.parse(decodedjsonData);
+          console.log(dataArray);}
+      else {
+          console.log("No data parameter found in the URL.");
+      };
+      // Load the RDKit module asynchronously
+      window
+        .initRDKitModule()
+        .then(function (RDKit) {
+          console.log("RDKit version: " + RDKit.version());
+          window.RDKitModule = RDKit;
+          if (type === "smiles") {
+            generateSVG(dataArray, "smiles", "name", "", "", "ligand_output");
+        } else if (type === "reaction") {
+            // loop through the reaction data 
+            dataArray.forEach((reaction, index) => {
+              index = index + 1;
+              reactionArray = reaction.split("\:");
+              reactionId = reactionArray[0];
+              reactionSmiles = reactionArray[1];
+              productsAndReactants = reactionSmiles.split(">>");
+              products = productsAndReactants[1];
+              reactants = productsAndReactants[0];
+              products = products.split("\.");
+              reactants = reactants.split("\.");
+              reactionContainer = document.createElement('div');
+              reactionContainer.id = reactionId;
+              reactionContainer.setAttribute( "class", "row align-items-center" );
+              document.getElementById("ligand_output").appendChild(reactionContainer);
+              titleDiv = document.createElement('div');
+              titleDiv.setAttribute( "class", "col d-flex justify-content-center" );
+              titleDiv.id = reactionId + "_title";
+              titleDiv.innerHTML = `${index}. <a href="https://www.rhea-db.org/rhea/${reactionId}" target="_blank">RHEA:${reactionId}</a>`;
+              reactionContainer.appendChild(titleDiv);
+              let i = 1
+              console.log(i);
+              reactants.forEach((reactant, key, arr) => {
+                
+                if (Object.is(arr.length - 1, key)) { 
+                  console.log("last element");
+                  reactantDiv = document.createElement('div');
+                  divId = reactionId + "_reactant" + i.toString();
+                  reactantDiv.id = divId;
+                  reactantDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                  reactionContainer.appendChild(reactantDiv);
+                  minimalSVG({"smiles": reactant, "name": "test"}, "smiles", "name", "", "", divId);
+                }
+                else {
+                reactantDiv = document.createElement('div');
+                divId = reactionId + "_reactant" + i.toString();
+                reactantDiv.id = divId;
+                reactantDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                reactionContainer.appendChild(reactantDiv);
+                minimalSVG({"smiles": reactant, "name": "test"}, "smiles", "name", "", "", divId);
+                plusDiv = document.createElement('div');
+                plusDiv.id = reactionId + "_plus" + i.toString();
+                reactionContainer.appendChild(plusDiv);
+                plusDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                plusDiv.innerHTML = generateSignSVG(type = "plus");
+                i++;}
+              });
+
+              console.log("here!");
+              arrowDiv = document.createElement('div');
+              arrowDiv.id = "arrow";
+              reactionContainer.appendChild(arrowDiv);
+              arrowDiv.setAttribute( "class", "col d-flex justify-content-center" );
+              arrowDiv.innerHTML = generateSignSVG(type = "arrow");
+
+              products.forEach((product, key, arr) => {
+                
+                if (Object.is(arr.length - 1, key)) { 
+                  console.log("last element");
+                  productDiv = document.createElement('div');
+                  divId = reactionId + "_product" + i.toString();
+                  productDiv.id = divId;
+                  productDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                  reactionContainer.appendChild(productDiv);
+                  minimalSVG({"smiles": product, "name": "test"}, "smiles", "name", "", "", divId);
+                }
+                else {
+                  productDiv = document.createElement('div');
+                divId = reactionId + "_product" + i.toString();
+                productDiv.id = divId;
+                productDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                reactionContainer.appendChild(productDiv);
+                minimalSVG({"smiles": product, "name": "test"}, "smiles", "name", "", "", divId);
+                plusDiv = document.createElement('div');
+                plusDiv.id = reactionId + "_plus" + i.toString();
+                reactionContainer.appendChild(plusDiv);
+                plusDiv.setAttribute( "class", "col d-flex justify-content-center" );
+                plusDiv.innerHTML = generateSignSVG(type = "plus");
+                i++;}
+              });
+
+
+              
+
+              
+            });
+        } else {
+            // Handle other types of data if needed
+        }})
+        .catch(() => {
+        });
+
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  </head>
+  <body>
+    <div class="container-fluid text-center">
+      <div class="row">
+          <div id="ligand_output" class="col text-center"></div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>

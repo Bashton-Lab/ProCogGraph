@@ -329,6 +329,18 @@ def parse_brenda_json_generic_reaction(reaction_list):
             ligand_names.extend(item.get("products"))
     return set(ligand_names)
 
+def select_cofactor(cofactor_set):
+    if len(cofactor_set) == 1:
+            return next(iter(cofactor_set))
+    cofactor_set.discard("N")
+    cofactor_subgroups = {'Coenzyme', 'Prosthetic Group', 'Siderophore'}
+    intersection = cofactor_set & cofactor_subgroups
+    
+    if len(intersection) == 1:
+        return next(iter(intersection))
+
+    return "/".join(sorted(cofactor_set))
+
 def main():    
     """
     This script is designed to take the enzyme.dat file from EXPASY, and extract the EC numbers, 
@@ -353,18 +365,13 @@ def main():
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
     parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
-    parser.add_argument('--brenda_mol_dir', type=str, default = None, help='Path to brenda_mol directory for extracting brenda ligand information')
-    parser.add_argument('--brenda_ligands', type=str, default = None, help='Path to brenda_ligands.csv file for extracting brenda ligand information')
-    parser.add_argument('--brenda_json', type=str, default = None, help='Path to brenda_json.json file for extracting brenda ligand information')
-    ## used with old brenda parsing method
-    ##parser.add_argument('--bkms_react', type=str, default = None, help='Path to bkms_react.tsv file for extracting brenda ec information')
     args = parser.parse_args()
 
     if args.compound_cache_dir:
         Path(f"{args.compound_cache_dir}").mkdir(parents=True, exist_ok=True)
 
-    if os.path.exists(f"biological_ligands.pkl"):
-        print("Biological ligands file already exists. Exiting.")
+    if os.path.exists(f"cognate_ligands_df.pkl"):
+        print("Cognate ligands file already exists. Exiting.")
         exit(0)
 
     ec_records_df = process_ec_records(args.ec_dat , args.enzyme_class_file)
@@ -635,58 +642,13 @@ def main():
     else:
         print("GlyTouCan records loaded from file")
         kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"kegg_reaction_enzyme_df_exploded_gtc.pkl")
-    
-    #eventually look at using mol files to load structures instead of inchis - may give more complete annotation (currenty ~7k have no ROMol val)
-    if not os.path.exists(f"brenda_cognate_ligands.pkl"):
-        brenda_ligands = pd.read_csv(f"{args.brenda_ligands}") #file provided by BRENDA admins (not for redistribution)
-        brenda_ligands.rename(columns = {"name":"ligand_name"}, inplace = True)
-
-        brenda_json_df = pd.read_json(args.brenda_json) #BRENDA json file from site - available for download by users after accepting license terms
-        brenda_ligand_df = pd.json_normalize(brenda_json_df.data) #normalise the json data in the data column
-        brenda_ligand_df = brenda_ligand_df[["id", "name", "systematic_name", "generic_reaction"]] ##remove unused columns
-        brenda_ligand_df = brenda_ligand_df.loc[(brenda_ligand_df.id != "spontaneous") & (brenda_ligand_df.id.isin(ec_list)) & (brenda_ligand_df.generic_reaction.isna() == False)].copy() #remove spontaneous reactions from the df and keep only those in the eclist, as well as only those with generic reaction
-        brenda_ligand_df["ligands"] = brenda_ligand_df.generic_reaction.apply(lambda x: parse_brenda_json_generic_reaction(x)) #get set of educts and products
-        brenda_ligand_df = brenda_ligand_df.explode("ligands") #explode on set of educts and products
-        brenda_ligand_df["ligands"] = brenda_ligand_df.ligands.str.strip().str.replace("^([0-9n]+\s+)", "", regex = True) #remove instances of ligands specifying xn molecules e.g. 2n NADH
-
-        brenda_ligand_df_merged = brenda_ligand_df.merge(brenda_ligands[["brenda_ligandid", "ligand_name", "inchi"]], left_on = brenda_ligand_df["ligands"].str.lower(), right_on = brenda_ligands["ligand_name"].str.lower(), how = "inner", validate = "m:1") #merge the brenda ec mapping with the admin provided ligand list (plus inchis)
-
-        brenda_ligandids = brenda_ligand_df_merged.brenda_ligandid.unique() #get the list of ligand ids to check for molfile
-
-        brenda_mol_dir = args.brenda_mol_dir #molfiles provided by admin - not for redistribution
-
-        #load the mol files where possible into a df to merge with ec mapping
-        ligands_list = []
-        for ligid in brenda_ligandids:
-            molfile = f"{brenda_mol_dir}/{ligid}.mol"
-            if os.path.exists(molfile):
-                try:
-                    mol = Chem.MolFromMolFile(molfile)
-                except:
-                    mol = np.nan
-            ligand_info = {"ligand_id": ligid, "ROMol": mol}
-            ligands_list.append(ligand_info)
-            
-        ligands_list_df = pd.DataFrame(ligands_list)
-
-        brenda_ligand_df_merged_mol_merged = brenda_ligand_df_merged.merge(ligands_list_df, left_on = "brenda_ligandid", right_on = "ligand_id", validate = "m:1", how = "left") #merge the mols with the ec mapping df
-        brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna(), "ROMol"] = brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna()].inchi.apply(lambda x: Chem.MolFromInchi(x)) #where molfile not found or fails to be loaded, attempt to use the admin provided inchi to load mol
-        brenda_ligand_df_merged_mol_merged = brenda_ligand_df_merged_mol_merged.loc[brenda_ligand_df_merged_mol_merged.ROMol.isna() == False].copy()
-        
-        brenda_ligand_df_merged_mol_merged["ligand_db"] = "BRENDA:" + brenda_ligand_df_merged_mol_merged.brenda_ligandid.astype("int").astype("str")
-        brenda_ligand_df_merged_mol_merged.rename(columns = {"id":"entry", "brenda_ligandid":"compound_id","ligand_name":"compound_name"}, inplace = True) #rename cols for combination with other database sources
-        brenda_ligand_df_merged_mol_merged.to_pickle(f"brenda_cognate_ligands.pkl")
-    else:
-        brenda_ligand_df_merged_mol_merged = pd.read_pickle(f"brenda_cognate_ligands.pkl")
-        print("BRENDA cognate ligands loaded from file")
 
     if not os.path.exists(f"cognate_ligands_df.pkl"):
         cognate_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db", "compound_reaction"]],
                                            kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db", "compound_reaction"]], 
                                            kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
                                            kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]],
-                                           brenda_ligand_df_merged_mol_merged[["entry", "compound_name", "compound_id", "ROMol","ligand_db"]]])
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]]])
         cognate_ligands_df = cognate_ligands_df.reset_index()
         
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
@@ -709,18 +671,24 @@ def main():
         chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
 
         chebi_cofactors = chebi_relations.loc[(chebi_relations.TYPE == "has_role") & (chebi_relations.INIT_ID.isin([23357,23354,26348,26672])), ["TYPE", "INIT_ID", "FINAL_ID"]]
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "cofactor"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "coenzyme"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "prosthetic group"
-        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "siderophore"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "Cofactor"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "Coenzyme"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "Prosthetic Group"
+        chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26672, "TYPE"] = "Siderophore"
         chebi_cofactors.drop(columns = ["INIT_ID"], inplace = True)
         chebi_cofactors.rename(columns = {"TYPE": "isCofactor"}, inplace = True)
         
-        cognate_ligands_df["chebi_match"] = cognate_ligands_df.ligand_db.str.extract("CHEBI:([0-9]+)").astype("float")
+
+        chebi_matches = cognate_ligands_df.ligand_db.str.extractall("CHEBI:([0-9]+)").astype("float")
+        chebi_matches_grouped = chebi_matches.groupby(level=0)[0].apply(list)
+        chebi_matches_grouped.rename("chebi_match", inplace = True)
+        cognate_ligands_df = cognate_ligands_df.merge(chebi_matches_grouped, left_index = True, right_index = True, how = "left")
+        cognate_ligands_df = cognate_ligands_df.explode("chebi_match")
         cognate_ligands_df = cognate_ligands_df.merge(chebi_cofactors, how = "left", left_on = "chebi_match", right_on = "FINAL_ID")
         cognate_ligands_df["isCofactor"] = cognate_ligands_df["isCofactor"].fillna("N")
         cognate_ligands_df.drop(columns = ["chebi_match", "FINAL_ID"], inplace = True)
-
+        cognate_ligands_df = cognate_ligands_df.groupby([col for col in cognate_ligands_df if col != "isCofactor"]).agg({"isCofactor":set}).reset_index()
+        cognate_ligands_df["isCofactor"] = cognate_ligands_df["isCofactor"].apply(lambda x: select_cofactor(x))
         cognate_ligands_df.to_pickle(f"cognate_ligands_df.pkl")
     else:
         cognate_ligands_df = pd.read_pickle(f"cognate_ligands_df.pkl")

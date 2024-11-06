@@ -1,18 +1,20 @@
 #! /usr/bin/env nextflow
 
 process PROCESS_MMCIF {
-    label 'medmem' //gives 8gb and single core (max observed usage is 8gb)
+    label 'largecpu_largemem' //job runs in parallel within script
     publishDir "${params.publish_dir}/process_struct", mode: 'copy'
-    errorStrategy { task.exitStatus in 120..122 ? 'ignore' : 'terminate' }
     cache 'lenient'
     input:
-        tuple( val(pdb_id), val(assembly_id), path(updated_cif), path(protonated_cif) )
-        
+        path manifest
+        val max_molwt
     output:
-        tuple val(pdb_id), path("${pdb_id}_bound_entity_info.pkl"), path("${pdb_id}_arpeggio.csv")
+        path("combined_arpeggio_manifest.csv"), emit:updated_manifest
+        path("process_mmcif_log.txt"), emit: log
+        path("*_bound_entity_info.pkl"), emit: bound_entity_info
+        path("bio_h_cif_*.csv"), emit: arpeggio_batch
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --cif ${updated_cif} --pdb_id ${pdb_id} --assembly_id ${assembly_id} --bio_h ${protonated_cif}
+    python3 ${workflow.projectDir}/bin/process_pdb_structure.py --manifest ${manifest} --threads ${task.cpus} --max_molwt ${max_molwt}
     """
 
 }
@@ -21,34 +23,38 @@ process RUN_ARPEGGIO {
     label 'arpeggio' //gives 18gb mem for arpeggio in slurm submission (offering overhead for complex structures)
     cache 'lenient'
     conda '/raid/MattC/repos/envs/arpeggio-env.yaml'
-    errorStrategy 'ignore' //temporary - arpeggio has errors when chem_comp.name is empty (bool false e.g. 2c16 - working on a fix)
     publishDir "${params.publish_dir}/arpeggio", mode: 'copy'
     input:
-        tuple val(pdb_id), path(arpeggio_selections), path(bio_h_cif)
+        path arpeggio_batch
 
     output:
-        tuple val(pdb_id), path("${pdb_id}_bio-h.json")
+        path("*_bio-h.json.gz")
 
     script:
     """
-    gzip -dkc ${bio_h_cif} > ${pdb_id}_bio-h.cif
-    timeout -k 10 6h pdbe-arpeggio -sf ${arpeggio_selections} ${pdb_id}_bio-h.cif -i 6
+    ${workflow.projectDir}/bin/run_arpeggio.sh ${arpeggio_batch}
+    gzip *.json
     """
 
 }
 
 process PROCESS_CONTACTS {
-    label 'medmem' //gives 12gb and single core (max observed usage is below 12gb)
+    label 'medmem' //needed for loading large json into memory.
     cache 'lenient'
     publishDir "${params.publish_dir}/process_contacts", mode: 'copy'
     errorStrategy { task.exitStatus in 124..127 ? 'ignore' : 'terminate' }
     input:
-        tuple val(pdb_id), val(assembly_id), path(updated_cif), path(sifts_xml), path(bound_entity_pickle), path(arpeggio_json), val(domain_contact_cutoff)
+        path json
+        path manifest
+        val domain_contact_cutoff
     output:
-        path("${pdb_id}_bound_entity_contacts.tsv")
+        path "combined_contacts.tsv", emit: contacts
+        path "process_contacts_log.txt", emit: log
+        path "combined_contacts.tsv", emit: combined_contacts
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --bound_entity_pickle ${bound_entity_pickle} --cif ${updated_cif} --contacts ${arpeggio_json} --pdb_id ${pdb_id} --sifts_xml ${sifts_xml} --assembly_id ${assembly_id} --domain_contact_cutoff ${domain_contact_cutoff}
+    python3 ${workflow.projectDir}/bin/process_pdb_contacts.py --manifest ${manifest} --domain_contact_cutoff ${domain_contact_cutoff}
+    find . -type f -name "*_bound_entity_contacts.tsv" -print0 | xargs -0 tail -q -n +2 >> combined_contacts.tsv
     """
 }
 
@@ -64,6 +70,7 @@ process PROCESS_ALL_CONTACTS {
         path pfam_clans
         path scop_domains_info
         path scop_domains_description
+        path scop2_domains_info
         path interpro_xml
         path cath_names
         path cddf
@@ -79,13 +86,15 @@ process PROCESS_ALL_CONTACTS {
         path("bound_entities_to_score.pkl"), emit: bound_entities
         path("cath_pdb_residue_interactions.csv.gz"), emit: cath
         path("scop_pdb_residue_interactions.csv.gz"), emit: scop
-        path ("pfam_pdb_residue_interactions.csv.gz"), emit: pfam
-        path ("interpro_pdb_residue_interactions.csv.gz"), emit: interpro
-        path ("scop2b_pdb_residue_interactions.csv.gz"), emit: scop2b
+        path("pfam_pdb_residue_interactions.csv.gz"), emit: pfam
+        path("superfamily_pdb_residue_interactions.csv.gz"), emit: superfamily
+        path("g3dsa_pdb_residue_interactions.csv.gz"), emit: g3dsa
+        path("scop2b_fa_pdb_residue_interactions.csv.gz"), emit: scop2b_fa
+        path("scop2b_sf_pdb_residue_interactions.csv.gz"), emit: scop2b_sf
         
     script:
     """
-    python3 ${workflow.projectDir}/bin/process_all_pdb_contacts.py --contacts ${combined_contacts} --ccd_cif ${ccd_cif} --pfam_a_file ${pfam_a} --pfam_clan_rels ${pfam_clan_rels} --pfam_clans ${pfam_clans} --scop_domains_info_file ${scop_domains_info} --scop_descriptions_file ${scop_domains_description} --interpro_xml ${interpro_xml} --cath_names ${cath_names} --cddf ${cddf} --glycoct_cache ${glycoct_cache} --smiles_cache ${smiles_cache} --csdb_linear_cache ${csdb_linear_cache} --enzyme_dat_file ${enzyme_dat_file} --enzyme_class_file ${enzyme_class_file} --sifts_ec_mapping ${sifts_ec_mapping}
+    python3 ${workflow.projectDir}/bin/process_all_pdb_contacts.py --contacts ${combined_contacts} --ccd_cif ${ccd_cif} --pfam_a_file ${pfam_a} --pfam_clan_rels ${pfam_clan_rels} --pfam_clans ${pfam_clans} --scop_domains_info_file ${scop_domains_info} --scop_descriptions_file ${scop_domains_description} --scop2_domains_info_file ${scop2_domains_info} --interpro_xml ${interpro_xml} --cath_names ${cath_names} --cddf ${cddf} --glycoct_cache ${glycoct_cache} --smiles_cache ${smiles_cache} --csdb_linear_cache ${csdb_linear_cache} --enzyme_dat_file ${enzyme_dat_file} --enzyme_class_file ${enzyme_class_file} --sifts_ec_mapping ${sifts_ec_mapping}
     """
 
 }
@@ -120,8 +129,11 @@ process PRODUCE_NEO4J_FILES {
         path bound_entities
         path cath_domain_ownership
         path scop_domain_ownership
-        path interpro_domain_ownership
         path pfam_domain_ownership
+        path superfamily_domain_ownership
+        path g3dsa_domain_ownership
+        path scop2b_sf_domain_ownership
+        path scop2b_fa_domain_ownership
         path enzyme_dat
         path enzyme_class
         val parity_threshold
@@ -140,10 +152,15 @@ process PRODUCE_NEO4J_FILES {
         path "cognate_ligand_nodes.csv.gz"
         path "cognate_ligands_ec.csv.gz"
         path "pdb_entry_nodes.csv.gz"
-        path "pdb_ec_rels.csv.gz"
+        path "pdb_protein_chain_nodes.csv.gz"
+        path "protein_ec_rels.csv.gz"
+        path "pdb_protein_rels.csv.gz"
         path "scop_domains_nodes.csv.gz"
         path "cath_domains_nodes.csv.gz"
-        path "interpro_domain_nodes.csv.gz"
+        path "superfamily_domains_nodes.csv.gz"
+        path "g3dsa_domains_nodes.csv.gz"
+        path "scop2b_fa_domains_nodes.csv.gz"
+        path "scop2b_sf_domains_nodes.csv.gz"
         path "pfam_domains_nodes.csv.gz"
         path "scop_family_nodes.csv.gz"
         path "scop_superfamily_nodes.csv.gz"
@@ -171,11 +188,17 @@ process PRODUCE_NEO4J_FILES {
         path "cath_domain_ligand_interactions.csv.gz"
         path "scop_domain_ligand_interactions.csv.gz"
         path "pfam_domain_ligand_interactions.csv.gz"
-        path "interpro_domain_ligand_interactions.csv.gz"
-        path "cath_pdb_rels.csv.gz"
-        path "scop_pdb_rels.csv.gz"
-        path "pfam_pdb_rels.csv.gz"
-        path "interpro_pdb_rels.csv.gz"
+        path "superfamily_domain_ligand_interactions.csv.gz"
+        path "g3dsa_domain_ligand_interactions.csv.gz"
+        path "scop2b_fa_domain_ligand_interactions.csv.gz"
+        path "scop2b_sf_domain_ligand_interactions.csv.gz"
+        path "cath_protein_rels.csv.gz"
+        path "scop_protein_rels.csv.gz"
+        path "pfam_protein_rels.csv.gz"
+        path "superfamily_protein_rels.csv.gz"
+        path "g3dsa_protein_rels.csv.gz"
+        path "scop2b_fa_protein_rels.csv.gz"
+        path "scop2b_sf_protein_rels.csv.gz"
         path "procoggraph_node.csv.gz"
     script:
     """
@@ -184,24 +207,11 @@ process PRODUCE_NEO4J_FILES {
 }
 
 workflow {
-    pdb_ids = Channel.fromPath(params.manifest) | splitCsv(header:true) | map { [ it.PDB, it.ASSEMBLY_ID, file(it.updated_mmcif), file(it.protonated_assembly), file(it.sifts_xml) ] }
-    process_mmcif = PROCESS_MMCIF( pdb_ids
-        .map { all_out -> [all_out[0], all_out[1], file(all_out[2]), file(all_out[3])] } )
-    arpeggio = RUN_ARPEGGIO(
-        process_mmcif
-            .map { all_out -> [all_out[0], file(all_out[2])] }
-        .join( 
-        pdb_ids
-            .map { all_out -> [all_out[0], file(all_out[3])] } ))
-    contacts = PROCESS_CONTACTS(
-       pdb_ids.map { all_out -> [all_out[0], all_out[1], all_out[2], all_out[4]] }
-       .join(
-        process_mmcif.map { all_out -> [all_out[0], all_out[1]] })
-        .join(
-        arpeggio.map { all_out -> [all_out[0], all_out[1]] } )
-        .combine( Channel.from(params.domain_contact_cutoff) ) )
-    collected = contacts.collectFile(name: 'combined_files.tsv', keepHeader: true, skip: 1)
-    all_contacts = PROCESS_ALL_CONTACTS( collected, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
+    processed_struct_manifest = PROCESS_MMCIF( Channel.fromPath(params.manifest), params.max_molwt )
+    arpeggio_batches = processed_struct_manifest.arpeggio_batch.flatten()
+    arpeggio = RUN_ARPEGGIO( arpeggio_batches ).collect()
+    contacts = PROCESS_CONTACTS( arpeggio, processed_struct_manifest.updated_manifest, params.domain_contact_cutoff )
+    all_contacts = PROCESS_ALL_CONTACTS( contacts.combined_contacts, Channel.fromPath("${params.ccd_cif}"), Channel.fromPath("${params.pfam_a_file}"), Channel.fromPath("${params.pfam_clan_rels}"), Channel.fromPath("${params.pfam_clans}"), Channel.fromPath("${params.scop_domains_info_file}"), Channel.fromPath("${params.scop_descriptions_file}"), Channel.fromPath("${params.scop2_domains_info_file}"), Channel.fromPath("${params.interpro_xml}"), Channel.fromPath("${params.cath_names}"), Channel.fromPath("${params.cddf}"), Channel.fromPath("${params.glycoct_cache}"), Channel.fromPath("${params.smiles_cache}"), Channel.fromPath("${params.csdb_linear_cache}"), Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.fromPath("${params.sifts_file}") )
     score_ligands = SCORE_LIGANDS( all_contacts.bound_entities, Channel.fromPath(params.cognate_ligands), Channel.fromPath(params.parity_cache), Channel.from(params.parity_threshold) )
-    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.interpro, all_contacts.pfam, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
+    produce_neo4j_files = PRODUCE_NEO4J_FILES( score_ligands.all_parity_calcs, Channel.fromPath(params.cognate_ligands) , all_contacts.bound_entities, all_contacts.cath, all_contacts.scop, all_contacts.pfam, all_contacts.superfamily, all_contacts.g3dsa, all_contacts.scop2b_sf, all_contacts.scop2b_fa, Channel.fromPath("${params.enzyme_dat_file}"), Channel.fromPath("${params.enzyme_class_file}"), Channel.from(params.parity_threshold), Channel.fromPath("${params.rhea2ec}"), Channel.fromPath("${params.rhea_directions}"), Channel.fromPath("${params.rhea_reactions_smiles}") )
 }
