@@ -25,7 +25,7 @@ ProCogGraph is a graph database which maps domains - cognate ligand interactions
 
 ## Citation
 
-To learn more about ProCogGraph take a look at the ProCogGraph paper in [_Binformatics Advances_](https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbae161/7831455). To cite this work please use:
+To learn more about ProCogGraph take a look at the ProCogGraph paper in [_Bioinformatics Advances_](https://academic.oup.com/bioinformaticsadvances/advance-article/doi/10.1093/bioadv/vbae161/7831455). To cite this work please use:
 
 > Matthew Crown, Matthew Bashton, ProCogGraph: A Graph-Based Mapping of Cognate Ligand Domain Interactions, _Bioinformatics Advances_, 2024; vbae161, [https://doi.org/10.1093/bioadv/vbae161](https://doi.org/10.1093/bioadv/vbae161)
 
