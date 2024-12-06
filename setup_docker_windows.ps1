@@ -7,7 +7,7 @@ foreach ($dir in $directories) {
 cd "neo4j_docker/import"
 
 # Download the zenodo database flat zip
-$ZENODO_URL = "https://zenodo.org/records/13929716/files/procoggraph_flat_files_v1-0-2.zip?download=1"
+$ZENODO_URL = "https://zenodo.org/records/14046116/files/procoggraph_flat_files_v1-0-2.zip?download=1"
 Invoke-WebRequest -Uri $ZENODO_URL -OutFile "procoggraph_flat_files_v1-0-2.zip"
 
 # Unzip the database flat files into the import directory
