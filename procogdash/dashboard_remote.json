@@ -255,6 +255,7 @@
           "type": "table",
           "selection": {},
           "settings": {
+            "fullscreenEnabled": true,
             "actionsRules": [
               {
                 "condition": "Click",
@@ -364,6 +365,7 @@
           "type": "table",
           "selection": {},
           "settings": {
+            "fullscreenEnabled": true,
             "actionsRules": [
               {
                 "condition": "Click",
@@ -584,6 +586,7 @@
           "type": "table",
           "selection": {},
           "settings": {
+            "fullscreenEnabled": true,
             "actionsRules": [
               {
                 "condition": "Click",
