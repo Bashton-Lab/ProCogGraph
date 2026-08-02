@@ -116,7 +116,7 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     - `--only NAME[,NAME...]` — fetch a subset of entries (see `nextflow/bin/reference_data_manifest.yaml` for names).
     - `--force` — re-download and refresh files that already exist.
 
-    A small number of files have no stable bulk-download source and must still be obtained manually; the script prints instructions for these (currently: `pubchem_substance_id_mapping.txt`, generated via a [PubChem substance search](https://www.ncbi.nlm.nih.gov/pcsubstance?term=%22KEGG%22%5BSourceName%5D%20AND%20hasnohold%5Bfilt%5D)) and skips them rather than failing the run. Every other file listed below is fetched automatically:
+    Every file below is fetched automatically (the script will print instructions and skip, rather than fail the run, for any future entry that turns out to have no stable bulk-download source):
 
     | File | Description |
     | ---- | ---- |
@@ -134,6 +134,8 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     | chebi_names.tsv.gz / relation.tsv | ChEBI names and relations. |
     | ChEBI_Results.tsv | ChEBI records with a KEGG COMPOUND cross-reference and a known structure — derived from bulk ChEBI flat files rather than ChEBI's advanced search UI (see `docs/reference_data_download_plan.md`). |
     | ccd.cif | Chemical Component Dictionary structures. |
+    | pubchem_substance_id_mapping.txt | PubChem CID ↔ KEGG code cross-references — derived from NCBI's bulk `CID-Identifiers.tsv.gz` rather than an interactive PubChem substance search (see `docs/reference_data_download_plan.md`). |
+    | rd/ | Directory of Rhea per-reaction (`.rd`) files, extracted from Rhea's `rhea-rd.tar.gz` bulk archive. |
 
     `pfamA.txt.gz`/`clan_membership.txt.gz`/`clan.txt.gz` in older versions of this doc have been consolidated upstream into the single `Pfam-A.clans.tsv.gz` above; the download script fetches it and the pipeline's parsing code (`utils.get_pfam_annotations`) reads it directly, so no separate files are needed. `rd/` — a directory of Rhea reaction (`.rd`) files, needed by `preprocess_rhea.py --rd_dir` — is also fetched automatically (extracted from Rhea's `rhea-rd.tar.gz` bulk archive).
 

@@ -200,8 +200,40 @@ def derive_chebi_results(data_dir, entry, manifest_by_name, force, skip_existing
     return dest_path
 
 
+def derive_pubchem_kegg_mapping(data_dir, entry, manifest_by_name, force, skip_existing):
+    """Reconstruct pubchem_substance_id_mapping.txt (PubChem CID <-> KEGG
+    code pairs) from NCBI's bulk CID-Identifiers.tsv.gz cross-reference
+    table, instead of an interactive PubChem substance search export.
+
+    get_ec_information.py's parser (nextflow/bin/get_ec_information.py:
+    556-570) is a hand-rolled "KEY:VALUE KEY:VALUE ..." per-line format,
+    not a real TSV - each output line here is "CID:<n> KEGG:<code>",
+    matching that exactly. It needs at minimum CID and KEGG keys per line;
+    no other fields from the original manual export are read anywhere
+    downstream, so nothing else needs to be included.
+    """
+    dep_entry = manifest_by_name["pubchem_cid_identifiers"]
+    dep_path = data_dir / dep_entry["target_filename"]
+    if not dep_path.exists():
+        print(f"    dependency pubchem_cid_identifiers not present, fetching it first")
+        fetch_entry(data_dir, dep_entry, manifest_by_name, force, skip_existing)
+
+    cid_identifiers = pd.read_csv(
+        dep_path, sep="\t", header=None, compression="gzip",
+        names=["cid", "identifier", "identifier_type"],
+    )
+    kegg_mapping = cid_identifiers.loc[cid_identifiers["identifier_type"] == "KEGG ID"]
+
+    dest_path = data_dir / entry["target_filename"]
+    with open(dest_path, "w") as out_file:
+        for cid, kegg_code in zip(kegg_mapping["cid"], kegg_mapping["identifier"]):
+            out_file.write(f"CID:{cid} KEGG:{kegg_code}\n")
+    return dest_path
+
+
 DERIVED_FUNCTIONS = {
     "derive_chebi_results": derive_chebi_results,
+    "derive_pubchem_kegg_mapping": derive_pubchem_kegg_mapping,
 }
 
 POST_PROCESS_FUNCTIONS = {

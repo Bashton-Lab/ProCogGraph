@@ -177,20 +177,38 @@ entries:
       download; min_size_bytes set well below the real size to avoid
       false-flagging on minor version growth.
 
+  - name: pubchem_cid_identifiers
+    target_filename: CID-Identifiers.tsv.gz
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ncbi.nlm.nih.gov/pubchem/Compound/Extras/CID-Identifiers.tsv.gz
+    min_size_bytes: 50000000
+    post_process: none
+    confidence: verified
+    note: >
+      Bulk NCBI PubChem CID-to-external-identifier cross-reference table
+      (CID, identifier, identifier_type per row, no header; 12.7M rows,
+      2026-08). Intermediate input for the pubchem_substance_mapping
+      derivation below - user-supplied source.
+
   - name: pubchem_substance_mapping
     target_filename: pubchem_substance_id_mapping.txt
     param_name: pubchem_mapping
-    source_type: manual
+    source_type: derived
     url: null
-    min_size_bytes: null
-    post_process: none
-    confidence: null
+    min_size_bytes: 500000
+    post_process: derive_pubchem_kegg_mapping
+    confidence: verified
     note: >
-      Generated via a PubChem substance search
-      (https://www.ncbi.nlm.nih.gov/pcsubstance?term=%22KEGG%22%5BSourceName%5D%20AND%20hasnohold%5Bfilt%5D)
-      and exported manually - no stable bulk download URL identified. The
-      download script prints these instructions and skips rather than
-      failing the whole run.
+      Derived from pubchem_cid_identifiers (filtered to
+      identifier_type == "KEGG ID", 26,933 of 12.7M rows, mixing KEGG
+      COMPOUND (C#####) and KEGG DRUG (D#####) codes - both valid, KEGG's
+      REST API handles both uniformly and get_ec_information.py doesn't
+      distinguish them) instead of the original manual PubChem substance
+      search export. Output format matches what get_ec_information.py's
+      hand-rolled "KEY:VALUE KEY:VALUE" line parser
+      (nextflow/bin/get_ec_information.py:556-570) expects: one line per
+      CID/KEGG pair, "CID:<n> KEGG:<code>".
 
   - name: rhea2ec
     target_filename: rhea2ec.tsv
