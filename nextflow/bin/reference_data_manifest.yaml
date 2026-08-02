@@ -95,25 +95,27 @@ entries:
     target_filename: scop2-cla-latest.txt
     param_name: scop2_domains_info_file
     source_type: direct_url
-    url: https://www.ebi.ac.uk/pdbe/scop/files/scop2-cla-latest.txt
+    url: https://www.ebi.ac.uk/pdbe/scop/files/scop-cla-latest.txt
     min_size_bytes: 1000000
     post_process: none
-    confidence: unverified
+    confidence: verified
     note: >
-      Could not confirm this exact path live while building this manifest
-      (search results were inconclusive on the current PDBe SCOP2 file
-      layout). Verify with --dry-run/--only scop2_domains_info before a
-      real pipeline run; update this URL if it 404s.
+      Confirmed live via https://www.ebi.ac.uk/pdbe/scop/download (2026-08).
+      Note the real upstream filename is scop-cla-latest.txt (no "2") despite
+      this being the SCOP2 dataset - target_filename keeps the local
+      scop2-cla-latest.txt name to match params.scop2_domains_info_file.
 
   - name: scop2_descriptions
     target_filename: scop2-des-latest.txt
     param_name: scop2_descriptions_file
     source_type: direct_url
-    url: https://www.ebi.ac.uk/pdbe/scop/files/scop2-des-latest.txt
+    url: https://www.ebi.ac.uk/pdbe/scop/files/scop-des-latest.txt
     min_size_bytes: 100000
     post_process: none
-    confidence: unverified
-    note: Same caveat as scop2_domains_info.
+    confidence: verified
+    note: >
+      Confirmed live alongside scop2_domains_info (2026-08). Same "no 2 in
+      the upstream filename" note applies.
 
   - name: interpro_xml
     target_filename: interpro.xml.gz
