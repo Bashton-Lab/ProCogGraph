@@ -72,24 +72,27 @@ entries:
     target_filename: dir.cla.scop.1_75.txt
     param_name: scop_domains_info_file
     source_type: direct_url
-    url: https://scop.berkeley.edu/downloads/parse/dir.cla.scop.1_75.txt
-    min_size_bytes: 1000000
+    url: https://scop.berkeley.edu/downloads/parse/dir.cla.scop.1.75.txt
+    min_size_bytes: 5000000
     post_process: none
-    confidence: unverified
+    confidence: verified
     note: >
-      docs/installation.md only links the SCOP downloads landing page, not
-      a direct file URL. This uses SCOP's documented /downloads/parse/
-      convention for flat files - confirm with --dry-run before relying on it.
+      Confirmed live via https://scop.berkeley.edu/downloads/ver=1.75
+      (2026-08). Real upstream filename uses a period (dir.cla.scop.1.75.txt,
+      10.5M) not an underscore - dir.cla.scop.1_75.txt 404s. target_filename
+      keeps the underscore form to match params.scop_domains_info_file.
 
   - name: scop_descriptions
     target_filename: dir.des.scop.1_75.txt
     param_name: scop_descriptions_file
     source_type: direct_url
-    url: https://scop.berkeley.edu/downloads/parse/dir.des.scop.1_75.txt
-    min_size_bytes: 100000
+    url: https://scop.berkeley.edu/downloads/parse/dir.des.scop.1.75.txt
+    min_size_bytes: 1000000
     post_process: none
-    confidence: unverified
-    note: Same caveat as scop_domains_info.
+    confidence: verified
+    note: >
+      Confirmed live alongside scop_domains_info (2026-08, 5.8M). Same
+      period-vs-underscore filename note applies.
 
   - name: scop2_domains_info
     target_filename: scop2-cla-latest.txt
@@ -175,16 +178,15 @@ entries:
     target_filename: ccd.cif
     param_name: ccd_cif
     source_type: direct_url
-    url: https://files.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
-    min_size_bytes: 50000000
-    post_process: gunzip
-    confidence: unverified
+    url: https://ftp.ebi.ac.uk/pub/databases/msd/pdbechem_v2/ccd/components.cif
+    min_size_bytes: 500000000
+    post_process: none
+    confidence: verified
     note: >
-      Long-established conventional URL for the full merged Chemical
-      Component Dictionary, but not confirmed live while building this
-      manifest (fetch returned a directory listing, not file content, when
-      checked). Verify with --dry-run/--only ccd before relying on it.
-      Downloads compressed (~100-150M) and gunzips to ~350-400M.
+      Confirmed live (2026-08) - already uncompressed (856,048,364 bytes,
+      ~816M via HEAD request), so no gunzip post_process needed. Large
+      download; min_size_bytes set well below the real size to avoid
+      false-flagging on minor version growth.
 
   - name: pubchem_substance_mapping
     target_filename: pubchem_substance_id_mapping.txt
