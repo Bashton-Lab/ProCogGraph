@@ -58,8 +58,17 @@ data, not by re-reading this plan:
   `rhea_reaction_smiles`/`rhea_rd_dir`/`pfam_clans` entries are now
   `confidence: verified` (user supplied several of the real source pages;
   each was then re-verified end-to-end via the actual script and, where
-  applicable, the exact downstream pipeline parsing logic). Only
-  `pubchem_substance_mapping` remains genuinely unresolved.
+  applicable, the exact downstream pipeline parsing logic).
+- **Update:** `pubchem_substance_mapping` is also resolved — user found
+  NCBI's bulk `CID-Identifiers.tsv.gz` (12.7M CID/identifier/type rows);
+  filtering to `identifier_type == "KEGG ID"` gives exactly the CID/KEGG
+  pairs needed (26,933 rows), turned into a `derived` entry
+  (`derive_pubchem_kegg_mapping`) that reproduces
+  `get_ec_information.py`'s expected `"CID:<n> KEGG:<code>"` line format.
+  Verified by feeding the derived output through the real parser and its
+  downstream CID-matching logic. **Every entry in the manifest is now
+  either `direct_url`/`derived` with `confidence: verified`, or a
+  self-contained code-only fix (Pfam) — zero remaining `manual` entries.**
 
 `docs/installation.md` updated to point at the script in place of the old
 manual download table.
