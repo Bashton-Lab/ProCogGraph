@@ -229,16 +229,29 @@ def get_scop_domains_info(domain_info_file, descriptions_file):
     scop_domains_info.drop(columns = ["pdb_id", "scop_description"], inplace = True)
     return scop_domains_info
 
-def get_pfam_annotations(pfam_a_file, clan_membership_file, clan_info_file):
-    pfam_a = pd.read_csv(pfam_a_file, sep = "\t", header = None, usecols = [0,1,3], names = ["pfam_accession", "pfam_name", "pfam_description"])
-    pfam_clan_rels = pd.read_csv(clan_membership_file, sep = "\t", header = None, names = ["clan", "pfam"])
-    pfam_clans = pd.read_csv(clan_info_file, sep = "\t", comment = "#", header = None, names = ["clan_acc", "clan_id", "previous_id", "clan_description", "clan_author", "deposited_by", "clan_comment", "updated", "created", "version", "number_structures", "number_archs", "number_species", "number_sequences", "competed", "uniprot_competed"])
-    pfam_clan_df = pfam_clan_rels.merge(pfam_clans[["clan_acc", "clan_description", "clan_comment"]], left_on = "clan", right_on = "clan_acc", how = "left", indicator = True)
-    assert(len(pfam_clan_df.loc[pfam_clan_df._merge != "both"]) == 0)
-    pfam_clan_df.drop(columns = "_merge", inplace = True)
-    
-    pfam_a_clans_merged = pfam_a.merge(pfam_clan_df, left_on = "pfam_accession", right_on = "pfam", how = "left")
-    return pfam_a_clans_merged
+def get_pfam_annotations(pfam_clans_file):
+    """Pfam consolidated the three files this used to read separately -
+    pfamA.txt.gz (pfam accession/name/description), clan_membership.txt.gz
+    (clan-to-pfam membership) and clan.txt.gz (clan details) - into a
+    single Pfam-A.clans.tsv.gz (2026 restructure, no header row):
+    pfam_accession, clan_acc, clan_id, pfam_name, pfam_description. Pfam
+    families with no clan have empty clan_acc/clan_id fields (parsed as
+    NaN by pandas). See docs/reference_data_download_plan.md #2.
+
+    Schema note: the consolidated file has no equivalent of the old
+    clan.txt.gz's free-text `clan_comment` field - Pfam no longer
+    publishes a bulk clan comment/description beyond the short clan id
+    (e.g. "GPCR_A"). clan_description below is that short id;
+    clan_comment is left null rather than duplicating clan_description
+    into it, since that would misrepresent it as distinct information.
+    """
+    pfam_clans = pd.read_csv(pfam_clans_file, sep = "\t", header = None,
+        names = ["pfam_accession", "clan_acc", "clan_id", "pfam_name", "pfam_description"])
+    pfam_clans["clan"] = pfam_clans["clan_acc"]
+    pfam_clans["pfam"] = pfam_clans["pfam_accession"].where(pfam_clans["clan_acc"].notna())
+    pfam_clans["clan_description"] = pfam_clans["clan_id"]
+    pfam_clans["clan_comment"] = np.nan
+    return pfam_clans[["pfam_accession", "pfam_name", "pfam_description", "clan", "pfam", "clan_acc", "clan_description", "clan_comment"]]
 
 def return_partial_EC_list(ec, total_ec_list):
     if not isinstance(ec, str) and np.isnan(ec):

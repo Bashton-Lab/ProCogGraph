@@ -128,14 +128,14 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     | cath-domain-description-file.txt | CATH domain descriptions. |
     | dir.des.scop.1_75.txt / dir.cla.scop.1_75.txt | SCOP domain descriptions/classifications. |
     | scop2-cla-latest.txt / scop2-des-latest.txt | SCOP2 domain classifications/descriptions. |
-    | pfamA.txt.gz | Pfam-A domain descriptions. |
+    | Pfam-A.clans.tsv.gz | Pfam-A domain descriptions and clan membership (consolidated by Pfam into a single file in 2026). |
     | interpro.xml.gz | InterPro domain annotations. |
     | rhea2ec.tsv / rhea-directions.tsv / rhea-reaction-smiles.tsv | RHEA reaction data. |
     | chebi_names.tsv.gz / relation.tsv | ChEBI names and relations. |
     | ChEBI_Results.tsv | ChEBI records with a KEGG COMPOUND cross-reference and a known structure — derived from bulk ChEBI flat files rather than ChEBI's advanced search UI (see `docs/reference_data_download_plan.md`). |
     | ccd.cif | Chemical Component Dictionary structures. |
 
-    Pfam's clan data (`clan_membership.txt.gz`/`clan.txt.gz` in older versions of this doc) has been consolidated upstream into a single `Pfam-A.clans.tsv.gz`; the download script fetches it, but the pipeline's own parsing code doesn't consume the new format yet, so it's not part of the list above — see `docs/reference_data_download_plan.md` for status. `preprocess_rhea.py --rd_dir` also expects a directory of Rhea reaction (`.rd`) files not currently covered by the script — obtain this manually for now.
+    `pfamA.txt.gz`/`clan_membership.txt.gz`/`clan.txt.gz` in older versions of this doc have been consolidated upstream into the single `Pfam-A.clans.tsv.gz` above; the download script fetches it and the pipeline's parsing code (`utils.get_pfam_annotations`) reads it directly, so no separate files are needed. `rd/` — a directory of Rhea reaction (`.rd`) files, needed by `preprocess_rhea.py --rd_dir` — is also fetched automatically (extracted from Rhea's `rhea-rd.tar.gz` bulk archive).
 
 3. Preprocess RHEA reaction files:
 

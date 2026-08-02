@@ -129,32 +129,21 @@ entries:
     post_process: none
     confidence: verified
 
-  - name: pfam_a
-    target_filename: pfamA.txt.gz
-    param_name: pfam_a_file
-    source_type: direct_url
-    url: https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/pfamA.txt.gz
-    min_size_bytes: 5000000
-    post_process: none
-    confidence: verified
-
-  - name: pfam_clans_consolidated
+  - name: pfam_clans
     target_filename: Pfam-A.clans.tsv.gz
-    param_name: null
-    source_type: needs_code_update
+    param_name: pfam_clans_file
+    source_type: direct_url
     url: https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.clans.tsv.gz
     min_size_bytes: 100000
     post_process: none
     confidence: verified
     note: >
-      Pfam removed clan_membership.txt.gz and clan.txt.gz (the two files
-      params.pfam_clan_rels/pfam_clans and utils.get_pfam_annotations
-      currently expect) and replaced them with this single consolidated
-      file. Downloaded here for visibility, but pfam_clan_rels/pfam_clans
-      params and utils.get_pfam_annotations (nextflow/bin/utils.py:232-241)
-      still need a code change to consume it - see
-      docs/reference_data_download_plan.md #2. Excluded from --dry-run's
-      "ready to run pipeline" summary until that lands.
+      Pfam consolidated the three files this used to be (pfamA.txt.gz,
+      clan_membership.txt.gz, clan.txt.gz) into this single file (2026
+      restructure). utils.get_pfam_annotations and
+      params.pfam_clans_file/nextflow.config updated to match - see
+      docs/reference_data_download_plan.md #2. No longer excluded from the
+      "ready to run pipeline" summary - fully wired up now.
 
   - name: cath_names
     target_filename: cath-names.txt
