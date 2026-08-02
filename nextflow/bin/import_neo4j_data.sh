@@ -32,7 +32,7 @@ bin/neo4j-admin database import full \
 --relationships=IS_IN_SCOP_FOLD=import/superfamily_fold_rels.tsv.gz \
 --nodes=scopFold=import/scop_fold_nodes.tsv.gz \
 --relationships=IS_IN_SCOP_CLASS=import/scop_fold_class_rels.tsv.gz \
---nodes=IS_IN_SCOP_CLASS=import/scop_class_nodes.tsv.gz \
+--nodes=scopClass=import/scop_class_nodes.tsv.gz \
 --nodes=cathClass=import/cath_class_nodes.tsv.gz \
 --relationships=IS_IN_CATH_CLASS=import/cath_class_architecture_rels.tsv.gz \
 --nodes=cathArchitecture=import/cath_architecture_nodes.tsv.gz \

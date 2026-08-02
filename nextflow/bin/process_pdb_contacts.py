@@ -185,7 +185,7 @@ def process_manifest_row(row, cutoff):
         ##we check in process_pdb_structure that domains are present for the structure, so no need to fail here.
         domain_info_dataframe = pd.DataFrame(block.find("_pdbx_sifts_xref_db_segments.", ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"]), 
             columns = ["entity_id", "asym_id", "xref_db", "xref_db_acc", "domain_name", "segment_id", "instance_id", "seq_id_start", "seq_id_end"])
-        domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "SCOP2" "Pfam", "InterPro"])]
+        domain_info_dataframe_filtered = domain_info_dataframe.loc[domain_info_dataframe.xref_db.isin(["CATH", "SCOP", "SCOP2B", "SCOP2", "Pfam", "InterPro"])]
 
         if len(domain_info_dataframe_filtered) > 0:
             mmcif_domains = domain_info_dataframe_filtered.xref_db.unique().tolist()
