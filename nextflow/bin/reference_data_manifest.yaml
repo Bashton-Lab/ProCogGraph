@@ -210,7 +210,8 @@ entries:
     url: https://ftp.expasy.org/databases/rhea/tsv/rhea2ec.tsv
     min_size_bytes: 50000
     post_process: none
-    confidence: unverified
+    confidence: verified
+    note: Confirmed live (2026-08).
 
   - name: rhea_directions
     target_filename: rhea-directions.tsv
@@ -219,7 +220,8 @@ entries:
     url: https://ftp.expasy.org/databases/rhea/tsv/rhea-directions.tsv
     min_size_bytes: 50000
     post_process: none
-    confidence: unverified
+    confidence: verified
+    note: Confirmed live (2026-08).
 
   - name: rhea_reaction_smiles
     target_filename: rhea-reaction-smiles.tsv
@@ -228,21 +230,27 @@ entries:
     url: https://ftp.expasy.org/databases/rhea/tsv/rhea-reaction-smiles.tsv
     min_size_bytes: 1000000
     post_process: none
-    confidence: unverified
+    confidence: verified
+    note: Confirmed live (2026-08).
 
   - name: rhea_rd_dir
-    target_filename: null
+    target_filename: rd
     param_name: null
-    source_type: manual
-    url: null
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/rhea/ctfiles/rhea-rd.tar.gz
     min_size_bytes: null
-    post_process: none
-    confidence: null
+    min_file_count: 30000
+    post_process: extract_tar_gz
+    confidence: verified
     note: >
       preprocess_rhea.py --rd_dir expects a directory of Rhea reaction (.rd)
-      files. No specific bulk archive for this was confirmed while building
-      this manifest - resolve and turn into a direct_url entry before
-      relying on --dry-run's "ready to run pipeline" summary being complete.
+      files, one per unidirectional Rhea reaction. The rd/ directory itself
+      (https://ftp.expasy.org/databases/rhea/ctfiles/rd/) has ~37,100
+      individual files and its own README explicitly says "please avoid
+      browsing the subdirectories" - use the sibling rhea-rd.tar.gz archive
+      instead (confirmed live, 2026-08, 24.8M), extracted into a local rd/
+      directory via the extract_tar_gz post_process. target_filename here is
+      a directory name, not a single file.
 
   - name: chebi_names
     target_filename: chebi_names.tsv.gz

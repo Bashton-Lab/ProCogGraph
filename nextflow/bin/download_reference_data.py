@@ -19,6 +19,7 @@ import csv
 import gzip
 import shutil
 import sys
+import tarfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,7 +60,24 @@ def download_with_retry(url, dest_path):
     raise RuntimeError(f"failed to download {url} after {RETRY_ATTEMPTS} attempts") from last_exception
 
 
-def check_size(dest_path, min_size_bytes):
+def check_size(dest_path, entry):
+    """For file entries, checks entry['min_size_bytes']. For directory
+    entries (post_process: extract_tar_gz), checks entry['min_file_count']
+    instead, since a directory's own stat().st_size isn't meaningful."""
+    if dest_path.is_dir():
+        min_file_count = entry.get("min_file_count")
+        if min_file_count is None:
+            return
+        actual_count = sum(1 for _ in dest_path.iterdir())
+        if actual_count < min_file_count:
+            raise RuntimeError(
+                f"{dest_path.name}/ contains {actual_count} files, below the expected "
+                f"minimum of {min_file_count} - likely a truncated/partial extraction. "
+                f"Not treating this as a successful fetch."
+            )
+        return
+
+    min_size_bytes = entry.get("min_size_bytes")
     if min_size_bytes is None:
         return
     actual_size = dest_path.stat().st_size
@@ -77,6 +95,29 @@ def post_process_gunzip(dest_path):
     with gzip.open(gz_path, "rb") as src, open(dest_path, "wb") as dst:
         shutil.copyfileobj(src, dst)
     gz_path.unlink()
+
+
+def post_process_extract_tar_gz(dest_path):
+    """For entries whose target_filename is a directory (e.g. Rhea's rd/
+    folder of per-reaction files): the tarball downloads to dest_path as a
+    plain file first (same as every other entry), then this extracts it.
+
+    Assumes the tarball's own top-level entry is a directory with the same
+    name as target_filename (verified true for rhea-rd.tar.gz, which
+    contains rd/10001.rd etc., not bare 10001.rd) - so extraction target is
+    dest_path's parent, letting the tarball's own top-level folder become
+    dest_path. Extracting *into* dest_path itself would double-nest
+    (dest_path/rd/10001.rd instead of dest_path/10001.rd)."""
+    tar_path = dest_path.with_name(dest_path.name + ".tar.gz.tmp")
+    dest_path.rename(tar_path)
+    with tarfile.open(tar_path, "r:gz") as tar:
+        tar.extractall(path=dest_path.parent, filter="data")
+    tar_path.unlink()
+    if not dest_path.is_dir():
+        raise RuntimeError(
+            f"expected extracting {tar_path.name} to produce a directory at {dest_path}, "
+            f"but it didn't - the tarball's internal layout may have changed."
+        )
 
 
 def post_process_csv_to_tsv_gz(dest_path):
@@ -166,6 +207,7 @@ DERIVED_FUNCTIONS = {
 POST_PROCESS_FUNCTIONS = {
     "gunzip": post_process_gunzip,
     "csv_to_tsv_gz": post_process_csv_to_tsv_gz,
+    "extract_tar_gz": post_process_extract_tar_gz,
 }
 
 
@@ -189,14 +231,14 @@ def fetch_entry(data_dir, entry, manifest_by_name, force, skip_existing):
         if entry.get("note"):
             print(f"    {entry['note'].strip()}")
         download_with_retry(entry["url"], dest_path)
-        check_size(dest_path, entry.get("min_size_bytes"))
+        check_size(dest_path, entry)
         return "needs_code_update", dest_path
 
     if source_type == "derived":
         print(f"[derive] {name}: deriving {dest_path.name}")
         derive_fn = DERIVED_FUNCTIONS[entry["post_process"]]
         derive_fn(data_dir, entry, manifest_by_name, force, skip_existing)
-        check_size(dest_path, entry.get("min_size_bytes"))
+        check_size(dest_path, entry)
         return "derived", dest_path
 
     if source_type == "direct_url":
@@ -205,7 +247,7 @@ def fetch_entry(data_dir, entry, manifest_by_name, force, skip_existing):
         post_process = entry.get("post_process", "none")
         if post_process != "none":
             POST_PROCESS_FUNCTIONS[post_process](dest_path)
-        check_size(dest_path, entry.get("min_size_bytes"))
+        check_size(dest_path, entry)
         return "fetched", dest_path
 
     raise ValueError(f"unknown source_type '{source_type}' for entry '{name}'")
