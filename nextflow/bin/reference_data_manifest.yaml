@@ -1,0 +1,335 @@
+# Manifest of external reference data required by the ProCogGraph Nextflow
+# pipeline (see nextflow/nextflow.config:85-103 and docs/installation.md).
+# This file is the single source of truth for "what does the pipeline need,
+# and where does it come from" — consumed by
+# nextflow/bin/download_reference_data.py. See docs/reference_data_download_plan.md
+# for the rationale behind each entry, especially the ones marked with a
+# `confidence` or `note` field below (URLs checked live during planning are
+# marked confidence: verified; a few could not be confirmed and are marked
+# confidence: unverified — the download script's dry-run/size-check is the
+# safety net for those, not blind trust in this file).
+#
+# Fields:
+#   name           - unique identifier, used with --only
+#   target_filename- filename written into --data_dir
+#   param_name     - matching nextflow.config param (for cross-checking), or
+#                    null if the file is only used outside nextflow.config
+#                    (e.g. as a CLI arg to download_mmcif.py)
+#   source_type    - direct_url | derived | manual | needs_code_update
+#   url            - source URL (direct_url entries)
+#   min_size_bytes - best-effort sanity floor for the downloaded file
+#   post_process   - none | gunzip | csv_to_tsv_gz | <derived function name>
+#   confidence     - verified (checked live while building this manifest) |
+#                    unverified (best-known convention, not confirmed live)
+#   note           - free text, e.g. why a source needs special handling
+
+entries:
+  - name: sifts_ec_mapping
+    target_filename: pdb_chain_enzyme.tsv.gz
+    param_name: sifts_file
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/msd/sifts/csv/pdb_chain_enzyme.csv
+    min_size_bytes: 1000000
+    post_process: csv_to_tsv_gz
+    confidence: verified
+    note: >
+      The only live SIFTS source is comma-separated and uncompressed, but
+      the pipeline (download_mmcif.py:182) reads it with sep="\t" from a
+      .tsv.gz file. post_process converts comma -> tab and gzips it.
+
+  - name: pdbe_kb_assemblies
+    target_filename: assemblies_data.csv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/pdbe-kb/complexes/assemblies_data.csv
+    min_size_bytes: 10000000
+    post_process: none
+    confidence: verified
+    note: >
+      Not a nextflow.config param - consumed directly as a CLI arg by
+      download_mmcif.py --assemblies_file when building the structure
+      manifest (docs/installation.md step 4).
+
+  - name: enzyme_dat
+    target_filename: enzyme.dat
+    param_name: enzyme_dat_file
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/enzyme/enzyme.dat
+    min_size_bytes: 5000000
+    post_process: none
+    confidence: verified
+
+  - name: enzyme_class
+    target_filename: enzclass.txt
+    param_name: enzyme_class_file
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/enzyme/enzclass.txt
+    min_size_bytes: 5000
+    post_process: none
+    confidence: verified
+
+  - name: scop_domains_info
+    target_filename: dir.cla.scop.1_75.txt
+    param_name: scop_domains_info_file
+    source_type: direct_url
+    url: https://scop.berkeley.edu/downloads/parse/dir.cla.scop.1_75.txt
+    min_size_bytes: 1000000
+    post_process: none
+    confidence: unverified
+    note: >
+      docs/installation.md only links the SCOP downloads landing page, not
+      a direct file URL. This uses SCOP's documented /downloads/parse/
+      convention for flat files - confirm with --dry-run before relying on it.
+
+  - name: scop_descriptions
+    target_filename: dir.des.scop.1_75.txt
+    param_name: scop_descriptions_file
+    source_type: direct_url
+    url: https://scop.berkeley.edu/downloads/parse/dir.des.scop.1_75.txt
+    min_size_bytes: 100000
+    post_process: none
+    confidence: unverified
+    note: Same caveat as scop_domains_info.
+
+  - name: scop2_domains_info
+    target_filename: scop2-cla-latest.txt
+    param_name: scop2_domains_info_file
+    source_type: direct_url
+    url: https://www.ebi.ac.uk/pdbe/scop/files/scop2-cla-latest.txt
+    min_size_bytes: 1000000
+    post_process: none
+    confidence: unverified
+    note: >
+      Could not confirm this exact path live while building this manifest
+      (search results were inconclusive on the current PDBe SCOP2 file
+      layout). Verify with --dry-run/--only scop2_domains_info before a
+      real pipeline run; update this URL if it 404s.
+
+  - name: scop2_descriptions
+    target_filename: scop2-des-latest.txt
+    param_name: scop2_descriptions_file
+    source_type: direct_url
+    url: https://www.ebi.ac.uk/pdbe/scop/files/scop2-des-latest.txt
+    min_size_bytes: 100000
+    post_process: none
+    confidence: unverified
+    note: Same caveat as scop2_domains_info.
+
+  - name: interpro_xml
+    target_filename: interpro.xml.gz
+    param_name: interpro_xml
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/interpro/current_release/interpro.xml.gz
+    min_size_bytes: 20000000
+    post_process: none
+    confidence: verified
+
+  - name: pfam_a
+    target_filename: pfamA.txt.gz
+    param_name: pfam_a_file
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/pfamA.txt.gz
+    min_size_bytes: 5000000
+    post_process: none
+    confidence: verified
+
+  - name: pfam_clans_consolidated
+    target_filename: Pfam-A.clans.tsv.gz
+    param_name: null
+    source_type: needs_code_update
+    url: https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.clans.tsv.gz
+    min_size_bytes: 100000
+    post_process: none
+    confidence: verified
+    note: >
+      Pfam removed clan_membership.txt.gz and clan.txt.gz (the two files
+      params.pfam_clan_rels/pfam_clans and utils.get_pfam_annotations
+      currently expect) and replaced them with this single consolidated
+      file. Downloaded here for visibility, but pfam_clan_rels/pfam_clans
+      params and utils.get_pfam_annotations (nextflow/bin/utils.py:232-241)
+      still need a code change to consume it - see
+      docs/reference_data_download_plan.md #2. Excluded from --dry-run's
+      "ready to run pipeline" summary until that lands.
+
+  - name: cath_names
+    target_filename: cath-names.txt
+    param_name: cath_names
+    source_type: direct_url
+    url: http://download.cathdb.info/cath/releases/latest-release/cath-classification-data/cath-names.txt
+    min_size_bytes: 100000
+    post_process: none
+    confidence: verified
+
+  - name: cath_domain_description_file
+    target_filename: cath-domain-description-file.txt
+    param_name: cddf
+    source_type: direct_url
+    url: http://download.cathdb.info/cath/releases/latest-release/cath-classification-data/cath-domain-description-file.txt
+    min_size_bytes: 50000000
+    post_process: none
+    confidence: verified
+
+  - name: ccd
+    target_filename: ccd.cif
+    param_name: ccd_cif
+    source_type: direct_url
+    url: https://files.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
+    min_size_bytes: 50000000
+    post_process: gunzip
+    confidence: unverified
+    note: >
+      Long-established conventional URL for the full merged Chemical
+      Component Dictionary, but not confirmed live while building this
+      manifest (fetch returned a directory listing, not file content, when
+      checked). Verify with --dry-run/--only ccd before relying on it.
+      Downloads compressed (~100-150M) and gunzips to ~350-400M.
+
+  - name: pubchem_substance_mapping
+    target_filename: pubchem_substance_id_mapping.txt
+    param_name: pubchem_mapping
+    source_type: manual
+    url: null
+    min_size_bytes: null
+    post_process: none
+    confidence: null
+    note: >
+      Generated via a PubChem substance search
+      (https://www.ncbi.nlm.nih.gov/pcsubstance?term=%22KEGG%22%5BSourceName%5D%20AND%20hasnohold%5Bfilt%5D)
+      and exported manually - no stable bulk download URL identified. The
+      download script prints these instructions and skips rather than
+      failing the whole run.
+
+  - name: rhea2ec
+    target_filename: rhea2ec.tsv
+    param_name: rhea2ec
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/rhea/tsv/rhea2ec.tsv
+    min_size_bytes: 50000
+    post_process: none
+    confidence: unverified
+
+  - name: rhea_directions
+    target_filename: rhea-directions.tsv
+    param_name: rhea_directions
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/rhea/tsv/rhea-directions.tsv
+    min_size_bytes: 50000
+    post_process: none
+    confidence: unverified
+
+  - name: rhea_reaction_smiles
+    target_filename: rhea-reaction-smiles.tsv
+    param_name: rhea_reactions_smiles
+    source_type: direct_url
+    url: https://ftp.expasy.org/databases/rhea/tsv/rhea-reaction-smiles.tsv
+    min_size_bytes: 1000000
+    post_process: none
+    confidence: unverified
+
+  - name: rhea_rd_dir
+    target_filename: null
+    param_name: null
+    source_type: manual
+    url: null
+    min_size_bytes: null
+    post_process: none
+    confidence: null
+    note: >
+      preprocess_rhea.py --rd_dir expects a directory of Rhea reaction (.rd)
+      files. No specific bulk archive for this was confirmed while building
+      this manifest - resolve and turn into a direct_url entry before
+      relying on --dry-run's "ready to run pipeline" summary being complete.
+
+  - name: chebi_names
+    target_filename: chebi_names.tsv.gz
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/names.tsv.gz
+    min_size_bytes: 5000000
+    post_process: none
+    confidence: verified
+    note: >
+      ChEBI restructured their FTP layout in 2026; this replaces the old
+      Flat_file_tab_delimited/chebi_names.tsv.gz path referenced in
+      docs/installation.md. Renamed on download from upstream's names.tsv.gz
+      to chebi_names.tsv.gz, since preprocess_rhea.py --chebi_names
+      (nextflow/bin/preprocess_rhea.py:93) reads it directly under that
+      local filename with pd.read_csv(sep="\t", compression="gzip").
+
+  - name: chebi_relation
+    target_filename: relation.tsv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/relation.tsv.gz
+    min_size_bytes: 500000
+    post_process: gunzip
+    confidence: verified
+    note: >
+      Upstream file is now gzipped (relation.tsv.gz); get_ec_information.py
+      --chebi_relations expects a plain .tsv, so this is gunzipped on
+      download.
+
+  - name: chebi_database_accession
+    target_filename: chebi_database_accession.tsv.gz
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/database_accession.tsv.gz
+    min_size_bytes: 500000
+    post_process: none
+    confidence: verified
+    note: Intermediate input for the ChEBI_Results.tsv derivation below.
+
+  - name: chebi_structures
+    target_filename: chebi_structures.tsv.gz
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/structures.tsv.gz
+    min_size_bytes: 50000000
+    post_process: none
+    confidence: verified
+    note: >
+      Intermediate input for the ChEBI_Results.tsv derivation below. Large
+      (~88M compressed) - the size-sanity floor here is set generously
+      below the real size to avoid false-flagging on minor version growth.
+
+  - name: chebi_results
+    target_filename: ChEBI_Results.tsv
+    param_name: null
+    source_type: derived
+    url: null
+    min_size_bytes: 500000
+    post_process: derive_chebi_results
+    confidence: verified
+    note: >
+      Derived from chebi_names, chebi_database_accession and
+      chebi_structures (all fetched above) instead of ChEBI's advanced
+      search UI - see docs/reference_data_download_plan.md #2. Requires
+      those three entries to have been fetched first; the script fetches
+      them automatically as dependencies if missing.
+
+  # --- Not required by the pipeline today - only needed once
+  # docs/cofactor_coverage_plan.md is implemented. Kept here so this
+  # manifest stays the single place tracking every external file the
+  # pipeline depends on, present or planned. Excluded from --dry-run's
+  # "ready to run pipeline" summary; fetch explicitly with --only.
+  - name: pdbe_rellig_chain_ligand_functions
+    target_filename: interacting_chains_with_ligand_functions.tsv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/msd/pdbechem_v2/additional_data/pdb_ligand_interactions/interacting_chains_with_ligand_functions.tsv
+    min_size_bytes: 100000000
+    post_process: none
+    confidence: verified
+    optional: true
+    note: For the cofactor-coverage plan (docs/cofactor_coverage_plan.md), not the current pipeline.
+
+  - name: pdbe_rellig_bound_molecules
+    target_filename: pdb_bound_molecules.tsv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/msd/pdbechem_v2/additional_data/pdb_ligand_interactions/pdb_bound_molecules.tsv
+    min_size_bytes: 50000000
+    post_process: none
+    confidence: verified
+    optional: true
+    note: For the cofactor-coverage plan (docs/cofactor_coverage_plan.md), not the current pipeline.

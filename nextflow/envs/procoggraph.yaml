@@ -17,3 +17,4 @@ dependencies:
     - biopython
     - beautifulsoup4
     - pubchempy
+    - pyyaml
