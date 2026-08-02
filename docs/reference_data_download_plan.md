@@ -37,13 +37,29 @@ data, not by re-reading this plan:
   note. Run `--dry-run --only <name>` and then a real fetch for these
   specifically before depending on them; update the manifest if any 404s.
 - `preprocess_rhea.py --rd_dir` needs a directory of Rhea `.rd` files with
-  no bulk source identified — left as a `manual`-style gap
-  (`rhea_rd_dir` entry), not solved here.
-- The Pfam clan-file consolidation (`Pfam-A.clans.tsv.gz`) is downloaded
-  (`needs_code_update` source type) but intentionally excluded from the
-  script's "ready to run pipeline" framing, since `utils.get_pfam_annotations`
-  doesn't parse the new format yet — that remains separate work, per this
-  plan's original §2.
+  no bulk source identified — left as a `manual`-style gap (`rhea_rd_dir`
+  entry) until the user pointed at Rhea's `rhea-rd.tar.gz` bulk archive
+  (sibling to the 37,100-file `rd/` directory Rhea's own README says to
+  avoid browsing directly); resolved via a new `extract_tar_gz`
+  post-process and directory-aware size checking added to the script.
+- **Update:** the Pfam clan-file consolidation (`Pfam-A.clans.tsv.gz`) is
+  no longer a gap — `utils.get_pfam_annotations` was rewritten to consume
+  the single consolidated file directly (`pfam_a_file`/`pfam_clan_rels`/
+  `pfam_clans` collapsed into one `pfam_clans_file` param throughout
+  `nextflow.config`/`main.nf`/`process_all_pdb_contacts.py`). One real
+  data loss found along the way: the consolidated file has no equivalent
+  of the old `clan.txt.gz`'s free-text `clan_comment` field (confirmed —
+  no supplementary clan-detail file exists on Pfam's FTP anymore);
+  `clan_description` now holds the short clan id (e.g. "GPCR_A") and
+  `clan_comment` is left null rather than faking it. Verified end-to-end
+  against the real file.
+- All `scop_domains_info`/`scop_descriptions`/`scop2_domains_info`/
+  `scop2_descriptions`/`ccd`/`rhea2ec`/`rhea_directions`/
+  `rhea_reaction_smiles`/`rhea_rd_dir`/`pfam_clans` entries are now
+  `confidence: verified` (user supplied several of the real source pages;
+  each was then re-verified end-to-end via the actual script and, where
+  applicable, the exact downstream pipeline parsing logic). Only
+  `pubchem_substance_mapping` remains genuinely unresolved.
 
 `docs/installation.md` updated to point at the script in place of the old
 manual download table.
