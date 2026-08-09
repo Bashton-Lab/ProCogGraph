@@ -6,12 +6,15 @@ import pandas as pd
 import requests
 from urllib.parse import quote
 from bs4 import BeautifulSoup
-import json 
+import json
 from Bio.ExPASy import Enzyme as EEnzyme
 from pdbeccdutils.helpers.mol_tools import fix_molecule
 from rdkit import Chem
-import gzip 
+import gzip
 import xml.etree.ElementTree as ET
+import signal
+import glyles
+from wurcs_to_iupac import translate as translate_wurcs_to_iupac
 
 #make this function be applicable to extract_pdbe_info script too - need to check if the grouped output at end is appropriate.
 def process_ec_records(enzyme_dat_file, enzyme_class_file):
@@ -149,7 +152,47 @@ def get_smiles_from_csdb(csdb_linear, cache_df):
         else:
             smiles = np.nan
         return smiles
-    
+
+def get_smiles_from_wurcs_offline(wurcs, timeout_seconds = 15):
+    """
+    Convert a WURCS glycan descriptor straight to SMILES, entirely offline:
+    glypy (WURCS parsing) -> wurcs_to_iupac.translate (IUPAC-condensed
+    translation) -> glyles (SMILES generation). No network calls, unlike
+    get_glycoct_from_wurcs/get_csdb_from_glycoct/get_smiles_from_csdb above.
+
+    See docs/iupac_translator_plan.md for the full validation history -
+    benchmarked at ~89% success on the real cognate-ligand master set and
+    ~96% on real PDB-deposited glycans, vs. 0% for the live glycoct-based
+    chain above (GlyTouCan's API no longer returns glycoct at all).
+
+    GlyLES is known to hang on malformed input instead of failing fast
+    (an ANTLR grammar issue, not specific to this translator), hence the
+    timeout - returns np.nan rather than blocking indefinitely.
+    """
+    if wurcs is np.nan or wurcs is None:
+        return np.nan
+    try:
+        iupac = translate_wurcs_to_iupac(wurcs)
+    except Exception:
+        return np.nan
+
+    def _timeout_handler(signum, frame):
+        raise TimeoutError("glyles.convert timed out")
+
+    previous_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.alarm(timeout_seconds)
+    try:
+        result = glyles.convert(glycan = iupac, verbose = None)
+    except Exception:
+        return np.nan
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+    if not result or not result[0][1]:
+        return np.nan
+    return result[0][1]
+
 def pdbe_sanitise_smiles(smiles, return_mol = False, return_sanitisation = False):
     """
     Sanitises a smiles string using pdbeccdutils fix_molecule functions and

@@ -21,7 +21,7 @@ from Bio.ExPASy import Enzyme as EEnzyme
 import argparse
 from pathlib import Path
 from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculator
-from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb, process_ec_records
+from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb, get_smiles_from_wurcs_offline, process_ec_records
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
@@ -646,6 +646,17 @@ def main():
         new_smiles_values.rename(columns = {"smiles":"descriptor"}, inplace = True)
         smiles_cache = pd.concat([smiles_cache, new_smiles_values], ignore_index = True)
         smiles_cache.to_pickle(f"{args.smiles_cache}")
+
+        #offline fallback for rows the live glycoct/CSDB chain above didn't resolve.
+        #GlyTouCan's gtcid2seqs API no longer returns glycoct at all (confirmed dead,
+        #0% success on real data - see docs/iupac_translator_plan.md), so in practice
+        #this is currently the path that resolves nearly everything that resolves at
+        #all - benchmarked at ~89% on the real cognate-ligand master set. Kept as a
+        #fallback rather than replacing the live chain outright, in case GlyTouCan's
+        #API is fixed in future.
+        missing_smiles_mask = glycan_compounds_df_merged["smiles"].isna() & glycan_compounds_df_merged["wurcs"].notna()
+        glycan_compounds_df_merged.loc[missing_smiles_mask, "smiles"] = glycan_compounds_df_merged.loc[missing_smiles_mask, "wurcs"].apply(get_smiles_from_wurcs_offline)
+
         glycan_compounds_df_merged = glycan_compounds_df_merged.loc[glycan_compounds_df_merged.smiles.isna() == False]
         kegg_reaction_enzyme_df_exploded_gtc = kegg_reaction_enzyme_df_exploded.merge(glycan_compounds_df_merged, left_on="entities", right_on="compound_id", how = "inner")
         PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_gtc, smilesCol='smiles')

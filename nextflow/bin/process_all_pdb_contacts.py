@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe, get_scop2_domains_info
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, get_smiles_from_wurcs_offline, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe, get_scop2_domains_info
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
@@ -16,15 +16,20 @@ def get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, gly
     updated_csdb_cache = []
     updated_smiles_cache = []
     for wurcs in wurcs_list:
-        smiles = None
-        glycoct = get_glycoct_from_wurcs(wurcs, glycoct_cache)
-        updated_glycoct_cache.append({"WURCS": wurcs, "glycoct": glycoct})
-        if not pd.isna(glycoct):
-            csdb = get_csdb_from_glycoct(glycoct, csdb_linear_cache)
-            updated_csdb_cache.append({"glycoct": glycoct, "csdb": csdb})
-            if not pd.isna(csdb):
-                smiles = get_smiles_from_csdb(csdb, smiles_cache)
-                updated_smiles_cache.append({"csdb": csdb, "descriptor" : smiles})
+        # offline translation (glypy -> IUPAC-condensed -> glyles) is the
+        # primary path here - benchmarked at ~96% on real PDB-deposited
+        # glycans, see docs/iupac_translator_plan.md. Only fall back to
+        # the live GlycoSmos/CSDB chain (below) when it fails.
+        smiles = get_smiles_from_wurcs_offline(wurcs)
+        if pd.isna(smiles):
+            glycoct = get_glycoct_from_wurcs(wurcs, glycoct_cache)
+            updated_glycoct_cache.append({"WURCS": wurcs, "glycoct": glycoct})
+            if not pd.isna(glycoct):
+                csdb = get_csdb_from_glycoct(glycoct, csdb_linear_cache)
+                updated_csdb_cache.append({"glycoct": glycoct, "csdb": csdb})
+                if not pd.isna(csdb):
+                    smiles = get_smiles_from_csdb(csdb, smiles_cache)
+                    updated_smiles_cache.append({"csdb": csdb, "descriptor" : smiles})
         sugar_smiles[wurcs] = smiles
     updated_glycoct_cache_df = pd.concat([pd.DataFrame(updated_glycoct_cache, columns = ["WURCS", "glycoct"]), glycoct_cache]).drop_duplicates()
     updated_csdb_cache_df = pd.concat([pd.DataFrame(updated_csdb_cache, columns = ["glycoct", "csdb"]), csdb_linear_cache]).drop_duplicates()
