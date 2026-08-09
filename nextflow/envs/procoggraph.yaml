@@ -18,3 +18,5 @@ dependencies:
     - beautifulsoup4
     - pubchempy
     - pyyaml
+    - glypy
+    - glyles
