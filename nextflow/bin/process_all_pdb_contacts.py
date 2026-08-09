@@ -106,9 +106,7 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--ccd_cif', type=str, help='cif file containing chemical component dictionary in mmcif format')
     parser.add_argument('--contacts_file', type=str, help='csv file containing concatenated contacts from pdbe-arpeggio for all pdbs')
-    parser.add_argument('--pfam_a_file', type=str, help='pfam a file')
-    parser.add_argument('--pfam_clan_rels', type=str, help='pfam clan relationships file')
-    parser.add_argument('--pfam_clans', type=str, help='pfam clans file')
+    parser.add_argument('--pfam_clans_file', type=str, help='consolidated Pfam-A.clans.tsv.gz file (pfam accession/name/description + clan membership)')
     parser.add_argument('--scop_domains_info_file', type=str, help='scop domains info file')
     parser.add_argument('--scop_descriptions_file', type=str, help='scop descriptions file')
     parser.add_argument('--scop2_domains_info_file', type=str, help='scop2 domains info file')
@@ -299,7 +297,7 @@ def main():
         scop_contacts.to_csv(f"scop_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
 
     if len(pfam_contacts) > 0:
-        pfam_annotations = get_pfam_annotations(args.pfam_a_file, args.pfam_clan_rels, args.pfam_clans)
+        pfam_annotations = get_pfam_annotations(args.pfam_clans_file)
         pfam_contacts = pfam_contacts.merge(pfam_annotations, left_on = "xref_db_acc" , right_on = "pfam_accession", how = "left")
         pfam_contacts.to_csv(f"pfam_pdb_residue_interactions.csv.gz", sep = "\t", index = False, compression = "gzip")
     else:

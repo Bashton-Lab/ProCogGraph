@@ -96,39 +96,48 @@ Installation instructions for running the database on bare metal, rather than Do
 
 The ProCogGraph pipeline is built using Nextflow for workflow management. To run the pipeline, follow these steps:
 
-1. The pipeline utilises data from a number of different sources to build the ProCogGraph database. To begin, prepare a data files directory with the following:
-
-    | File | Description | Download |
-    | ---- | ---- | ---- |
-    | pdb_chain_enzyme.tsv.gz | Protein chain EC ID annotation from SIFTS for PDe structures. | [SIFTS](https://ftp.ebi.ac.uk/pub/databases/msd/sifts/csv/pdb_chain_enzyme.csv) |
-    | assemblies_data.csv.gz | Assembly data for PDBe structures from PDBe-KB | [PDBe-KB](https://ftp.ebi.ac.uk/pub/databases/pdbe-kb/complexes/assemblies_data.csv) |
-    | enzclass.txt | Enzyme classification hierarchy | [ExPASy](https://ftp.expasy.org/databases/enzyme/) |
-    | enzyme.dat | ENZYME database records | [ExPASy](https://ftp.expasy.org/databases/enzyme/) |
-    | cath-names.txt | CATH domain names | [CATH](http://download.cathdb.info/cath/releases/latest-release/cath-classification-data/) |
-    | cath-domain-description-file.txt | CATH domain descriptions | [CATH](http://download.cathdb.info/cath/releases/latest-release/cath-classification-data/) |
-    | dir.des.scop.1_75.txt | SCOP domain descriptions | [SCOP](https://scop.berkeley.edu/downloads/) |
-    | dir.cla.scop.1_75.txt | SCOP domain classifications | [SCOP](https://scop.berkeley.edu/downloads/) |
-    | clan_membership.txt.gz | Pfam clan membership | [InterPro](https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/database_files/) |
-    | clan.txt.gz | Pfam clan descriptions | [InterPro](https://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/database_files/) |
-    | interpro.xml.gz | InterPro domain annotations | [InterPro](https://ftp.ebi.ac.uk/pub/databases/interpro/current_release/) |
-    | rhea-reaction-smiles.tsv | RHEA reaction smiles strings | [RHEA](https://www.rhea-db.org/help/download) |
-    | rhea2ec.tsv | RHEA to EC number mappings | [RHEA](https://www.rhea-db.org/help/download) |
-    | rhea-directions.tsv | RHEA reaction directions | [RHEA](https://www.rhea-db.org/help/download) |
-    | chebi_names.tsv.gz | ChEBI names | [ChEBI](https://ftp.ebi.ac.uk/pub/databases/chebi/Flat_file_tab_delimited/) |
-    | relation.tsv | ChEBI relations | [ChEBI](https://ftp.ebi.ac.uk/pub/databases/chebi/Flat_file_tab_delimited/) |
-    | ChEBI_Results.tsv | ChEBI records with database cross references to KEGG GLYCAN and KEGG COMPOUND, where a structure exists for the record, generated with advanced search function. | [ChEBI](https://www.ebi.ac.uk/chebi/advancedSearchForward.do) |
-    | scop2-cla-latest.txt | SCOP2 domain classifications | [EBI](https://www.ebi.ac.uk/pdbe/scop/download) |
-    | scop2-des-latest.txt | SCOP2 domain descriptions | [EBI](https://www.ebi.ac.uk/pdbe/scop/download) |
-    | ccd.cif | Chemical Component Dictionary Structures | [CCD](https://www.wwpdb.org/data/ccd) |
-    | pubchem_substance_id_mapping.txt | PubChem substance ID mappings from PubChem search for KEGG data source. | [PubChem](https://www.ncbi.nlm.nih.gov/pcsubstance?term=%22KEGG%22%5BSourceName%5D%20AND%20hasnohold%5Bfilt%5D) |
-
-2. Clone this repository and install dependencies:
+1. Clone this repository and install dependencies:
 
     ``` bash
     git clone m-crown/ProCogGraph
     cd ProCogGraph
-    conda env create -f nextflow/envs/environment.yml
+    conda env create -f nextflow/envs/procoggraph.yaml
+    conda activate procoggraph
     ```
+
+2. The pipeline utilises data from a number of different sources to build the ProCogGraph database. Rather than downloading these manually, run the reference data download script, which fetches, validates, and (where needed) reformats every file the pipeline requires into a single data directory:
+
+    ``` bash
+    python3 nextflow/bin/download_reference_data.py --data_dir /PATH/TO/DATA_DIR
+    ```
+
+    Useful flags:
+    - `--dry-run` — list what would be fetched without downloading anything.
+    - `--only NAME[,NAME...]` — fetch a subset of entries (see `nextflow/bin/reference_data_manifest.yaml` for names).
+    - `--force` — re-download and refresh files that already exist.
+
+    Every file below is fetched automatically (the script will print instructions and skip, rather than fail the run, for any future entry that turns out to have no stable bulk-download source):
+
+    | File | Description |
+    | ---- | ---- |
+    | pdb_chain_enzyme.tsv.gz | Protein chain EC ID annotation from SIFTS for PDBe structures. |
+    | assemblies_data.csv | Assembly data for PDBe structures from PDBe-KB. |
+    | enzclass.txt | Enzyme classification hierarchy (ExPASy). |
+    | enzyme.dat | ENZYME database records (ExPASy). |
+    | cath-names.txt | CATH domain names. |
+    | cath-domain-description-file.txt | CATH domain descriptions. |
+    | dir.des.scop.1_75.txt / dir.cla.scop.1_75.txt | SCOP domain descriptions/classifications. |
+    | scop2-cla-latest.txt / scop2-des-latest.txt | SCOP2 domain classifications/descriptions. |
+    | Pfam-A.clans.tsv.gz | Pfam-A domain descriptions and clan membership (consolidated by Pfam into a single file in 2026). |
+    | interpro.xml.gz | InterPro domain annotations. |
+    | rhea2ec.tsv / rhea-directions.tsv / rhea-reaction-smiles.tsv | RHEA reaction data. |
+    | chebi_names.tsv.gz / relation.tsv | ChEBI names and relations. |
+    | ChEBI_Results.tsv | ChEBI records with a KEGG COMPOUND cross-reference and a known structure — derived from bulk ChEBI flat files rather than ChEBI's advanced search UI (see `docs/reference_data_download_plan.md`). |
+    | ccd.cif | Chemical Component Dictionary structures. |
+    | pubchem_substance_id_mapping.txt | PubChem CID ↔ KEGG code cross-references — derived from NCBI's bulk `CID-Identifiers.tsv.gz` rather than an interactive PubChem substance search (see `docs/reference_data_download_plan.md`). |
+    | rd/ | Directory of Rhea per-reaction (`.rd`) files, extracted from Rhea's `rhea-rd.tar.gz` bulk archive. |
+
+    `pfamA.txt.gz`/`clan_membership.txt.gz`/`clan.txt.gz` in older versions of this doc have been consolidated upstream into the single `Pfam-A.clans.tsv.gz` above; the download script fetches it and the pipeline's parsing code (`utils.get_pfam_annotations`) reads it directly, so no separate files are needed. `rd/` — a directory of Rhea reaction (`.rd`) files, needed by `preprocess_rhea.py --rd_dir` — is also fetched automatically (extracted from Rhea's `rhea-rd.tar.gz` bulk archive).
 
 3. Preprocess RHEA reaction files:
 
@@ -140,7 +149,7 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
 4. Produce final manifest file of structures to be processed:
 
     ``` bash
-    python3 download_mmcif.py --sifts_file /PATH/TO/DATA_DIR/pdb_chain_enzyme.tsv.gz --assemblies_file /PATH/TO/DATA_DIR/assemblies_data.csv.gz --chunk_size 100 --output_dir /PATH/TO/STRUCTURES_DIR
+    python3 download_mmcif.py --sifts_file /PATH/TO/DATA_DIR/pdb_chain_enzyme.tsv.gz --assemblies_file /PATH/TO/DATA_DIR/assemblies_data.csv --chunk_size 100 --output_dir /PATH/TO/STRUCTURES_DIR
     ```
 
 5. Run the nextflow pipeline:
@@ -155,7 +164,7 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
 
     - params.output_dir - the desired output directory.
 
-    - params.manifest - the path to the manifest file created in step 3.
+    - params.manifest - the path to the manifest file created in step 4.
 
     ``` bash
     cd /PATH/TO/PROCOGGRAPH_REPOSITORY/nextflow
