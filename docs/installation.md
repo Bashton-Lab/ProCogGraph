@@ -58,12 +58,12 @@ NOTE: Currently, the NeoDash Docker image does not contain a build for arm based
 
 Installation instructions for running the database on bare metal, rather than Docker, are described below.
 
-1. Download the latest database flat files from Zenodo [here](https://zenodo.org/records/13165852) and clone the ProCogGraph repository:
+1. Download the latest database flat files from Zenodo [here](https://zenodo.org/records/14046116) and clone the ProCogGraph repository:
 
     ``` bash
     git clone Bashton-Lab/ProCogGraph
-    curl https://zenodo.org/records/13165852/files/procoggraph_flat_files_v1-0.zip?download=1 -o /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
-    unzip /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0.zip
+    curl https://zenodo.org/records/14046116/files/procoggraph_flat_files_v1-0-2.zip?download=1 -o /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0-2.zip
+    unzip /PATH/TO/DATABASE_FLAT_FILES/procoggraph_flat_files_v1-0-2.zip
     ```
 
 2. Download and install Neo4j community edition from the [Neo4j website](https://neo4j.com/download/). The database was built using Neo4j version 5.
