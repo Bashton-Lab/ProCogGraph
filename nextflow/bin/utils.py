@@ -10,6 +10,7 @@ import json
 from Bio.ExPASy import Enzyme as EEnzyme
 from pdbeccdutils.helpers.mol_tools import fix_molecule
 from rdkit import Chem
+from rdkit.Chem import PandasTools
 import gzip
 import xml.etree.ElementTree as ET
 import signal
@@ -310,6 +311,72 @@ def return_partial_EC_list(ec, total_ec_list):
         return(matching_ec)
     else:
         return [ec]
+
+def get_chem_comp_descriptors(ccd_doc, comp_id_list):
+    """Resolve a list of PDB chemical component codes to a single SMILES
+    descriptor each, using the CCD's own _pdbx_chem_comp_descriptor loop
+    (OpenEye descriptors preferred when present, else the first
+    RDKit-parseable SMILES row). Moved here from process_all_pdb_contacts.py
+    so it can be reused by preprocess_cofactors.py without a cross-script
+    import - it's a generic CCD-parsing utility, not specific to the
+    contacts pipeline."""
+    ligand_descriptors = {}
+    for ligand in comp_id_list:
+        lig_descriptor = None
+        lig_block = ccd_doc.find_block(ligand)
+        if lig_block is not None:
+            lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
+            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|';").str.replace(r"\n$","", regex = True)
+            lig_descriptors = lig_descriptors.loc[lig_descriptors.type == "SMILES"]
+            PandasTools.AddMoleculeColumnToFrame(lig_descriptors, smilesCol='descriptor', molCol='pdb_ROMol')
+            lig_descriptors = lig_descriptors.loc[lig_descriptors.pdb_ROMol.isna() == False]
+            if len(lig_descriptors) == 0:
+                lig_descriptor = None
+            else:
+                #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
+                preferred_row = lig_descriptors.loc[lig_descriptors.program.str.startswith("OpenEye")]
+                if not preferred_row.empty:
+                    lig_descriptor = preferred_row.iloc[0].descriptor
+                else:
+                    # Otherwise, select the first row with a SMILES string
+                    lig_descriptor = lig_descriptors.iloc[0].descriptor
+            ligand_descriptors[ligand] = lig_descriptor
+        else:
+            ligand_descriptors[ligand] = None
+    return ligand_descriptors
+
+def classify_ec_completeness(ec):
+    """Returns how many of an EC number's 4 dot-separated segments are
+    fully resolved (non "-") before the first wildcard, reading
+    left-to-right and stopping at the first "-". E.g. "1.1.1.10" -> 4,
+    "1.1.1.-" -> 3, "1.1.-.-" -> 2, "1.-.-.-" -> 1. Used by
+    preprocess_cofactors.py to decide whether a source's EC value is exact,
+    safely broadcastable (subsubclass-level, 3), or too coarse to use at
+    all (class/subclass-level, 1 or 2) - see docs/cofactor_coverage_plan.md
+    ("The broadcast problem, and its fix") for why levels 1 and 2 are
+    excluded: broadcasting them down to every terminal EC in that class/
+    subclass would claim structurally unrelated enzymes share a cofactor
+    just because they share a leading EC digit or two."""
+    segments = ec.split(".")
+    level = 0
+    for segment in segments:
+        if segment == "-":
+            break
+        level += 1
+    return level
+
+def broadcast_subsubclass_ec(ec, terminal_ec_list):
+    """Expands a subsubclass-level partial EC (e.g. "1.1.1.-") to every
+    matching terminal EC in terminal_ec_list. Reuses the existing
+    return_partial_EC_list matching logic (already used elsewhere in this
+    pipeline for SIFTS' partial EC annotations) rather than re-implementing
+    prefix matching. Callers MUST have already checked
+    classify_ec_completeness(ec) == 3 before calling this - it will happily
+    (and, per the cofactor plan, incorrectly) broadcast a class- or
+    subclass-level wildcard too, since return_partial_EC_list itself has no
+    concept of "too coarse to use"."""
+    matches = return_partial_EC_list(ec, terminal_ec_list)
+    return matches if isinstance(matches, list) else []
 
 def get_updated_enzyme_records(df, ec_records_df, ec_col = "protein_entity_ec"):
     ec_list = ec_records_df.ID.unique() ##fill the partial ec records using the original ec ids from the expasy enzyme list

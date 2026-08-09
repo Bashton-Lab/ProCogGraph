@@ -365,6 +365,7 @@ def main():
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
     parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
+    parser.add_argument('--cofactor_ligands', type=str, default = None, help='Path to preprocessed cofactor_ligands_df.pkl from preprocess_cofactors.py (optional - see docs/cofactor_coverage_plan.md)')
     args = parser.parse_args()
 
     if args.compound_cache_dir:
@@ -498,6 +499,17 @@ def main():
         rhea_reactions["compound_reaction"] = rhea_reactions.compound_reaction.apply(lambda x: [x])
         rhea_reactions["compound_reaction"] = rhea_reactions["compound_reaction"].str.join("|")
         print("RHEA records loaded from file")
+
+    # cofactor-origin cognate ligands (docs/cofactor_coverage_plan.md) - a
+    # strict addition alongside the reaction-derived sources above, not a
+    # modification of them. Optional: the pipeline runs unchanged without
+    # --cofactor_ligands.
+    cofactor_ligands_cols = ["entry", "compound_id", "compound_name", "ROMol", "ligand_db", "compound_reaction", "ligand_source"]
+    if args.cofactor_ligands:
+        cofactor_ligands_df = pd.read_pickle(args.cofactor_ligands)
+        print(f"Cofactor ligands loaded from file: {len(cofactor_ligands_df)} rows, {cofactor_ligands_df['entry'].nunique()} distinct ECs")
+    else:
+        cofactor_ligands_df = pd.DataFrame(columns=cofactor_ligands_cols)
 
     # ChEBI and PubChem are resolved *before* the live per-compound KEGG lookup
     # below, specifically so that lookup can skip any compound code already
@@ -672,23 +684,25 @@ def main():
         kegg_reaction_enzyme_df_exploded_gtc = pd.read_pickle(f"kegg_reaction_enzyme_df_exploded_gtc.pkl")
 
     if not os.path.exists(f"cognate_ligands_df.pkl"):
-        cognate_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db", "compound_reaction"]],
-                                           kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db", "compound_reaction"]], 
-                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}), 
-                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG" : "compound_id"}),
-                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]]])
+        cognate_ligands_df = pd.concat([rhea_reactions[["entry", "compound_id", "compound_name", "ROMol", "ligand_db", "compound_reaction"]].assign(ligand_source = "reaction"),
+                                           kegg_reaction_enzyme_df_exploded_kegg[["entry", "compound_name", "compound_id", "ROMol", "ligand_db", "compound_reaction"]].assign(ligand_source = "reaction"),
+                                           kegg_reaction_enzyme_df_exploded_chebi[["entry", "ChEBI_NAME", "KEGG COMPOUND ACCESSION", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG COMPOUND ACCESSION" : "compound_id"}).assign(ligand_source = "reaction"),
+                                           kegg_reaction_enzyme_df_exploded_pubchem[["entry", "compound_name", "KEGG", "ROMol", "ligand_db", "compound_reaction"]].rename(columns = {"KEGG" : "compound_id"}).assign(ligand_source = "reaction"),
+                                           kegg_reaction_enzyme_df_exploded_gtc[["entry", "compound_name", "compound_id","ROMol", "ligand_db", "compound_reaction"]].assign(ligand_source = "reaction"),
+                                           cofactor_ligands_df[cofactor_ligands_cols]])
         cognate_ligands_df = cognate_ligands_df.reset_index()
-        
+
         #fill the missing compound names first using the chebi name, and subsequently with the compound id if that is also nan.
         cognate_ligands_df["compound_name"] = cognate_ligands_df["compound_name"].fillna(cognate_ligands_df["ChEBI_NAME"]).fillna(cognate_ligands_df["compound_id"])
         cognate_ligands_df["ROMol"] = cognate_ligands_df["ROMol"].apply(lambda x: neutralize_atoms(x) if isinstance(x,Chem.rdchem.Mol) else np.nan) #attempt to neutralise charged structures for grouping as charges cannot be used to score mols
         cognate_ligands_df["canonical_smiles"] = cognate_ligands_df["ROMol"].map(lambda x: canon_smiles(x) if isinstance(x,Chem.rdchem.Mol) else np.nan)
-        cognate_ligands_df_unique_smiles = cognate_ligands_df[["canonical_smiles", "compound_name", "ligand_db", "compound_reaction"]].copy()
+        cognate_ligands_df_unique_smiles = cognate_ligands_df[["canonical_smiles", "compound_name", "ligand_db", "compound_reaction", "ligand_source"]].copy()
         cognate_ligands_df_unique_smiles["compound_reaction"] = cognate_ligands_df_unique_smiles["compound_reaction"].fillna("")
-        cognate_ligands_df_unique_smiles = cognate_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set, "compound_reaction": set}).reset_index()
+        cognate_ligands_df_unique_smiles = cognate_ligands_df_unique_smiles.groupby("canonical_smiles", dropna = False).agg({"compound_name": set, "ligand_db": set, "compound_reaction": set, "ligand_source": set}).reset_index()
         cognate_ligands_df_unique_smiles["ligand_db"] = cognate_ligands_df_unique_smiles.ligand_db.str.join("|")
         cognate_ligands_df_unique_smiles["compound_name"] = cognate_ligands_df_unique_smiles.compound_name.str.join("|")
         cognate_ligands_df_unique_smiles["compound_reaction"] = cognate_ligands_df_unique_smiles.compound_reaction.str.join("|").str.strip("|")
+        cognate_ligands_df_unique_smiles["ligand_source"] = cognate_ligands_df_unique_smiles.ligand_source.apply(lambda x: "|".join(sorted(x)))
         cognate_ligands_df_unique_smiles = cognate_ligands_df_unique_smiles.reset_index(drop=True).reset_index()
 
         cognate_ligands_df_unique_smiles.rename(columns = {"index": "uniqueID"}, inplace = True)
