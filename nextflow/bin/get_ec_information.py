@@ -489,33 +489,6 @@ def main():
     kegg_reaction_enzyme_df_exploded = kegg_reaction_enzyme_df.explode("entities")
     compound_codes = kegg_reaction_enzyme_df_exploded.entities.dropna().unique()
 
-    #here we should try and get the kegg compounds from the compound codes, where they are non glycans (deal with glycans later)
-    if not os.path.exists(f"kegg_compounds_df.pkl"):
-        print("Getting KEGG Compound records")
-        compound_codes = kegg_reaction_enzyme_df_exploded.entities.dropna().unique()
-        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir =  args.compound_cache_dir) for code in compound_codes if code.startswith("C")])
-        kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x, mol_compound_cache_dir = args.compound_cache_dir))
-        kegg_compounds_df.to_pickle(f"kegg_compounds_df.pkl")
-        print("KEGG Compound records saved")
-    else:
-        kegg_compounds_df = pd.read_pickle(f"kegg_compounds_df.pkl")
-        print("KEGG Compound records loaded from file")
-
-    if not os.path.exists(f"kegg_reaction_enzyme_df_exploded_kegg.pkl"):
-        print("Merging KEGG Compound records with Enzyme and Reaction records")
-        kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded.merge(kegg_compounds_df, left_on = "entities", right_on = "compound_id", how = "inner")
-        kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded_kegg.dropna(subset = ["canonical_smiles"])
-        kegg_reaction_enzyme_df_exploded_kegg["ligand_db"] = "KEGG:" + kegg_reaction_enzyme_df_exploded_kegg["entities"].astype("str")
-        kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"] = kegg_reaction_enzyme_df_exploded_kegg.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x.compound_id in item], axis = 1)
-        kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"] = kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"].str.join("|")
-        PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_kegg, smilesCol='canonical_smiles')
-        kegg_reaction_enzyme_df_exploded_kegg.to_pickle(f"kegg_reaction_enzyme_df_exploded_kegg.pkl")
-        print("KEGG Compound records merged with Enzyme and Reaction records and saved")
-    else:
-        kegg_reaction_enzyme_df_exploded_kegg = pd.read_pickle(f"kegg_reaction_enzyme_df_exploded_kegg.pkl")
-        print("Merged KEGG Compound records with Enzyme and Reaction records loaded from file")
-
-
     #the rhea reactions can have identical molecules on left and right hand side, so should drop duplicates for final df.
     if not args.rhea_reactions:
         raise ValueError("RHEA reactions file not provided")
@@ -525,6 +498,18 @@ def main():
         rhea_reactions["compound_reaction"] = rhea_reactions.compound_reaction.apply(lambda x: [x])
         rhea_reactions["compound_reaction"] = rhea_reactions["compound_reaction"].str.join("|")
         print("RHEA records loaded from file")
+
+    # ChEBI and PubChem are resolved *before* the live per-compound KEGG lookup
+    # below, specifically so that lookup can skip any compound code already
+    # resolvable from bulk/cheap sources. ChEBI is a local bulk file (zero API
+    # calls); PubChem resolution here is a handful of batched calls (200
+    # CIDs/request) rather than the unthrottled one-request-per-compound KEGG
+    # calls it's replacing - both were previously run *after* (and
+    # independently of) the KEGG direct-fetch loop, which meant every compound
+    # got a live, unthrottled KEGG API call regardless of whether ChEBI/PubChem
+    # already had it. See docs/cognate_ligands_generation_plan.md ("Question 3")
+    # for the analysis behind this: ~93% of KEGG compound codes seen in
+    # reactions already have a structure via ChEBI or PubChem bulk data.
     ### ChEBI KEGG Mapping
     if not os.path.exists(f"kegg_reaction_enzyme_df_exploded_chebi.pkl"):
         print("Getting ChEBI records")
@@ -596,6 +581,38 @@ def main():
         print("PubChem records loaded from file")
         kegg_reaction_enzyme_df_exploded_pubchem = pd.read_pickle(f"kegg_reaction_enzyme_df_exploded_pubchem.pkl")
 
+    #here we should try and get the kegg compounds from the compound codes, where they are non glycans (deal with glycans later).
+    #only compound codes NOT already resolved (with a confirmed structure) via ChEBI or PubChem above are looked up
+    #live against KEGG's per-compound endpoint - that endpoint has no rate limiting of its own
+    #(unlike get_kegg_enzymes/get_kegg_reactions, which chunk+throttle), so minimising how often it's hit matters.
+    #see docs/cognate_ligands_generation_plan.md ("Question 3") for the coverage analysis behind this change.
+    if not os.path.exists(f"kegg_compounds_df.pkl"):
+        chebi_covered_codes = set(kegg_reaction_enzyme_df_exploded_chebi["entities"].unique())
+        pubchem_covered_codes = set(kegg_reaction_enzyme_df_exploded_pubchem["entities"].unique())
+        already_covered_codes = chebi_covered_codes | pubchem_covered_codes
+        compound_codes_for_kegg = [code for code in compound_codes if code.startswith("C") and code not in already_covered_codes]
+        print(f"Getting KEGG Compound records for {len(compound_codes_for_kegg)} compound codes not already resolved via ChEBI/PubChem (of {len([c for c in compound_codes if c.startswith('C')])} total KEGG compound codes seen)")
+        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir =  args.compound_cache_dir) for code in compound_codes_for_kegg])
+        kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x, mol_compound_cache_dir = args.compound_cache_dir))
+        kegg_compounds_df.to_pickle(f"kegg_compounds_df.pkl")
+        print("KEGG Compound records saved")
+    else:
+        kegg_compounds_df = pd.read_pickle(f"kegg_compounds_df.pkl")
+        print("KEGG Compound records loaded from file")
+
+    if not os.path.exists(f"kegg_reaction_enzyme_df_exploded_kegg.pkl"):
+        print("Merging KEGG Compound records with Enzyme and Reaction records")
+        kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded.merge(kegg_compounds_df, left_on = "entities", right_on = "compound_id", how = "inner")
+        kegg_reaction_enzyme_df_exploded_kegg = kegg_reaction_enzyme_df_exploded_kegg.dropna(subset = ["canonical_smiles"])
+        kegg_reaction_enzyme_df_exploded_kegg["ligand_db"] = "KEGG:" + kegg_reaction_enzyme_df_exploded_kegg["entities"].astype("str")
+        kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"] = kegg_reaction_enzyme_df_exploded_kegg.apply(lambda x: [re.search(r"^(.+):", item)[1] for item in x.reaction_equation.split(",") if x.compound_id in item], axis = 1)
+        kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"] = kegg_reaction_enzyme_df_exploded_kegg["compound_reaction"].str.join("|")
+        PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_kegg, smilesCol='canonical_smiles')
+        kegg_reaction_enzyme_df_exploded_kegg.to_pickle(f"kegg_reaction_enzyme_df_exploded_kegg.pkl")
+        print("KEGG Compound records merged with Enzyme and Reaction records and saved")
+    else:
+        kegg_reaction_enzyme_df_exploded_kegg = pd.read_pickle(f"kegg_reaction_enzyme_df_exploded_kegg.pkl")
+        print("Merged KEGG Compound records with Enzyme and Reaction records loaded from file")
 
     if not os.path.exists(f"kegg_reaction_enzyme_df_exploded_gtc.pkl"):
         ### Getting list of glytoucan glycans to query
