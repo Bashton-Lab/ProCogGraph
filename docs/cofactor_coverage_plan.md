@@ -286,6 +286,23 @@ combined source working.
   analysis behind Table 3.3 / the Discussion's unmatched-ligand
   discussion) for the ~4,843 newly-EC-covered enzymes.
 
+## Benchmark results
+
+Real end-to-end build (2026-08-30), benchmarked against the last
+pre-cofactor-coverage `cognate_ligands_df.pkl` (2024-07): **+87%
+EC-ligand pairs (41,785 → 78,163), +1,102 net ECs covered (6,214 →
+7,316)**, with the "strict addition" design intent confirmed (40,282
+pairs unchanged) and a small, fully-categorised set of differences from
+the old build (3.6%, mostly RDKit macrocycle-sanitization edge cases and
+normal upstream Rhea/KEGG data drift, not a regression in this plan's own
+logic).
+
+Full methodology, the complete results table, the lost-pair
+categorisation, and reproduction instructions now live in
+**[docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md)** — written as
+the first-class, citable record of this work (for the v2 docs/paper),
+rather than duplicated here where it would drift out of sync.
+
 ## Suggested order of work
 
 1. Vendor and parse `cofactor_ec.csv` / `cofactors_details.json`; resolve
