@@ -232,7 +232,13 @@ def pubchem_cid_to_descriptor(compound_list, chunk_size = 200):
         # SMILES concept, new name as part of PubChem's PUG-REST schema
         # modernization). Request the current name directly rather than
         # relying on whatever alias PubChem happens to still honour.
-        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{compound_string}/property/ConnectivitySMILES/JSON"
+        # Also request Title (PubChem's display name) in the same batched
+        # call - free (one more property on an already-batched request),
+        # and replaces the separate per-KEGG-code live name lookup that
+        # used to sit later in the PubChem block (removed: it was the
+        # single most expensive call in the whole build for a purely
+        # cosmetic field - see git history for that change).
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{compound_string}/property/ConnectivitySMILES,Title/JSON"
         # Fetch JSON data from the URL
         response = request_with_retry(requests.get, url)
 
@@ -432,6 +438,7 @@ def main():
     parser.add_argument('--csdb_cache', type=str, default = None, help='Path to csdb_cache.pkl file, cached from previous run')
     parser.add_argument('--compound_cache_dir', type=str, default = None, help='Path to directory containing KEGG compound records, cached from previous run')
     parser.add_argument('--chebi_relations', type=str, default = None, help='Path to chebi relations.tsv file for extracting cofactor information')
+    parser.add_argument('--chebi_relation_types', type=str, default = None, help='Path to ChEBI relation_type.tsv vocabulary file (id/code lookup for relation.tsv.relation_type_id, e.g. resolving "has_role")')
     parser.add_argument('--gtc_cache', type=str, default = None, help='Path to glytoucan_cache.pkl file, cached from previous run')
     parser.add_argument('--cofactor_ligands', type=str, default = None, help='Path to preprocessed cofactor_ligands_df.pkl from preprocess_cofactors.py (optional - see docs/cofactor_coverage_plan.md)')
     args = parser.parse_args()
@@ -656,11 +663,25 @@ def main():
         # (confirmed: only ~8.2k compound codes are ever relevant here) -
         # this was the dominant, silent cost of this whole phase.
         kegg_pubchem_mapping = kegg_pubchem_mapping.loc[kegg_pubchem_mapping.KEGG.isin(compound_codes)].reset_index(drop = True)
-        pubchem_kegg_compound_records = pd.DataFrame(fetch_all_with_progress(
-            kegg_pubchem_mapping.KEGG.unique(),
-            lambda code: get_kegg_compound_record(code, compound_cache_dir = args.compound_cache_dir),
-            "PubChem block: fetching KEGG display names",
-        ))
+        # Not a live get_kegg_compound_record call per code: the only field
+        # of that record actually used downstream from this specific merge
+        # is compound_name, purely as a cosmetic display-name fallback
+        # (cognate_ligands_df already falls further back to ChEBI_NAME, then
+        # to the bare compound code itself, if this is missing - see the
+        # fillna chain after the final concat). It never feeds structure/
+        # SMILES resolution (that's CID -> ConnectivitySMILES, entirely
+        # separate) or any matching/dedup logic. Measured live: ~1.4s/code,
+        # which made this the dominant cost of the whole build (~2.5h for
+        # ~6.5k codes) for a purely cosmetic field. Skip the live fetch and
+        # let the existing name fallback chain handle it instead - matches
+        # get_kegg_compound_record's own "not found" shape so the merge/
+        # assert below are unaffected.
+        pubchem_kegg_compound_records = pd.DataFrame({
+            "compound_id": kegg_pubchem_mapping.KEGG.unique(),
+            "compound_name": None,
+            "dbxrefs": None,
+            "KEGG_compound_record": None,
+        })
         kegg_pubchem_mapping = kegg_pubchem_mapping.merge(pubchem_kegg_compound_records, left_on = "KEGG", right_on = "compound_id", how = "left", indicator = True)
         assert(len(kegg_pubchem_mapping.loc[kegg_pubchem_mapping._merge != "both"]) == 0)
         kegg_pubchem_mapping.drop(columns = ["_merge"], inplace = True)
@@ -673,6 +694,10 @@ def main():
         pubchem_smiles["CID"] = pubchem_smiles["CID"].astype(int)
 
         kegg_pubchem_mapping_smiles = kegg_pubchem_mapping.merge(pubchem_smiles, on = "CID", how = "left", indicator = True)
+        # compound_name is always None at this point (see above) - fill it
+        # from PubChem's own Title property, fetched in the same batched
+        # call as the SMILES above.
+        kegg_pubchem_mapping_smiles["compound_name"] = kegg_pubchem_mapping_smiles["compound_name"].fillna(kegg_pubchem_mapping_smiles["Title"])
         kegg_pubchem_mapping_smiles_filtered = kegg_pubchem_mapping_smiles.loc[kegg_pubchem_mapping_smiles.ConnectivitySMILES.isna() == False].reset_index(drop = True).copy()
         kegg_pubchem_mapping_smiles_filtered.drop(columns = "_merge", inplace = True)
 
@@ -770,6 +795,13 @@ def main():
         #all - benchmarked at ~89% on the real cognate-ligand master set. Kept as a
         #fallback rather than replacing the live chain outright, in case GlyTouCan's
         #API is fixed in future.
+        # object dtype, not whatever pandas inferred from line 784's mostly-
+        # NaN result (often float64): a .loc[mask, col] = <mixed str/NaN>
+        # partial assignment into a float64-typed column raises under this
+        # pandas version ("Invalid value '<StringArray>...' for dtype
+        # 'float64'") - same class of bug already fixed in preprocess_rhea.py
+        # today (assigning str/NaN into a strictly-typed column).
+        glycan_compounds_df_merged["smiles"] = glycan_compounds_df_merged["smiles"].astype(object)
         missing_smiles_mask = glycan_compounds_df_merged["smiles"].isna() & glycan_compounds_df_merged["wurcs"].notna()
         glycan_compounds_df_merged.loc[missing_smiles_mask, "smiles"] = glycan_compounds_df_merged.loc[missing_smiles_mask, "wurcs"].apply(get_smiles_from_wurcs_offline)
 
@@ -814,9 +846,33 @@ def main():
         cognate_ligands_df["compound_name"] = cognate_ligands_df["compound_name"].str.split("|").apply(lambda x: length_upper_sorted(x)).str.join("|")
         cognate_ligands_df = cognate_ligands_df.drop_duplicates()
         
+        # ChEBI's relation.tsv moved from a string TYPE column to a numeric
+        # relation_type_id foreign key (and INIT_ID/FINAL_ID -> lowercase
+        # init_id/final_id) - resolve "has_role" via the small
+        # relation_type.tsv vocabulary file rather than hardcoding whatever
+        # numeric id it happens to be today (confirmed live: 4, but that's
+        # an internal ChEBI id, not a stable public constant).
+        #
+        # Direction, confirmed against real data: init_id is the specific
+        # compound, final_id is the role class it has
+        # (glucose --has_role--> nutrient) - the ontologically-expected
+        # direction. Filtering init_id against the role IDs (as an earlier
+        # version of this code did) matches zero rows on current data;
+        # role IDs belong on final_id. Renamed below (final_id -> INIT_ID,
+        # init_id -> FINAL_ID) so the rest of this block, which already
+        # expects INIT_ID to be the role-class side and FINAL_ID to be the
+        # specific-compound side it later merges cognate_ligands_df against,
+        # is otherwise unchanged.
         chebi_relations = pd.read_csv(f"{args.chebi_relations}", sep="\t")
+        chebi_relation_types = pd.read_csv(f"{args.chebi_relation_types}", sep="\t")
+        has_role_id = chebi_relation_types.loc[chebi_relation_types.code == "has_role", "id"].iloc[0]
 
-        chebi_cofactors = chebi_relations.loc[(chebi_relations.TYPE == "has_role") & (chebi_relations.INIT_ID.isin([23357,23354,26348,26672])), ["TYPE", "INIT_ID", "FINAL_ID"]]
+        chebi_cofactors = chebi_relations.loc[(chebi_relations.relation_type_id == has_role_id) & (chebi_relations.final_id.isin([23357,23354,26348,26672])), ["relation_type_id", "final_id", "init_id"]].copy()
+        chebi_cofactors.rename(columns = {"relation_type_id": "TYPE", "final_id": "INIT_ID", "init_id": "FINAL_ID"}, inplace = True)
+        # TYPE is int64 at this point (it's relation_type_id, always
+        # has_role_id here) - the string labels assigned below need object
+        # dtype first, same strict-coercion issue as elsewhere in this file.
+        chebi_cofactors["TYPE"] = chebi_cofactors["TYPE"].astype(object)
         chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23357, "TYPE"] = "Cofactor"
         chebi_cofactors.loc[chebi_cofactors.INIT_ID == 23354, "TYPE"] = "Coenzyme"
         chebi_cofactors.loc[chebi_cofactors.INIT_ID == 26348, "TYPE"] = "Prosthetic Group"

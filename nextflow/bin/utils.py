@@ -88,7 +88,7 @@ def get_terminal_record(entry, row, df):
     return row.ID
 
 def get_csdb_from_glycoct(glycoct, cache_df):
-    if glycoct is np.nan or glycoct == None:
+    if pd.isna(glycoct):
         return np.nan
     elif glycoct in cache_df.glycoct.values:
         csdb_linear = cache_df.loc[cache_df.glycoct == glycoct, "csdb"].values[0]
@@ -111,7 +111,7 @@ def get_csdb_from_glycoct(glycoct, cache_df):
     return csdb_linear
     
 def get_glycoct_from_wurcs(wurcs, cache_df):
-    if wurcs is np.nan or wurcs == None:
+    if pd.isna(wurcs):
         return np.nan
     elif wurcs in cache_df.WURCS.values:
         glycoct = cache_df.loc[cache_df.WURCS == wurcs, "glycoct"].values[0]
@@ -133,7 +133,7 @@ def get_glycoct_from_wurcs(wurcs, cache_df):
         return glycoct
 
 def get_smiles_from_csdb(csdb_linear, cache_df):
-    if csdb_linear is np.nan or csdb_linear == None:
+    if pd.isna(csdb_linear):
         return np.nan
     elif csdb_linear in cache_df.csdb.values:
         smiles = cache_df.loc[cache_df.csdb == csdb_linear, "descriptor"].values[0]
@@ -170,7 +170,7 @@ def get_smiles_from_wurcs_offline(wurcs, timeout_seconds = 15):
     (an ANTLR grammar issue, not specific to this translator), hence the
     timeout - returns np.nan rather than blocking indefinitely.
     """
-    if wurcs is np.nan or wurcs is None:
+    if pd.isna(wurcs):
         return np.nan
     try:
         iupac = translate_wurcs_to_iupac(wurcs)

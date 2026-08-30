@@ -286,7 +286,26 @@ entries:
     note: >
       Upstream file is now gzipped (relation.tsv.gz); get_ec_information.py
       --chebi_relations expects a plain .tsv, so this is gunzipped on
-      download.
+      download. Also note the TYPE/INIT_ID/FINAL_ID columns documented in
+      older versions of this project are gone - the real columns are
+      lowercase (init_id/final_id), and TYPE is now a numeric
+      relation_type_id foreign key, not a string label - see
+      chebi_relation_types below for the vocabulary needed to resolve it
+      (e.g. "has_role").
+
+  - name: chebi_relation_types
+    target_filename: relation_type.tsv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/relation_type.tsv.gz
+    min_size_bytes: 100
+    post_process: gunzip
+    confidence: verified
+    note: >
+      Small id/code vocabulary (11 rows) for relation.tsv's
+      relation_type_id column - get_ec_information.py
+      --chebi_relation_types uses it to resolve "has_role" to its current
+      numeric id (confirmed live: 4) rather than hardcoding that number.
 
   - name: chebi_database_accession
     target_filename: chebi_database_accession.tsv.gz
