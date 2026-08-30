@@ -8,6 +8,7 @@ import argparse
 from Bio.KEGG import Enzyme
 import io
 import time
+import datetime
 import pickle
 import re
 from rich.progress import Progress
@@ -24,6 +25,63 @@ from rdkit.ML.Descriptors.MoleculeDescriptors import MolecularDescriptorCalculat
 from utils import get_terminal_record, get_csdb_from_glycoct, get_smiles_from_csdb, get_smiles_from_wurcs_offline, process_ec_records
 from bs4 import BeautifulSoup
 from urllib.parse import quote
+
+# (connect_timeout, read_timeout), not a single float: a single timeout
+# value only reliably bounds the read phase in some observed cases - a
+# stuck TCP handshake (socket sitting in SYN_SENT, no SYN-ACK ever
+# arriving) was seen in practice to survive well past 30s combined-timeout
+# calls without raising or retrying. Separating connect/read is the
+# standard, more robust pattern requests/urllib3 recommend for exactly
+# this failure mode.
+REQUEST_TIMEOUT_SECONDS = (10, 30)
+REQUEST_RETRY_ATTEMPTS = 3
+REQUEST_RETRY_BACKOFF_SECONDS = 5
+
+def _now():
+    return datetime.datetime.now().strftime("%H:%M:%S")
+
+def request_with_retry(method, url, **kwargs):
+    """Thin wrapper around requests.get/requests.post with a timeout and a
+    small retry-with-backoff. None of this module's live API calls
+    (KEGG, PubChem, GlyTouCan) previously set a timeout at all, so a
+    stalled/dead connection - e.g. the host machine sleeping mid-request -
+    hangs forever instead of failing and retrying. This does not fix the
+    separate, larger issue that each phase (enzyme records, reaction
+    records, ...) only checkpoints to disk once the whole phase completes -
+    a hang partway through a phase still loses that phase's progress if it
+    has to be killed - but it does mean a transient drop no longer requires
+    that at all."""
+    last_exc = None
+    for attempt in range(1, REQUEST_RETRY_ATTEMPTS + 1):
+        try:
+            return method(url, timeout=REQUEST_TIMEOUT_SECONDS, **kwargs)
+        except requests.RequestException as exc:
+            last_exc = exc
+            if attempt < REQUEST_RETRY_ATTEMPTS:
+                print(f"    [{_now()}] request failed (attempt {attempt}/{REQUEST_RETRY_ATTEMPTS}): {exc} - retrying in {REQUEST_RETRY_BACKOFF_SECONDS}s")
+                time.sleep(REQUEST_RETRY_BACKOFF_SECONDS)
+    raise last_exc
+
+def fetch_all_with_progress(items, fetch_fn, label, print_every=100):
+    """Runs fetch_fn(item) for every item, printing timestamped progress
+    every `print_every` items (and always on the first and last). Every
+    live-fetch loop in this module used to be completely silent between a
+    "Getting X records" print and the next checkpoint, sometimes covering
+    thousands of live calls - a stall anywhere inside looked identical to
+    it just being slow, from the log alone. Returns the list of results in
+    input order."""
+    results = []
+    total = len(items)
+    start = time.time()
+    print(f"    [{_now()}] [{label}] starting, {total} items")
+    for i, item in enumerate(items, 1):
+        results.append(fetch_fn(item))
+        if i == 1 or i % print_every == 0 or i == total:
+            elapsed = time.time() - start
+            rate = i / elapsed if elapsed > 0 else 0
+            remaining = (total - i) / rate if rate > 0 else float("nan")
+            print(f"    [{_now()}] [{label}] {i}/{total} ({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining)")
+    return results
 
 def get_kegg_enzymes(ec_list, enzyme_string_file = None):
     def extract_reaction(ec):
@@ -54,7 +112,7 @@ def get_kegg_enzymes(ec_list, enzyme_string_file = None):
         else:
             return np.nan    
     if not enzyme_string_file:
-        response = requests.get(f'https://rest.kegg.jp/get/{"+".join(ec_list)}')
+        response = request_with_retry(requests.get, f'https://rest.kegg.jp/get/{"+".join(ec_list)}')
         if response.status_code == 200:
             response_string = response.text
         else:
@@ -118,7 +176,7 @@ def extract_secondary_id(identifier, database_list, current_db = ""):
 def get_kegg_reactions(chunk, reactions_string_file = None):
     kegg_reaction_dictionary = {}
     if not reactions_string_file:
-        response = requests.get(f'https://rest.kegg.jp/get/{ "+".join(chunk)}')
+        response = request_with_retry(requests.get, f'https://rest.kegg.jp/get/{ "+".join(chunk)}')
         if response.status_code == 200:
             responses_string = response.text
             response_status = 200
@@ -168,9 +226,15 @@ def pubchem_cid_to_descriptor(compound_list, chunk_size = 200):
     for i in range(0, len(compound_list), chunk_size):
         chunk = compound_list[i:i+chunk_size]
         compound_string = ",".join(chunk)
-        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{compound_string}/property/CanonicalSMILES/JSON"
+        # PubChem renamed/deprecated the "CanonicalSMILES" property - a live
+        # request confirmed requesting it now returns the value under a
+        # "ConnectivitySMILES" JSON key instead (same non-isomeric canonical
+        # SMILES concept, new name as part of PubChem's PUG-REST schema
+        # modernization). Request the current name directly rather than
+        # relying on whatever alias PubChem happens to still honour.
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{compound_string}/property/ConnectivitySMILES/JSON"
         # Fetch JSON data from the URL
-        response = requests.get(url)
+        response = request_with_retry(requests.get, url)
 
         # Check if the request was successful
         if response.status_code == 200:
@@ -192,7 +256,7 @@ def get_kegg_compound_record(kegg_id, compound_cache_dir = None):
         with open(f"{compound_cache_dir}/{kegg_id}.kegg_record.txt", "r") as file:
             compound_record_text = file.read()
     else:
-        compound_record = requests.get(f'https://rest.kegg.jp/get/{kegg_id}')
+        compound_record = request_with_retry(requests.get, f'https://rest.kegg.jp/get/{kegg_id}')
         if compound_record.status_code == 200:
             compound_record_text = compound_record.text
             if compound_cache_dir:
@@ -221,7 +285,7 @@ def get_kegg_compound_smiles(kegg_id, mol_compound_cache_dir = None):
             molblock = file.read()
     else:
         time.sleep(1)
-        response = requests.get(f'https://rest.kegg.jp/get/{kegg_id}/mol')
+        response = request_with_retry(requests.get, f'https://rest.kegg.jp/get/{kegg_id}/mol')
         if response.status_code == 200:
             compound_split = response.text.split("> <ENTRY>\n")
             molblock = compound_split[0]
@@ -241,7 +305,11 @@ def get_gtc_info(gtcids, cache_df_file):
         cache_df = pd.read_pickle(cache_df_file)
     else:
         cache_df = None
-    for gtcid in gtcids:
+    total = len(gtcids)
+    print(f"    [{_now()}] [GlyTouCan] starting, {total} ids")
+    for i, gtcid in enumerate(gtcids, 1):
+        if i == 1 or i % 50 == 0 or i == total:
+            print(f"    [{_now()}] [GlyTouCan] {i}/{total}")
         if cache_df is not None and gtcid in cache_df.index:
             continue
         else:
@@ -249,7 +317,7 @@ def get_gtc_info(gtcids, cache_df_file):
             data = {'gtcid': gtcid}
             nested_dict = {}
 
-            response = requests.post(url, data=data)
+            response = request_with_retry(requests.post, url, data=data)
 
             if response.status_code == 200:
                 json_result = json.loads(response.text)  # Display the response content
@@ -395,7 +463,8 @@ def main():
             #run this indiviudally, and save the results to a file for each enzyme. Adapt function to take a cache dir and check for matching filename before making api call
             print("Fetching enzyme records from KEGG API")
             for i in range(0, len(ec_list), n):
-                print(f"Processing chunk {i} of {len(ec_list)}")
+                if i % 100 == 0 or i + n >= len(ec_list):
+                    print(f"    [{_now()}] Processing chunk {i} of {len(ec_list)}")
                 chunk = ec_list[i:i + n]
                 enzyme_dict, enzyme_string = get_kegg_enzymes(chunk)
                 enzyme_records.update(enzyme_dict)
@@ -424,9 +493,11 @@ def main():
             print("Loading reaction records from text file.")
             kegg_reaction_dictionary, kegg_reaction_string = get_kegg_reactions(reactions, reactions_string_file = args.kegg_reaction_string)
         else:
-            print("Fetching reaction records from KEGG API")
+            print(f"Fetching reaction records from KEGG API ({len(reactions)} reactions)")
             n=10 #chunk size
             for i in range(0, len(reactions), n):
+                if i % 100 == 0 or i + n >= len(reactions):
+                    print(f"    [{_now()}] Processing chunk {i} of {len(reactions)}")
                 chunk = reactions[i:i + n]
                 reaction_dictionary, reaction_string = get_kegg_reactions(chunk)
                 kegg_reaction_dictionary.update(reaction_dictionary)
@@ -456,7 +527,20 @@ def main():
         kegg_reaction_enzyme_df["EC_substrate_codes"] = kegg_reaction_enzyme_df["EC_substrate_codes"].apply(lambda d: d if isinstance(d, list) else [])
         kegg_reaction_enzyme_df["EC_product_codes"] = kegg_reaction_enzyme_df["EC_product_codes"].apply(lambda d: d if isinstance(d, list) else [])
 
-        kegg_reaction_enzyme_df = kegg_reaction_enzyme_df.fillna("").groupby("entry").agg({"entry" : set, "error" : set, "matched_name" : set, "EC_substrate_codes": sum,"EC_product_codes": sum, "reaction_substrate_codes" : sum, "reaction_product_codes": sum, "EC_reactions":set, "reaction_id" : set, "reaction_definition": set, "reaction_equation" : set})
+        # not `sum` directly: pandas' groupby.agg(sum) on an object/list
+        # column calls Python's builtin sum() with its default start=0,
+        # which raises "unsupported operand type(s) for +: 'int' and
+        # 'list'" the moment it tries 0 + <first list> - true for every
+        # group regardless of whether the lists are empty, this was never
+        # going to work as a list-concatenation aggregator under this
+        # pandas version. concat_lists explicitly starts from [] instead.
+        def concat_lists(series):
+            result = []
+            for value in series:
+                result.extend(value)
+            return result
+
+        kegg_reaction_enzyme_df = kegg_reaction_enzyme_df.fillna("").groupby("entry").agg({"entry" : set, "error" : set, "matched_name" : set, "EC_substrate_codes": concat_lists,"EC_product_codes": concat_lists, "reaction_substrate_codes" : concat_lists, "reaction_product_codes": concat_lists, "EC_reactions":set, "reaction_id" : set, "reaction_definition": set, "reaction_equation" : set})
         kegg_reaction_enzyme_df["entities"] = kegg_reaction_enzyme_df["EC_substrate_codes"] + kegg_reaction_enzyme_df["EC_product_codes"] + kegg_reaction_enzyme_df["reaction_substrate_codes"] + kegg_reaction_enzyme_df["reaction_product_codes"]
         kegg_reaction_enzyme_df["entities"] = kegg_reaction_enzyme_df["entities"].apply(lambda x: ",".join(list(set(x))))
         #convert substrate/product codes to a comma separated string instead of list (for easier merging later)
@@ -564,7 +648,19 @@ def main():
             data.append(record)
 
         kegg_pubchem_mapping = pd.DataFrame(data)
-        pubchem_kegg_compound_records = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir = args.compound_cache_dir) for code in kegg_pubchem_mapping.KEGG.unique()])
+        # Restrict to codes actually seen in our reactions *before* the live
+        # fetch below - this file is NCBI's full bulk KEGG<->PubChem
+        # cross-reference (26k+ KEGG codes), not scoped to this run's data at
+        # all. Previously every one of those 26k+ codes got a live,
+        # unbatched get_kegg_compound_record call regardless of relevance
+        # (confirmed: only ~8.2k compound codes are ever relevant here) -
+        # this was the dominant, silent cost of this whole phase.
+        kegg_pubchem_mapping = kegg_pubchem_mapping.loc[kegg_pubchem_mapping.KEGG.isin(compound_codes)].reset_index(drop = True)
+        pubchem_kegg_compound_records = pd.DataFrame(fetch_all_with_progress(
+            kegg_pubchem_mapping.KEGG.unique(),
+            lambda code: get_kegg_compound_record(code, compound_cache_dir = args.compound_cache_dir),
+            "PubChem block: fetching KEGG display names",
+        ))
         kegg_pubchem_mapping = kegg_pubchem_mapping.merge(pubchem_kegg_compound_records, left_on = "KEGG", right_on = "compound_id", how = "left", indicator = True)
         assert(len(kegg_pubchem_mapping.loc[kegg_pubchem_mapping._merge != "both"]) == 0)
         kegg_pubchem_mapping.drop(columns = ["_merge"], inplace = True)
@@ -577,12 +673,12 @@ def main():
         pubchem_smiles["CID"] = pubchem_smiles["CID"].astype(int)
 
         kegg_pubchem_mapping_smiles = kegg_pubchem_mapping.merge(pubchem_smiles, on = "CID", how = "left", indicator = True)
-        kegg_pubchem_mapping_smiles_filtered = kegg_pubchem_mapping_smiles.loc[kegg_pubchem_mapping_smiles.CanonicalSMILES.isna() == False].reset_index(drop = True).copy()
+        kegg_pubchem_mapping_smiles_filtered = kegg_pubchem_mapping_smiles.loc[kegg_pubchem_mapping_smiles.ConnectivitySMILES.isna() == False].reset_index(drop = True).copy()
         kegg_pubchem_mapping_smiles_filtered.drop(columns = "_merge", inplace = True)
 
         ### Merging PubChem with enzyme df
         kegg_reaction_enzyme_df_exploded_pubchem = kegg_reaction_enzyme_df_exploded.merge(kegg_pubchem_mapping_smiles_filtered, left_on = "entities", right_on = "KEGG", how = "inner")
-        PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_pubchem, smilesCol='CanonicalSMILES')
+        PandasTools.AddMoleculeColumnToFrame(kegg_reaction_enzyme_df_exploded_pubchem, smilesCol='ConnectivitySMILES')
 
         kegg_reaction_enzyme_df_exploded_pubchem = kegg_reaction_enzyme_df_exploded_pubchem.loc[kegg_reaction_enzyme_df_exploded_pubchem.ROMol.isna() == False].reset_index(drop = True)
         kegg_reaction_enzyme_df_exploded_pubchem["ligand_db"] = "Pubchem:" + kegg_reaction_enzyme_df_exploded_pubchem["CID"].astype("str")
@@ -604,8 +700,16 @@ def main():
         already_covered_codes = chebi_covered_codes | pubchem_covered_codes
         compound_codes_for_kegg = [code for code in compound_codes if code.startswith("C") and code not in already_covered_codes]
         print(f"Getting KEGG Compound records for {len(compound_codes_for_kegg)} compound codes not already resolved via ChEBI/PubChem (of {len([c for c in compound_codes if c.startswith('C')])} total KEGG compound codes seen)")
-        kegg_compounds_df = pd.DataFrame([get_kegg_compound_record(code, compound_cache_dir =  args.compound_cache_dir) for code in compound_codes_for_kegg])
-        kegg_compounds_df["canonical_smiles"] = kegg_compounds_df["compound_id"].apply(lambda x: get_kegg_compound_smiles(x, mol_compound_cache_dir = args.compound_cache_dir))
+        kegg_compounds_df = pd.DataFrame(fetch_all_with_progress(
+            compound_codes_for_kegg,
+            lambda code: get_kegg_compound_record(code, compound_cache_dir = args.compound_cache_dir),
+            "KEGG-direct fallback: fetching compound records",
+        ))
+        kegg_compounds_df["canonical_smiles"] = fetch_all_with_progress(
+            kegg_compounds_df["compound_id"].tolist(),
+            lambda code: get_kegg_compound_smiles(code, mol_compound_cache_dir = args.compound_cache_dir),
+            "KEGG-direct fallback: fetching compound SMILES",
+        )
         kegg_compounds_df.to_pickle(f"kegg_compounds_df.pkl")
         print("KEGG Compound records saved")
     else:
@@ -632,12 +736,12 @@ def main():
                                                         & (kegg_reaction_enzyme_df_exploded.entities.str.startswith("G")), "entities"].values.tolist()
 
         ### Getting KEGG compound records for glycans (to get xref to glytoucan)
-        glycan_compounds = []
+        glycan_compounds = fetch_all_with_progress(
+            glycans,
+            lambda glycan: get_kegg_compound_record(glycan, compound_cache_dir=args.compound_cache_dir),
+            "Glycans: fetching KEGG compound records",
+        )
 
-        for glycan in glycans:
-            compound = get_kegg_compound_record(glycan, compound_cache_dir=args.compound_cache_dir)
-            glycan_compounds.append(compound)
-            
         glycan_compounds_df = pd.DataFrame(glycan_compounds)
         glycan_compounds_df[["source", "secondary_id"]] = glycan_compounds_df.apply(lambda x: extract_secondary_id(x["compound_id"], x["dbxrefs"]), axis = 1, result_type = "expand").values
         glytoucan_ids = glycan_compounds_df.loc[(glycan_compounds_df.secondary_id.isna() == False) &
