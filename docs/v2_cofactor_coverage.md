@@ -178,6 +178,90 @@ long tail (742 of 111,819 UniProt cofactor+EC rows, ≈0.7%, are free-text
 only) and is deferred to a separate LLM-assisted extraction pass, not
 attempted mechanically here.
 
+## Small-scale PARITY validation (2026-08-30/31)
+
+The comparison in Results is at the `cognate_ligands_df.pkl` candidate-set
+level (old vs. new cognate ligand lists) — it does not by itself confirm
+that a real PDB structure's bound cofactor actually scores a PARITY match.
+A small, hand-picked, three-structure run of the full downstream pipeline
+(`download_mmcif.py` → `process_pdb_structure.py` → PDBe-Arpeggio →
+`process_pdb_contacts.py` → `process_all_pdb_contacts.py` →
+`get_pdb_parity.py`) was done to check this directly, run standalone
+(outside Nextflow, no conda) via a dedicated Python 3.9 venv
+(`pip install openbabel-wheel pdbe-arpeggio` — no conda environment
+needed, despite `nextflow/envs/arpeggio-env.yaml` being conda-based).
+
+**Structures** (chosen from the plan's own Verification section, EC
+confirmed against real SIFTS `pdb_chain_enzyme.tsv.gz` data, not assumed):
+
+| PDB | Protein | EC | Cofactor of interest |
+|---|---|---|---|
+| 2CPP | Cytochrome P450cam | 1.14.15.1 | heme b |
+| 1MTY | Methane monooxygenase hydroxylase | 1.14.13.25 | non-heme diiron center |
+| 1JB0 | Photosystem I | 1.97.1.12 | chlorophyll + `[4Fe-4S]` |
+
+**Results, 2 of 3 structures** (1JB0 — a 36-mer complex — was stopped
+mid-run in Arpeggio's contact-computation phase before completion; not
+yet re-attempted):
+
+- **2CPP: confirmed positive.** The real bound `HEM` ligand scores
+  **0.717 PARITY similarity** (threshold 0.40) against cognate ligand
+  `HEA` (heme A) — a row that exists in `cognate_ligands_df.pkl` *only*
+  because of the v2 cofactor path (`ligand_source: cofactor`,
+  `CofactorDB:22`). Before this work, heme was never a stoichiometric
+  reactant/product of the P450cam reaction, so it could not have scored
+  against anything. Camphor (the real substrate) separately scores 1.0
+  via the pre-existing reaction path, confirming that path is unaffected.
+- **1MTY: confirmed limitation, not a bug.** The real bound `FE (III)
+  ION` scores 0.0 against every cognate ligand. MMO's actual cofactor is
+  a carboxylate-bridged **diiron** cluster; this structure deposits it as
+  a bare mononuclear ion, which neither combined source (CoFactor DB's 27
+  classes, UniProt's structured entries for this protein) resolves to a
+  matching cognate ligand as represented. A genuine, specific gap - not
+  general evidence against the mechanism (2CPP's heme match is real
+  evidence for it).
+- **1JB0: not completed.** Chlorophyll is expected to still fail to
+  match (known gap, see above); the `[4Fe-4S]` cluster was expected to
+  succeed (confirmed present in `cognate_ligands_df.pkl` for this EC via
+  the UniProt path) but this wasn't confirmed against real structure data
+  before the run was stopped.
+
+**Two more real bugs found and fixed running this** (same
+strict-dtype-coercion/version-drift class as the ones found building
+`cognate_ligands_df.pkl` - see the commit history):
+`process_pdb_contacts.py` assigning a list into a strictly-string-typed
+`xref_db` column, and a `np.where(..., "minor", np.nan)` call that numpy
+2.x's stricter dtype promotion now rejects when mixing a string result
+with `np.nan` (fixed by using `None` instead).
+
+**This is evidence, not a benchmark.** Two hand-picked structures is
+enough to confirm the mechanism works on a real, known case and to
+surface one real limitation — it is not a statistically meaningful
+measure of match rate across the ~4,843 newly-covered ECs. See "Future
+work" below.
+
+## Future work
+
+1. **A real, larger-scale PARITY benchmark** across a proper sample of
+   the newly-covered ECs (not just 2-3 hand-picked structures) — the
+   natural follow-up to the small validation above. Needs deciding a
+   sampling strategy (e.g. N structures per newly-covered EC) and likely
+   a full Nextflow/conda environment rather than the manual per-script
+   invocation used for the small run, given the volume. **Tracked as a
+   standing to-do in memory** (see `todo_v2_parity_benchmark` in this
+   project's Claude memory) rather than only here, so it survives across
+   sessions.
+2. **LLM-assisted extraction for the 742 free-text-only UniProt
+   `COFACTOR` rows** — the mechanical fix for chlorophyll specifically
+   (see "Known gaps" above).
+3. **Root-cause the 9 fully-lost ECs and the ~104 macrocycle-structure
+   lost pairs**, if full parity with the pre-v2 dataset is ever required.
+4. Finish the 1JB0 run (chlorophyll/`[4Fe-4S]` case) and/or fold it into
+   whichever of the above happens first.
+
+See [docs/cofactor_coverage_plan.md](cofactor_coverage_plan.md#remaining-next-steps-not-yet-done)
+for the same list with more detail.
+
 ## Reproducing this benchmark
 
 ```bash

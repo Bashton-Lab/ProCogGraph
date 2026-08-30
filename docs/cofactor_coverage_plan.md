@@ -303,17 +303,38 @@ categorisation, and reproduction instructions now live in
 the first-class, citable record of this work (for the v2 docs/paper),
 rather than duplicated here where it would drift out of sync.
 
-## Suggested order of work
+## Status
 
-1. Vendor and parse `cofactor_ec.csv` / `cofactors_details.json`; resolve
-   representative CCD codes to SMILES. Smallest, self-contained first
-   step.
-2. Add the UniProt bulk cofactor TSV pull to the reference data manifest;
-   parse structured rows; implement the exact/broadcast/drop split by EC
-   completeness.
-3. Add `ligand_source` column (backfilling existing reaction rows to
-   `"reaction"`); union and concat into `cognate_ligands_df` construction.
-4. Re-run the unmatched-ligand analysis to quantify real improvement
-   against the ~4,843-EC combined coverage.
-5. Only then, as a separate follow-on: LLM-assisted extraction for the 742
-   free-text-only UniProt rows (chlorophyll's actual fix).
+**Implemented and benchmarked** — see
+[docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md) for the full
+writeup. What was originally scoped as "suggested order of work" is done:
+vendoring/parsing the CoFactor DB tables, the UniProt bulk pull and
+exact/broadcast/drop EC-completeness split, the `ligand_source` column
+and union into `cognate_ligands_df`, and a real before/after comparison
+against the last pre-cofactor-coverage build.
+
+## Remaining next steps (not yet done)
+
+1. **Real, larger-scale PARITY-based validation against PDB structures.**
+   A *small* version of this is now done — see
+   [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md#small-scale-parity-validation-2026-08-3031):
+   `get_pdb_parity.py` run standalone against 2 of 3 hand-picked
+   structures (P450cam/heme, MMO/diiron; Photosystem I incomplete),
+   confirming a real cofactor-origin PARITY match on P450cam's heme
+   (0.717, clears threshold) and a real, specific gap on MMO's bare Fe³⁺
+   ion (0.0, not matched). That's evidence the mechanism works, not a
+   statistically meaningful measure across the ~4,843 newly-covered ECs —
+   a proper sampled benchmark is still open. **Tracked as a standing
+   to-do in memory** (`todo_v2_parity_benchmark`), so it isn't lost
+   between sessions.
+2. **LLM-assisted extraction for the 742 free-text-only UniProt
+   `COFACTOR` rows** (chlorophyll's actual fix - see "Known remaining
+   gap" above). Explicitly deferred, not started.
+3. **Investigate the 9 ECs and ~104 macrocycle-structure pairs lost
+   relative to the pre-cofactor-coverage baseline**, if full parity with
+   the old dataset is ever required (see
+   [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md)'s "Known
+   gaps" for the specific EC list and categorisation). Not blocking -
+   small (9 of 6,214 ECs) - but not yet root-caused either.
+4. Finish the stopped 1JB0 (Photosystem I) run — the chlorophyll/`[4Fe-4S]`
+   case — likely as part of whichever of the above happens first.
