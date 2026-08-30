@@ -51,7 +51,16 @@ def main():
 
                         for reactant in reactants:
                             reactant_smiles = reactant.smiles
-                            reactant_id = reactant.metadata["molecule_name"]
+                            # not reactant.metadata["molecule_name"]: rdfreader's
+                            # .metadata property fixed-column-parses the whole mol
+                            # block header including the program/timestamp line,
+                            # which Rhea's CDK-written molfiles don't conform to
+                            # (e.g. "  CDK    2/12/10,15:27" instead of MDL's fixed
+                            # MMDDYY field) - breaks on ~97% of real Rhea rd/ files.
+                            # The molecule name is just the mol block's raw first
+                            # line; read it directly instead of going through the
+                            # metadata parser at all.
+                            reactant_id = reactant.mol_block.splitlines()[0].strip()
                             mol_dict[unique_id] = {"reaction_id": reaction_id,
                                             "reaction_properties": reaction_properties,
                                             "reaction_smiles": reaction_smiles,
@@ -62,7 +71,7 @@ def main():
 
                         for product in products:
                             product_smiles = product.smiles
-                            product_id = product.metadata["molecule_name"]
+                            product_id = product.mol_block.splitlines()[0].strip()
                             mol_dict[unique_id] = {"reaction_id": reaction_id,
                                             "reaction_properties": reaction_properties,
                                             "reaction_smiles": reaction_smiles,
@@ -87,10 +96,19 @@ def main():
 
     reactions_df_merged = reactions_df.merge(rheamerge[["RHEA_ID_LR", "ID"]], left_on = "reaction_id", right_on = "RHEA_ID_LR", how = "inner")
     reactions_df_merged.loc[reactions_df_merged.compound_id.str.startswith("CHEBI"), "COMPOUND_ID"] = reactions_df_merged.loc[reactions_df_merged.compound_id.str.startswith("CHEBI"), "compound_id"].apply(lambda x: re.findall(r"CHEBI:(\d+)", x)[0]) #in chebi names format
-    reactions_df_merged.loc[reactions_df_merged.compound_id.str.startswith("CHEBI") == False, "COMPOUND_ID"] = -1
+    # "-1" as a str, not int: the line above leaves COMPOUND_ID as a
+    # pandas StringDtype column, and modern pandas rejects assigning an
+    # int into a StringDtype column in place. The next line casts the
+    # whole column to int anyway, so the str/int distinction here doesn't
+    # matter to the result.
+    reactions_df_merged.loc[reactions_df_merged.compound_id.str.startswith("CHEBI") == False, "COMPOUND_ID"] = "-1"
     reactions_df_merged["COMPOUND_ID"] = reactions_df_merged["COMPOUND_ID"].astype("int")
 
     chebi_names = pd.read_csv(f"{args.chebi_names}", sep = "\t", compression = "gzip")
+    # ChEBI's flat files moved to lowercase columns upstream (see
+    # download_reference_data.py's derive_chebi_results docstring) - rename
+    # to the uppercase names the rest of this script already uses.
+    chebi_names.rename(columns = {"compound_id": "COMPOUND_ID", "name": "NAME"}, inplace = True)
     #get the first name for each compound ID in the chebi names file
     chebi_names = chebi_names.groupby("COMPOUND_ID").agg({"NAME": "first"}).reset_index()
     print(chebi_names)

@@ -3,7 +3,7 @@
 import argparse
 import pandas as pd
 from gemmi import cif
-from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, get_smiles_from_wurcs_offline, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe, get_scop2_domains_info
+from utils import process_ec_records, get_updated_enzyme_records, get_scop_domains_info, extract_interpro_domain_annotations, get_pfam_annotations, get_glycoct_from_wurcs, get_csdb_from_glycoct, get_smiles_from_csdb, get_smiles_from_wurcs_offline, build_cath_dataframe, parse_cddf, build_g3dsa_dataframe, get_scop2_domains_info, get_chem_comp_descriptors
 import numpy as np
 from Bio.ExPASy import Enzyme as EEnzyme
 import re
@@ -35,32 +35,6 @@ def get_sugar_smiles_from_wurcs(wurcs_list, csdb_linear_cache, smiles_cache, gly
     updated_csdb_cache_df = pd.concat([pd.DataFrame(updated_csdb_cache, columns = ["glycoct", "csdb"]), csdb_linear_cache]).drop_duplicates()
     updated_smiles_cache_df = pd.concat([pd.DataFrame(updated_smiles_cache, columns = ["csdb", "descriptor"]), smiles_cache]).drop_duplicates()
     return sugar_smiles, updated_glycoct_cache_df, updated_csdb_cache_df, updated_smiles_cache_df
-
-def get_chem_comp_descriptors(ccd_doc, comp_id_list):
-    ligand_descriptors = {}
-    for ligand in comp_id_list:
-        lig_descriptor = None
-        lig_block = ccd_doc.find_block(ligand)
-        if lig_block is not None:
-            lig_descriptors = pd.DataFrame(lig_block.find_mmcif_category("_pdbx_chem_comp_descriptor."), columns = ["comp_id", "type", "program", "program_version", "descriptor"])
-            lig_descriptors["descriptor"] = lig_descriptors.descriptor.str.strip("\"|';").str.replace(r"\n$","", regex = True)
-            lig_descriptors = lig_descriptors.loc[lig_descriptors.type == "SMILES"]
-            PandasTools.AddMoleculeColumnToFrame(lig_descriptors, smilesCol='descriptor', molCol='pdb_ROMol')
-            lig_descriptors = lig_descriptors.loc[lig_descriptors.pdb_ROMol.isna() == False]
-            if len(lig_descriptors) == 0:
-                lig_descriptor = None
-            else: 
-                #preference is to use openeye descriptors where available. if not, revert to the first smiles string able to be loaded into RDkit.
-                preferred_row = lig_descriptors.loc[lig_descriptors.program.str.startswith("OpenEye")]
-                if not preferred_row.empty:
-                    lig_descriptor = preferred_row.iloc[0].descriptor
-                else:
-                    # Otherwise, select the first row with a SMILES string
-                    lig_descriptor = lig_descriptors.iloc[0].descriptor
-            ligand_descriptors[ligand] = lig_descriptor
-        else:
-            ligand_descriptors[ligand] = None
-    return ligand_descriptors
 
 def process_sifts_ec_map(sifts_ec_mapping_file, ec_records_file):
     sifts_chains_ec = sifts_ec_mapping_file.loc[sifts_ec_mapping_file.EC_NUMBER != "?"].copy()

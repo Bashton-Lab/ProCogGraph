@@ -215,7 +215,11 @@ A [tutorial](docs/tutorial.md) with a walkthrough of some of these features is a
 
 #### Sources
 
-Cognate ligands in ProCogGraph are aggregated from the following sources:
+Cognate ligands in ProCogGraph are aggregated from two independent routes.
+
+**Reaction-derived** (v1 onwards) — a compound is a candidate cognate
+ligand for an EC if it is written as a reactant or product of that EC's
+reaction equation, sourced from:
 
 - [KEGG](https://kegg.jp/)
 - [ChEBI](https://www.ebi.ac.uk/chebi/)
@@ -223,7 +227,20 @@ Cognate ligands in ProCogGraph are aggregated from the following sources:
 - [PubChem](https://pubchem.ncbi.nlm.nih.gov/)
 - [GlyTouCan](https://glytoucan.org/)
 
-SMILES representations are obtained for each ligand, and each cognate ligand is mapped to one or more EC IDs. Cognate ligands are processed using the RDKit library in Python, with structures neutralised and re-canonicalised to reduce the number of duplicate structures. A total of XXX cognate ligands are currently represented in the database.
+**Cofactor-derived** (v2 onwards) — a second, independent route that adds
+cofactors an EC's reaction equation never states explicitly (prosthetic
+groups, electron/light carriers, structural metal centers — cofactors
+that participate catalytically rather than stoichiometrically), sourced
+from:
+
+- The [CoFactor database](https://doi.org/10.1093/bioinformatics/btq157) (2010) + [BRENDA](https://www.brenda-enzymes.org/)
+- [UniProt](https://www.uniprot.org/)'s structured `COFACTOR` annotation
+
+See [docs/v2_cofactor_coverage.md](docs/v2_cofactor_coverage.md) for the
+full methodology, source-selection rationale, and a benchmarked
+before/after comparison against the last pre-v2 database build.
+
+SMILES representations are obtained for each ligand, and each cognate ligand is mapped to one or more EC IDs. Cognate ligands are processed using the RDKit library in Python, with structures neutralised and re-canonicalised to reduce the number of duplicate structures. As of the v2 cofactor-coverage build, 8,811 distinct cognate ligand structures are mapped across 7,316 ECs (78,163 EC-ligand pairs); see [docs/v2_cofactor_coverage.md](docs/v2_cofactor_coverage.md) for the full breakdown, and note these totals will shift slightly on each rebuild as upstream sources (KEGG, ChEBI, Rhea, UniProt) are revised.
 
 #### Similarity
 

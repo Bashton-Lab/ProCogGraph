@@ -286,7 +286,26 @@ entries:
     note: >
       Upstream file is now gzipped (relation.tsv.gz); get_ec_information.py
       --chebi_relations expects a plain .tsv, so this is gunzipped on
-      download.
+      download. Also note the TYPE/INIT_ID/FINAL_ID columns documented in
+      older versions of this project are gone - the real columns are
+      lowercase (init_id/final_id), and TYPE is now a numeric
+      relation_type_id foreign key, not a string label - see
+      chebi_relation_types below for the vocabulary needed to resolve it
+      (e.g. "has_role").
+
+  - name: chebi_relation_types
+    target_filename: relation_type.tsv
+    param_name: null
+    source_type: direct_url
+    url: https://ftp.ebi.ac.uk/pub/databases/chebi/flat_files/relation_type.tsv.gz
+    min_size_bytes: 100
+    post_process: gunzip
+    confidence: verified
+    note: >
+      Small id/code vocabulary (11 rows) for relation.tsv's
+      relation_type_id column - get_ec_information.py
+      --chebi_relation_types uses it to resolve "has_role" to its current
+      numeric id (confirmed live: 4) rather than hardcoding that number.
 
   - name: chebi_database_accession
     target_filename: chebi_database_accession.tsv.gz
@@ -326,29 +345,63 @@ entries:
       those three entries to have been fetched first; the script fetches
       them automatically as dependencies if missing.
 
-  # --- Not required by the pipeline today - only needed once
-  # docs/cofactor_coverage_plan.md is implemented. Kept here so this
-  # manifest stays the single place tracking every external file the
-  # pipeline depends on, present or planned. Excluded from --dry-run's
-  # "ready to run pipeline" summary; fetch explicitly with --only.
-  - name: pdbe_rellig_chain_ligand_functions
-    target_filename: interacting_chains_with_ligand_functions.tsv
+  # --- Optional - only needed if preprocess_cofactors.py is run (see
+  # docs/cofactor_coverage_plan.md). Not required by the core pipeline;
+  # excluded from --dry-run's default summary, fetch explicitly with
+  # --only or --include-optional. NOTE: an earlier version of this section
+  # pointed at PDBe RelLig's bulk PDBeChem v2 TSVs
+  # (interacting_chains_with_ligand_functions.tsv / pdb_bound_molecules.tsv)
+  # as the primary source - checked against the real files and that was
+  # wrong (no EC column in either; RelLig's actual EC-bearing output is
+  # per-ligand JSON requiring the pipeline to be run, not a static bulk
+  # download). Replaced with RelLig's own small vendored EC-cofactor
+  # mapping plus a bulk UniProt COFACTOR pull instead - see the plan doc's
+  # "Sources considered" section for the full reasoning.
+  - name: cofactor_ec_csv
+    target_filename: cofactor_ec.csv
     param_name: null
     source_type: direct_url
-    url: https://ftp.ebi.ac.uk/pub/databases/msd/pdbechem_v2/additional_data/pdb_ligand_interactions/interacting_chains_with_ligand_functions.tsv
-    min_size_bytes: 100000000
+    url: https://raw.githubusercontent.com/PDBeurope/rellig/main/pdberellig/data/cofactors/cofactor_ec.csv
+    min_size_bytes: 50000
     post_process: none
     confidence: verified
     optional: true
-    note: For the cofactor-coverage plan (docs/cofactor_coverage_plan.md), not the current pipeline.
+    note: >
+      RelLig's (Apache-2.0, redistributable) EC_NO/COFACTOR_ID/SOURCE
+      table, sourced from CoFactor DB 2010 + BRENDA - 27 cofactor classes,
+      2,760 distinct ECs, all exact (4-digit). Consumed by
+      preprocess_cofactors.py --cofactor_ec_csv.
 
-  - name: pdbe_rellig_bound_molecules
-    target_filename: pdb_bound_molecules.tsv
+  - name: cofactor_details_json
+    target_filename: cofactors_details.json
     param_name: null
     source_type: direct_url
-    url: https://ftp.ebi.ac.uk/pub/databases/msd/pdbechem_v2/additional_data/pdb_ligand_interactions/pdb_bound_molecules.tsv
-    min_size_bytes: 50000000
+    url: https://raw.githubusercontent.com/PDBeurope/rellig/main/pdberellig/data/cofactors/cofactors_details.json
+    min_size_bytes: 500
     post_process: none
     confidence: verified
     optional: true
-    note: For the cofactor-coverage plan (docs/cofactor_coverage_plan.md), not the current pipeline.
+    note: >
+      Maps each of the 27 cofactor_ec_csv COFACTOR_IDs to a representative
+      PDB CCD code (e.g. id 4 -> NAD), resolved to a SMILES via the
+      already-fetched ccd.cif. Consumed by preprocess_cofactors.py
+      --cofactor_details_json.
+
+  - name: uniprot_cofactor_annotations
+    target_filename: uniprot_cofactor_annotations.tsv
+    param_name: null
+    source_type: direct_url
+    url: "https://rest.uniprot.org/uniprotkb/stream?query=reviewed:true+AND+cc_cofactor:*+AND+ec:*&fields=accession,ec,cc_cofactor&format=tsv"
+    min_size_bytes: 5000000
+    post_process: none
+    confidence: verified
+    optional: true
+    note: >
+      Bulk (not per-accession) pull of every reviewed UniProt entry with
+      both an EC number and a COFACTOR annotation - 111,819 rows as of
+      2026-08. Only rows with a structured `Xref=ChEBI:CHEBI:<n>` are
+      usable (~99.3%); free-text-only rows (~0.7%, e.g. chlorophyll's
+      photosystem entries) are skipped by preprocess_cofactors.py and are
+      a separate, deferred LLM-extraction follow-on per the plan doc, not
+      handled by this pull. Consumed by preprocess_cofactors.py
+      --uniprot_cofactor_tsv.
