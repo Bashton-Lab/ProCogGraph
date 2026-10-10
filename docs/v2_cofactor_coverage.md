@@ -248,20 +248,100 @@ with `np.nan` (fixed by using `None` instead).
 **This is evidence, not a benchmark.** Two hand-picked structures is
 enough to confirm the mechanism works on a real, known case and to
 surface one real limitation — it is not a statistically meaningful
-measure of match rate across the ~4,843 newly-covered ECs. See "Future
-work" below.
+measure of match rate across the ~4,843 newly-covered ECs. See the
+larger, stratified sample below.
+
+## Larger, stratified PARITY benchmark (2026-10-10)
+
+A proper (if still modest) follow-up to the hand-picked check above:
+rather than choosing structures to make a point, this samples the actual
+`ligand_source == "cofactor"` population (2,077 rows, 1,833 distinct
+ECs — compounds that exist in `cognate_ligands_df.pkl` *only* because of
+this work) stratified by cofactor identity, so every distinct cofactor
+class (not just the two most common: `[4Fe-4S]` cluster and heme A) gets
+at least one real test case. Method:
+
+1. For each of the 1,833 cofactor-only ECs, found its distinct cofactor
+   identities (`compound_name`) and, for each (EC, identity) pair, the
+   smallest real PDB structure annotated with that EC (SIFTS chain-count
+   as a cheap size proxy, to avoid another 1JB0-style stall) via SIFTS
+   `pdb_chain_enzyme.tsv.gz` - not every target has a real small
+   structure available; 946 of the 1,833 ECs do.
+2. Took one EC per distinct cofactor-identity category (random seed 7),
+   giving **24 structures across 24 ECs**, covering heme/heme-d variants,
+   `[4Fe-4S]`/`[Ni-4Fe-4S]`/`[8Fe-7S]`-type clusters, B12 (as
+   methylcobalamin), MGD, SAM, FAD, DPM, PQQ, TPQ/TRQ/LTQ, several
+   lanthanide/transition-metal ions, and more.
+3. Ran the same standalone pipeline chain as the small check, but with a
+   short (15 min, not 6h) per-structure Arpeggio timeout, in a single
+   batch rather than per-structure invocations. All 23/24 structures
+   cleared Arpeggio (none timed out at this size; one structure, 2nyf,
+   had no bound entities in its CIF at all - a data finding, not a
+   pipeline failure). One structure (1dd9) produced no domain contacts
+   above the cutoff for its ligand and was excluded. `get_pdb_parity.py`
+   scored the remaining structures' bound ligands against the real
+   `cognate_ligands_df.pkl`.
+
+**Results**: of the 24 targeted ECs, 20 produced usable real structural
+data. Among those, 16 (EC, real bound ligand) pairs scored a PARITY
+match ≥ 0.40, and **5 of those exist only because of this session's
+cofactor-coverage work** (`ligand_source == "cofactor"`, not
+`"reaction"` or a mix):
+
+| EC | Real PDB ligand | Score |
+|---|---|---|
+| 1.1.2.10 | Lanthanum ion | 1.000 |
+| 2.5.1.61 | DPM (a dipyrromethane-type cofactor) | 1.000 |
+| 1.11.1.10 | Heme | 0.956 |
+| 7.1.1.7 | A1JN4 (a heme *d* derivative) | 0.780 |
+| 1.2.7.4 | `[Ni-4Fe-4S]` cluster (deposited as `XCC`) | 0.462 |
+
+This is real, diverse evidence beyond the single P450cam/heme case above
+- a metal ion, an open-chain porphyrin precursor, two distinct heme
+variants, and a nickel-iron-sulfur cluster, each a different EC and a
+different real PDB structure, none hand-picked to make this point.
+
+**Honest misses, not glossed over**: `SF4` (a plain iron-sulfur cluster)
+at EC 1.7.99.1 scored only 0.333 (below threshold, despite `SF4`-type
+clusters being cofactor-covered elsewhere in the dataset - this specific
+structure's deposited variant didn't score highly enough). Cobalamin
+(B12, as `COB`) at EC 2.8.4.1 scored 0.316 (close, still below). SAM at
+the same EC scored only 0.171 despite being a dual-sourced
+(`cofactor|reaction`) cognate ligand - the specific deposited structural
+variant in that one structure didn't closely match. These are genuine,
+structure-specific limitations of PARITY-level matching, not failures of
+the EC-coverage mechanism itself (the candidate cognate ligand for each
+of these *is* present in `cognate_ligands_df.pkl` - it just didn't score
+above threshold against this particular real structure's deposited
+form).
+
+**One more real, non-blocking bug found running this**:
+`process_all_pdb_contacts.py` crashes later in an unrelated CATH-domain-
+interaction-output step when run standalone without `--cache`
+(`AssertionError` on a `cath_contacts_mmcif` merge) - but
+`bound_entities_to_score.pkl`, the only file `get_pdb_parity.py` actually
+needs, is written *before* that step, so it didn't block this result.
+Not yet root-caused or fixed - flagged for whoever next touches
+`process_all_pdb_contacts.py`'s standalone (non-Nextflow) invocation
+path.
+
+**Still not the full picture**: 24 of 1,833 cofactor-only ECs (and only
+one structure per EC) is still a small fraction, and the sampling
+favoured the smallest available structure per EC rather than a random
+one. A genuinely complete benchmark - all cofactor-only ECs, multiple
+structures per EC where available - remains open; see the standing
+memory to-do.
 
 ## Future work
 
-1. **A real, larger-scale PARITY benchmark** across a proper sample of
-   the newly-covered ECs (not just 2-3 hand-picked structures) — the
-   natural follow-up to the small validation above. Needs deciding a
-   sampling strategy (e.g. N structures per newly-covered EC) and likely
-   a full Nextflow/conda environment rather than the manual per-script
-   invocation used for the small run, given the volume. **Tracked as a
-   standing to-do in memory** (see `todo_v2_parity_benchmark` in this
-   project's Claude memory) rather than only here, so it survives across
-   sessions.
+1. **An even larger/fuller PARITY benchmark.** The 24-structure
+   stratified sample above meaningfully advances this item (up from 2-3
+   hand-picked structures to a real, diverse, non-cherry-picked sample)
+   but doesn't close it - it covers 24 of 1,833 cofactor-only ECs, one
+   structure each. A fuller version would sample more ECs and more than
+   one structure per EC. **Tracked as a standing to-do in memory** (see
+   `todo_v2_parity_benchmark` in this project's Claude memory) rather
+   than only here, so it survives across sessions.
 2. **LLM-assisted extraction for the 742 free-text-only UniProt
    `COFACTOR` rows** — the mechanical fix for chlorophyll specifically
    (see "Known gaps" above).
