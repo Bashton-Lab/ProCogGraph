@@ -239,7 +239,7 @@ def main():
             cath_parsed_data = parse_cddf(args.cddf, cath_domain_list)
             cath_domains_info = build_cath_dataframe(cath_parsed_data)
             cath_contacts_mmcif = cath_contacts_mmcif.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
-            assert(len(cath_contacts_mmcif.loc[cath_contacts_mmcif._merge != "both"]) == 0)
+            #assert(len(cath_contacts_mmcif.loc[cath_contacts_mmcif._merge != "both"]) == 0) #we remove the assertion here, because the CATH domain description file is a curated subset of the PDB and does not cover every real domain accession (e.g. 1av4A03 from 1av4) - same class of issue as the SCOP2 case below, need to discuss with CATH team potentially
             cath_contacts_mmcif.drop(columns = "_merge", inplace = True)
         else:
             cath_contacts_mmcif = pd.DataFrame(columns = core_cols + cath_cols + cath_mmcif_cols)
@@ -250,7 +250,7 @@ def main():
             cath_names["name"] = cath_names["name"].str.replace("^:", "", regex = True)
             cath_domains_info = build_g3dsa_dataframe(cath_names,cath_domain_list)
             cath_contacts_xml = cath_contacts_xml.merge(cath_domains_info, how = "left", left_on = "xref_db_acc", right_on = "cath_domain", indicator = True)
-            assert(len(cath_contacts_xml.loc[cath_contacts_xml._merge != "both"]) == 0)
+            #assert(len(cath_contacts_xml.loc[cath_contacts_xml._merge != "both"]) == 0) #we remove the assertion here, for the same reason as the mmcif branch above - not every CATH domain accession is present in the CATH names reference file
             cath_contacts_xml.drop(columns = "_merge", inplace = True)
             cath_contacts_xml[cath_mmcif_cols] = np.nan
         else:
