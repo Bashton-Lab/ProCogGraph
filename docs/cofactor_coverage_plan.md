@@ -336,5 +336,13 @@ against the last pre-cofactor-coverage build.
    [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md)'s "Known
    gaps" for the specific EC list and categorisation). Not blocking -
    small (9 of 6,214 ECs) - but not yet root-caused either.
-4. Finish the stopped 1JB0 (Photosystem I) run — the chlorophyll/`[4Fe-4S]`
-   case — likely as part of whichever of the above happens first.
+4. **1JB0 (Photosystem I) specifically: genuinely timed out, not just
+   stopped.** Re-run to completion and PDBe-Arpeggio ran the full 6-hour
+   wall-clock limit on its biological assembly without finishing (it's a
+   crystallographic trimer - 3 symmetric copies of every chain, far more
+   atoms than 2CPP/1MTY). Accepted as a known scale limitation of running
+   Arpeggio standalone on a single machine against a large assembly, not
+   a defect in this work - not pursued further. The chlorophyll/
+   `[4Fe-4S]` case remains unconfirmed against real structure data;
+   revisit with a smaller/monomeric Photosystem I structure or a proper
+   Nextflow/cluster environment if wanted later.

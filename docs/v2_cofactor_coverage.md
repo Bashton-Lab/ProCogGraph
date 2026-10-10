@@ -200,9 +200,8 @@ confirmed against real SIFTS `pdb_chain_enzyme.tsv.gz` data, not assumed):
 | 1MTY | Methane monooxygenase hydroxylase | 1.14.13.25 | non-heme diiron center |
 | 1JB0 | Photosystem I | 1.97.1.12 | chlorophyll + `[4Fe-4S]` |
 
-**Results, 2 of 3 structures** (1JB0 — a 36-mer complex — was stopped
-mid-run in Arpeggio's contact-computation phase before completion; not
-yet re-attempted):
+**Results, 2 of 3 structures** (1JB0 did not complete — see below, a
+confirmed scale limitation, not a bug):
 
 - **2CPP: confirmed positive.** The real bound `HEM` ligand scores
   **0.717 PARITY similarity** (threshold 0.40) against cognate ligand
@@ -220,11 +219,23 @@ yet re-attempted):
   matching cognate ligand as represented. A genuine, specific gap - not
   general evidence against the mechanism (2CPP's heme match is real
   evidence for it).
-- **1JB0: not completed.** Chlorophyll is expected to still fail to
-  match (known gap, see above); the `[4Fe-4S]` cluster was expected to
-  succeed (confirmed present in `cognate_ligands_df.pkl` for this EC via
-  the UniProt path) but this wasn't confirmed against real structure data
-  before the run was stopped.
+- **1JB0: known scale limitation, not a bug — accepted, not pursued
+  further.** Re-run to completion and genuinely timed out: PDBe-Arpeggio
+  ran for the full 6-hour wall-clock limit on 1JB0's biological assembly
+  without finishing, because that assembly is a crystallographic trimer
+  (3 symmetric copies of every chain - the selection list contains
+  `/A/`, `/A_2/`, `/A_3/`, etc. for each chain), not the monomeric unit -
+  a far larger atom count than 2CPP or 1MTY. This is a real limitation of
+  running PDBe-Arpeggio standalone on a single machine against a large
+  biological assembly, not a defect in the cofactor-coverage work itself.
+  Chlorophyll was still expected to fail to match (known gap, see above)
+  and the `[4Fe-4S]` cluster was still expected to succeed (confirmed
+  present in `cognate_ligands_df.pkl` for this EC via the UniProt path),
+  but neither was confirmed against real structure data - this specific
+  case remains unconfirmed. Not pursued further this session; a smaller/
+  monomeric Photosystem I structure, or a proper Nextflow/cluster
+  environment with more time and resources, would be the way to actually
+  finish this case if wanted later.
 
 **Two more real bugs found and fixed running this** (same
 strict-dtype-coercion/version-drift class as the ones found building
@@ -256,8 +267,12 @@ work" below.
    (see "Known gaps" above).
 3. **Root-cause the 9 fully-lost ECs and the ~104 macrocycle-structure
    lost pairs**, if full parity with the pre-v2 dataset is ever required.
-4. Finish the 1JB0 run (chlorophyll/`[4Fe-4S]` case) and/or fold it into
-   whichever of the above happens first.
+4. The 1JB0 (chlorophyll/`[4Fe-4S]`) case specifically — genuinely timed
+   out standalone (6h Arpeggio wall-clock limit on its trimeric
+   biological assembly), accepted as a known scale limitation and not
+   pursued further this session. Revisit with a smaller/monomeric
+   Photosystem I structure, or a proper Nextflow/cluster environment,
+   if this specific case is wanted later.
 
 See [docs/cofactor_coverage_plan.md](cofactor_coverage_plan.md#remaining-next-steps-not-yet-done)
 for the same list with more detail.
