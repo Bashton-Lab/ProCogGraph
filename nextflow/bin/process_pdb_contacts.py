@@ -70,7 +70,13 @@ def assign_ownership_percentile_categories(ligands_df, unique_id = "uniqueID", d
                     (ligands_df["domain_contact_perc"] > 0.1)
                     & (ligands_df["domain_contact_perc"] < 0.5) & (ligands_df["num_non_minor_domains"] > 1), "partner",
                         np.where(
-                        ligands_df["domain_contact_perc"] <= 0.1, "minor", np.nan)
+                        # None, not np.nan: numpy 2.x's stricter dtype
+                        # promotion rejects mixing a string array with a
+                        # float nan in np.where ("could not be promoted"),
+                        # where it used to silently fall back to object
+                        # dtype. None is still treated as missing by pandas
+                        # once this array is used downstream.
+                        ligands_df["domain_contact_perc"] <= 0.1, "minor", None)
                     )
                 )
             )
@@ -287,6 +293,11 @@ def process_manifest_row(row, cutoff):
             'xref_db': db_source_list,
             'xref_db_version': db_version_list
         })
+        # object dtype: xref_db starts as a plain string column (pandas
+        # StringDtype under this pandas version), and the line below
+        # assigns a list into some of its cells - same strict-dtype-
+        # coercion issue fixed elsewhere in this codebase today.
+        db_df["xref_db"] = db_df["xref_db"].astype(object)
         db_df.loc[db_df.xref_db == "SCOP2", "xref_db"] = db_df.loc[db_df.xref_db == "SCOP2", "xref_db"].apply(lambda x: ["SCOP2_SuperFamily", "SCOP2_Family"]) #we adapt the SCOP2 source to the db formatting we use in ProCogGraph
         db_df["xref_db"] = db_df["xref_db"].apply(lambda x: [x] if isinstance(x, str) else x)
         db_df = db_df.explode("xref_db")

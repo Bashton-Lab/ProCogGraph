@@ -146,6 +146,24 @@ The ProCogGraph pipeline is built using Nextflow for workflow management. To run
     python3 preprocess_rhea.py --rhea_ec_mapping rhea2ec.tsv --rhea_reaction_directions rhea-directions.tsv --rd_dir rd/ --outdir . --chebi_names chebi_names.tsv.gz
     ```
 
+    Optionally, also preprocess cofactor-EC association data (see
+    `docs/cofactor_coverage_plan.md`) - adds cofactor-origin cognate
+    ligands (e.g. NAD, FAD, PLP, metal centers) alongside the
+    reaction-derived ones above, for cofactors that never appear as a
+    reactant/product in an EC's reaction equation. Requires the vendored
+    `cofactor_ec.csv`/`cofactors_details.json` and a bulk UniProt
+    cofactor-annotation pull (`--only cofactor_ec_csv,cofactor_details_json,uniprot_cofactor_annotations`
+    with `download_reference_data.py --include-optional`), on top of
+    files already fetched above (`ccd.cif`, `chebi_structures.tsv.gz`,
+    `chebi_names.tsv.gz`, `enzyme.dat`, `enzclass.txt`):
+
+    ``` bash
+    python3 preprocess_cofactors.py --cofactor_ec_csv cofactor_ec.csv --cofactor_details_json cofactors_details.json --ccd_cif ccd.cif --uniprot_cofactor_tsv uniprot_cofactor_annotations.tsv --chebi_structures chebi_structures.tsv.gz --chebi_names chebi_names.tsv.gz --ec_dat enzyme.dat --enzyme_class_file enzclass.txt --outdir .
+    ```
+
+    This produces `cofactor_ligands_df.pkl`, passed to `get_ec_information.py`
+    via `--cofactor_ligands` (optional - the pipeline runs unchanged without it).
+
 4. Produce final manifest file of structures to be processed:
 
     ``` bash

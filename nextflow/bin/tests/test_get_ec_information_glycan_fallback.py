@@ -48,6 +48,36 @@ class TestOfflineFallbackMasking(unittest.TestCase):
         self.assertTrue(pd.isna(df.loc[2, "smiles"]))
         self.assertTrue(pd.isna(df.loc[3, "smiles"]))
 
+    def test_backfill_works_when_smiles_column_starts_as_float64(self):
+        """Regression test: in the real pipeline, the "smiles" column is
+        built via df["smiles"] = df.something.apply(get_smiles_from_csdb),
+        which pandas can infer as float64 dtype when most/all rows resolve
+        to NaN (unlike a literal Python list mixing str/NaN, which pandas
+        infers as object dtype - the case the test above covers, and which
+        never reproduced this). A later df.loc[mask, "smiles"] = <mix of
+        real SMILES strings and NaN> partial assignment into that float64
+        column then raises ("Invalid value '<StringArray>...' for dtype
+        'float64'") under this pandas version - hit for real running the
+        full build against real data. get_ec_information.py fixes this by
+        casting the "smiles" column to object dtype immediately before the
+        masked assignment; this test locks that in."""
+        df = pd.DataFrame({
+            "compound_id": ["G1", "G2"],
+            "wurcs": [CHITOBIOSE_WURCS, np.nan],
+        })
+        # mimics the real pipeline: an .apply() that returns NaN for every
+        # row infers a float64 column, not object.
+        df["smiles"] = df["wurcs"].apply(lambda x: np.nan)
+        self.assertEqual(df["smiles"].dtype, np.float64)
+
+        # exact fix from get_ec_information.py
+        df["smiles"] = df["smiles"].astype(object)
+        missing_smiles_mask = df["smiles"].isna() & df["wurcs"].notna()
+        df.loc[missing_smiles_mask, "smiles"] = df.loc[missing_smiles_mask, "wurcs"].apply(get_smiles_from_wurcs_offline)
+
+        self.assertIsInstance(df.loc[0, "smiles"], str)
+        self.assertTrue(pd.isna(df.loc[1, "smiles"]))
+
 
 if __name__ == "__main__":
     unittest.main()
