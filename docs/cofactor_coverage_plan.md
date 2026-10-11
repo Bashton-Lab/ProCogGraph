@@ -315,6 +315,13 @@ against the last pre-cofactor-coverage build.
 
 ## Remaining next steps (not yet done)
 
+**Priority order (set 2026-10-10):** items 1 and 3 below first (fuller
+PARITY benchmark, lost-ECs investigation), *then* a full pipeline run to
+generate the actual v2 dataset end-to-end. Items 2 and 4 are deferred/
+accepted, not blocking that ordering. **Item 3 is now done** (2026-10-11,
+see below) — item 1 (fuller PARITY benchmark) is the remaining blocker
+before the full v2 pipeline run.
+
 1. **Real, larger-scale PARITY-based validation against PDB structures.**
    A *small* version of this is now done — see
    [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md#small-scale-parity-validation-2026-08-3031):
@@ -330,12 +337,19 @@ against the last pre-cofactor-coverage build.
 2. **LLM-assisted extraction for the 742 free-text-only UniProt
    `COFACTOR` rows** (chlorophyll's actual fix - see "Known remaining
    gap" above). Explicitly deferred, not started.
-3. **Investigate the 9 ECs and ~104 macrocycle-structure pairs lost
-   relative to the pre-cofactor-coverage baseline**, if full parity with
-   the old dataset is ever required (see
-   [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md)'s "Known
-   gaps" for the specific EC list and categorisation). Not blocking -
-   small (9 of 6,214 ECs) - but not yet root-caused either.
+3. ~~Investigate the 9 ECs and ~104 macrocycle-structure pairs lost
+   relative to the pre-cofactor-coverage baseline~~ **Done, 2026-10-11.**
+   Both root-caused, neither is a real defect: the 9 "lost" ECs are all
+   EC Nomenclature Committee "Transferred entry" numbers (confirmed via
+   `enzyme.dat`) — the same compounds are present under the new EC
+   number in v2, usually with more ligands attached via the cofactor
+   path. Of the 104 macrocycle pairs, 55 are a pair-diff-script false
+   positive (same compound, same EC, different SMILES string for the
+   same charge/coordination state — ruled out RDKit sanitization
+   failure directly, all 104 parse fine); the other 49 are genuine
+   compound-level gaps but no EC is lost because of them. See
+   [docs/v2_cofactor_coverage.md](v2_cofactor_coverage.md#known-gaps-explained-not-hidden)'s
+   "Known gaps" section for the full writeup.
 4. **1JB0 (Photosystem I) specifically: genuinely timed out, not just
    stopped.** Re-run to completion and PDBe-Arpeggio ran the full 6-hour
    wall-clock limit on its biological assembly without finishing (it's a

@@ -150,9 +150,26 @@ from v2.** Categorised (554 distinct lost structures):
 - 180 involve wildcard-substituent SMILES (`*`) — partial/generic
   structures such as `[acyl-carrier protein]`-linked intermediates.
 - 104 involve charge-separated porphyrin/macrocycle SMILES (`[N+]`/`[Mg`)
-  — chlorophyll/heme-biosynthesis-pathway intermediates specifically,
-  plausibly an RDKit sanitization edge case on unusual valence states
-  (characterised, not yet root-caused).
+  — chlorophyll/bacteriochlorophyll/heme-biosynthesis-pathway
+  intermediates specifically. **Root-caused 2026-10-11**: NOT an RDKit
+  sanitization failure — every one of these 104 SMILES strings parses
+  and sanitizes cleanly under current RDKit, ruling that out directly.
+  Of the 104: 55 (53%) are a false positive of the pair-diff script
+  itself — the identical compound (same name, same EC, same underlying
+  Rhea reaction IDs, e.g. `RHEA:48765`/`RHEA:19734` for EC 1.1.1.396)
+  is still present in v2, just written out with a different SMILES
+  string for the same charge/coordination state (Rhea itself gives the
+  same chlorophyll-pathway molecule different protonation/Mg-chelation
+  notation across its own reaction entries — a pre-existing property of
+  the upstream data, not something this work introduced). The script
+  diffs on exact SMILES string equality, so these register as "lost"
+  pairs when they're really the same ligand under a different textual
+  representation. The remaining 49 (47%) are genuine compound-level
+  gaps, but in every case the EC itself is still present in v2 with
+  other ligands (cofactor and/or other reaction-derived) — no EC is
+  lost because of this category. Consistent with the same normal
+  upstream Rhea-revision pattern as the "other" category below, not a
+  defect in this work.
 - 270 are ordinary, otherwise-well-resolved compounds missing only for
   specific ECs — consistent with normal upstream Rhea/KEGG reaction-
   equation revision over the ~2-year gap (confirmed example: NADH is
@@ -160,9 +177,23 @@ from v2.** Categorised (554 distinct lost structures):
   630 other ECs — the reaction equation for that one EC now cites NAD
   where it previously cited NADH).
 - 9 ECs lost entirely (`1.14.14.140, 2.1.1.86, 2.4.1.129, 2.7.11.27,
-  3.1.8.2, 4.2.1.78, 4.3.3.2, 4.3.3.3, 4.3.3.4`) — not yet individually
-  root-caused; small enough (9 of 6,214) not to block on, but worth
-  revisiting if full v1 parity is ever required.
+  3.1.8.2, 4.2.1.78, 4.3.3.2, 4.3.3.3, 4.3.3.4`). **Root-caused
+  2026-10-11**: not a real loss — all 9 are EC Nomenclature Committee
+  "Transferred entry" numbers in the current `enzyme.dat` (confirmed:
+  each one's `DE` line reads `Transferred entry: <new EC>`, e.g.
+  `1.14.14.140` → `1.14.14.162`, `4.3.3.2` → `3.5.99.13`). The old
+  baseline (2024-07) still carried ligand data directly under the old,
+  now-retired EC numbers; v2 correctly follows the current EC
+  nomenclature instead. Checked all 9 transfer targets directly: the
+  exact same compounds (by name — e.g. dopamine, tryptamine, secologanin/
+  strictosidine, water) are present under the new EC number in v2,
+  usually with *more* ligands attached (the new EC also picks up
+  cofactor-path compounds like heme, FAD, FMN, `[4Fe-4S]`). The pair-diff
+  script missed this because `uniqueID` is a per-build index, not a
+  stable cross-build compound identifier, so a naive join can't see the
+  migration. Not a bug and nothing to fix — just a reminder that
+  `enzyme.dat` transfers need resolving before any future old-vs-new
+  comparison at the EC level.
 
 **Chlorophyll as a photosystem cofactor is still not captured**, and this
 is expected, not a bug: neither combined source resolves it mechanically.
